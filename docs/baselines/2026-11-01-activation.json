@@ -7,7 +7,8 @@
       "before": "Phase 1 install; workspace-core disabled via --settings",
       "with": "Phase 2: workspace-core enabled (events cross-checked against cw-probe)",
       "bare": "listing reference: empty dir, no workspace plugins, claude-mem disabled (1 trivial prompt)"
-    }
+    },
+    "correction": "2026-11-02: runs whose request ended with reason=error (5-hour usage limit) were wrongly counted as ok; re-aggregated from the saved results"
   },
   "suite": {
     "version": 1,
@@ -32,97 +33,182 @@
     "conditions": {
       "with": {
         "runs": 42,
-        "ok": 42,
-        "failedRuns": [],
+        "ok": 21,
+        "failedRuns": [
+          {
+            "id": "review-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "tests-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "tests-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "cont-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "cont-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "triv-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "triv-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "feat-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "feat-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "debug-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "debug-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "arch-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "arch-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "review-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "review-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "tests-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "tests-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "cont-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "cont-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "triv-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "triv-2",
+            "error": "request ended: error (usage limit reached)"
+          }
+        ],
         "overall": {
-          "n": 36,
+          "n": 19,
           "hits": 0,
           "rate": {
             "p": 0,
             "lo": 0,
-            "hi": 0.09642183044857634
+            "hi": 0.16818436536845052
           }
         },
         "byClass": {
           "feature": {
-            "n": 6,
+            "n": 4,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.48990002040399916
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "debug": {
-            "n": 6,
+            "n": 4,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.48990002040399916
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "architecture": {
-            "n": 6,
+            "n": 4,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.48990002040399916
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "review": {
-            "n": 6,
+            "n": 3,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.5615060804490177
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "tests": {
-            "n": 6,
+            "n": 2,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.6576280471103807
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "continue": {
-            "n": 6,
+            "n": 2,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.6576280471103807
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "trivial": {
-            "n": 6,
-            "hits": 6,
+            "n": 2,
+            "hits": 2,
             "rate": {
               "p": 1,
-              "lo": 0.6096569663469354,
-              "hi": 0.9999999999999999
+              "lo": 0.34237195288961925,
+              "hi": 1
             },
             "skills": {},
             "overActivation": [],
@@ -130,114 +216,199 @@
           }
         },
         "tokens": {
-          "in": 3.0952380952380953,
-          "out": 595.2619047619048,
-          "cacheRead": 38223.80952380953,
-          "cacheWrite": 6484.761904761905,
-          "steps": 1.9761904761904763,
-          "contextPerStep": 15328.90873015873
+          "in": 6.095238095238095,
+          "out": 1181.7142857142858,
+          "cacheRead": 75931.42857142857,
+          "cacheWrite": 12116.761904761905,
+          "steps": 2.9047619047619047,
+          "contextPerStep": 29973.29365079365
         },
         "models": [
           "claude-opus-5-5"
         ],
         "agreement": {
-          "runs": 42,
-          "matching": 42
+          "runs": 21,
+          "matching": 21
         }
       },
       "before": {
         "runs": 42,
-        "ok": 42,
-        "failedRuns": [],
+        "ok": 21,
+        "failedRuns": [
+          {
+            "id": "tests-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "review-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "tests-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "cont-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "cont-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "triv-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "triv-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "feat-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "feat-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "debug-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "debug-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "arch-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "arch-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "review-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "review-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "tests-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "tests-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "cont-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "cont-2",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "triv-1",
+            "error": "request ended: error (usage limit reached)"
+          },
+          {
+            "id": "triv-2",
+            "error": "request ended: error (usage limit reached)"
+          }
+        ],
         "overall": {
-          "n": 36,
+          "n": 19,
           "hits": 0,
           "rate": {
             "p": 0,
             "lo": 0,
-            "hi": 0.09642183044857634
+            "hi": 0.16818436536845052
           }
         },
         "byClass": {
           "feature": {
-            "n": 6,
+            "n": 4,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.48990002040399916
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "debug": {
-            "n": 6,
+            "n": 4,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.48990002040399916
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "architecture": {
-            "n": 6,
+            "n": 4,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.48990002040399916
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "review": {
-            "n": 6,
+            "n": 3,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.5615060804490177
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "tests": {
-            "n": 6,
+            "n": 2,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.6576280471103807
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "continue": {
-            "n": 6,
+            "n": 2,
             "hits": 0,
             "rate": {
               "p": 0,
               "lo": 0,
-              "hi": 0.3903430336530645
+              "hi": 0.6576280471103807
             },
             "skills": {},
             "overActivation": [],
             "denied": []
           },
           "trivial": {
-            "n": 6,
-            "hits": 6,
+            "n": 2,
+            "hits": 2,
             "rate": {
               "p": 1,
-              "lo": 0.6096569663469354,
-              "hi": 0.9999999999999999
+              "lo": 0.34237195288961925,
+              "hi": 1
             },
             "skills": {},
             "overActivation": [],
@@ -245,12 +416,12 @@
           }
         },
         "tokens": {
-          "in": 3.0952380952380953,
-          "out": 587.5714285714286,
-          "cacheRead": 33864.30952380953,
-          "cacheWrite": 10927.97619047619,
-          "steps": 2,
-          "contextPerStep": 15525.380952380956
+          "in": 6,
+          "out": 1157.6666666666667,
+          "cacheRead": 66696,
+          "cacheWrite": 20150.428571428572,
+          "steps": 2.9047619047619047,
+          "contextPerStep": 29681.595238095244
         },
         "models": [
           "claude-opus-5-5"
@@ -259,8 +430,13 @@
       },
       "bare": {
         "runs": 1,
-        "ok": 1,
-        "failedRuns": [],
+        "ok": 0,
+        "failedRuns": [
+          {
+            "id": "bare-1",
+            "error": "request ended: error (usage limit reached)"
+          }
+        ],
         "overall": {
           "n": 0,
           "hits": 0,
@@ -344,12 +520,12 @@
             "denied": []
           },
           "trivial": {
-            "n": 1,
-            "hits": 1,
+            "n": 0,
+            "hits": 0,
             "rate": {
-              "p": 1,
-              "lo": 0.20654329147389294,
-              "hi": 1
+              "p": null,
+              "lo": null,
+              "hi": null
             },
             "skills": {},
             "overActivation": [],
@@ -357,31 +533,29 @@
           }
         },
         "tokens": {
-          "in": 0,
-          "out": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0,
-          "steps": 1,
-          "contextPerStep": 0
+          "in": null,
+          "out": null,
+          "cacheRead": null,
+          "cacheWrite": null,
+          "steps": null,
+          "contextPerStep": null
         },
-        "models": [
-          "claude-opus-5-5"
-        ],
+        "models": [],
         "agreement": null
       }
     },
     "comparison": {
       "activationDiff": {
         "d": 0,
-        "lo": -0.09642183044857634,
-        "hi": 0.09642183044857634
+        "lo": -0.16818436536845052,
+        "hi": 0.16818436536845052
       },
-      "contextPerStepDelta": -196.47222222222626,
+      "contextPerStepDelta": 291.6984126984062,
       "listingCharsDelta": 0
     },
     "listing": {
       "with": {
-        "sessions": 42,
+        "sessions": 21,
         "skillCount": [
           99
         ],
@@ -402,7 +576,7 @@
         "workspaceNameOnly": []
       },
       "before": {
-        "sessions": 42,
+        "sessions": 21,
         "skillCount": [
           99
         ],
@@ -423,18 +597,7 @@
         "workspaceNameOnly": []
       },
       "bare": {
-        "sessions": 1,
-        "skillCount": [
-          26
-        ],
-        "chars": {
-          "min": 16099,
-          "median": 16099,
-          "max": 16099
-        },
-        "nameOnly": [],
-        "mandatoryNameOnly": [],
-        "workspaceNameOnly": []
+        "sessions": 0
       }
     },
     "conditionCheck": {
@@ -2210,7 +2373,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 8474,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "ac28c1b1-fecf-4f34-b685-a824d9522b39",
         "activated": [],
@@ -2242,7 +2405,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2251,7 +2415,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 9641,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "394b4bf5-498c-4127-8066-b02311656a6b",
         "activated": [],
@@ -2287,7 +2451,8 @@
       "core": {
         "activated": [],
         "events": 18
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -2296,7 +2461,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 10282,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "970a543b-e4cd-4f3d-9708-122a853b5a1b",
         "activated": [],
@@ -2328,7 +2493,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -2337,7 +2503,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 4526,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "0fedab24-ed9a-45b9-9b92-9534af42e8c5",
         "activated": [],
@@ -2369,7 +2535,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2378,7 +2545,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 4822,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "476591ea-9c87-4c77-9031-a1bd0fdfc457",
         "activated": [],
@@ -2414,7 +2581,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2423,7 +2591,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 4734,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "e32e803a-4237-4b08-a3f0-cb0a7b9ef3d8",
         "activated": [],
@@ -2459,7 +2627,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2513,7 +2682,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 4966,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "41c908af-228d-41e7-8b33-1a169c6294bc",
         "activated": [],
@@ -2545,7 +2714,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -2554,7 +2724,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 5307,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "fc6d95c2-4561-40b2-b343-195fd14662ac",
         "activated": [],
@@ -2586,7 +2756,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2595,7 +2766,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 5433,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "9a5b66a1-1f5d-4e02-9bdf-9bb21c4a8513",
         "activated": [],
@@ -2631,7 +2802,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2640,7 +2812,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 5570,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "1bfe7c35-fc87-40a7-8ecd-306c04475d46",
         "activated": [],
@@ -2676,7 +2848,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -2685,7 +2858,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 5667,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "bcf3a13e-94d1-4bbf-9d7c-84e94d7100b3",
         "activated": [],
@@ -2717,7 +2890,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -2726,7 +2900,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 5395,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "2a2de266-f4d0-40d8-afa1-d2700ef8d63b",
         "activated": [],
@@ -2758,7 +2932,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2767,7 +2942,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 5876,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "cdd71fed-2901-4b5e-9fd9-3906f2c321b6",
         "activated": [],
@@ -2803,7 +2978,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2812,7 +2988,7 @@
       "iteration": 1,
       "exitCode": 1,
       "ms": 5366,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "95c84e1a-3896-42bc-8b21-3482516ea349",
         "activated": [],
@@ -2848,7 +3024,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -2857,7 +3034,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5552,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "6a82d871-2642-4b7b-b9e3-df1dffd6a8dd",
         "activated": [],
@@ -2889,7 +3066,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2898,7 +3076,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5938,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "dd1b84de-4136-41df-a3d3-0d9f32406d58",
         "activated": [],
@@ -2934,7 +3112,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -2943,7 +3122,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5790,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "906d5d1b-530f-42ff-a273-9739ae038004",
         "activated": [],
@@ -2975,7 +3154,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -2984,7 +3164,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5654,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "9776bc28-98cc-486d-a806-18ec227380f7",
         "activated": [],
@@ -3020,7 +3200,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3029,7 +3210,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5353,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "46bea81c-14c9-40b3-ba20-d51dd3eae85a",
         "activated": [],
@@ -3061,7 +3242,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3070,7 +3252,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5649,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "4050754f-3928-420a-b43f-0baa72f76a24",
         "activated": [],
@@ -3102,7 +3284,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3111,7 +3294,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5912,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "0b6e97db-b52b-4607-acfb-43b3e57ab602",
         "activated": [],
@@ -3147,7 +3330,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3156,7 +3340,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5426,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "e01bd14f-0c82-4056-9caa-a992a546deba",
         "activated": [],
@@ -3192,7 +3376,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3201,7 +3386,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5979,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "bcf61c6b-a82a-4066-9e67-bc0a13d82278",
         "activated": [],
@@ -3233,7 +3418,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3242,7 +3428,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 6187,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "2323504c-defd-4b82-9c5a-2f3454ef45b6",
         "activated": [],
@@ -3274,7 +3460,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3283,7 +3470,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 6476,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "a35222c0-484f-4914-b15f-ce5ff4f8a30d",
         "activated": [],
@@ -3319,7 +3506,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3328,7 +3516,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 6963,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "dc081b6a-ac84-4d8d-811a-402466408831",
         "activated": [],
@@ -3364,7 +3552,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3373,7 +3562,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 6182,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "ac2f0f79-c288-4541-8db0-be2c059b1093",
         "activated": [],
@@ -3405,7 +3594,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3414,7 +3604,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 6063,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "0be08283-ce11-448c-a788-4911d4fed44e",
         "activated": [],
@@ -3450,7 +3640,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3459,7 +3650,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5986,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "e34bb786-6788-43ba-8712-4535048b005c",
         "activated": [],
@@ -3491,7 +3682,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3500,7 +3692,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 6013,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "4e00b263-827a-439e-a7fe-9fc6714a4dd5",
         "activated": [],
@@ -3536,7 +3728,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3545,7 +3738,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5603,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "cf243aa4-787c-4df6-aeb0-3fcde08ae9b9",
         "activated": [],
@@ -3577,7 +3770,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3586,7 +3780,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5722,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "b66c5ce1-06da-4107-96fa-381893749cc8",
         "activated": [],
@@ -3618,7 +3812,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3627,7 +3822,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 6092,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "38834328-0146-43e3-a81c-240a5bdec95a",
         "activated": [],
@@ -3663,7 +3858,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3672,7 +3868,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 6061,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "8ec02f1c-70a6-4123-a56a-cc6ea023e173",
         "activated": [],
@@ -3708,7 +3904,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3717,7 +3914,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5940,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "e0ee1be6-9780-4b5d-b327-95a1be7cc58c",
         "activated": [],
@@ -3749,7 +3946,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3758,7 +3956,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5626,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "962dd09a-2b7c-4fd4-8e65-c3e82e5639f7",
         "activated": [],
@@ -3794,7 +3992,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3803,7 +4002,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5796,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "c0821d65-207b-4992-ae3b-ab3b87204b46",
         "activated": [],
@@ -3835,7 +4034,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3844,7 +4044,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5848,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "30e7aef7-42b0-4989-acdd-e49642c29e76",
         "activated": [],
@@ -3880,7 +4080,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3889,7 +4090,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5540,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "4a7523fc-49ae-4016-aef9-e9179e3bdb61",
         "activated": [],
@@ -3921,7 +4122,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "before",
@@ -3930,7 +4132,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5406,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "afdacbd1-0d61-46cb-9056-d194dc347e50",
         "activated": [],
@@ -3962,7 +4164,8 @@
           "anthropic-skills:skill-creator",
           "anthropic-skills:xlsx"
         ]
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -3971,7 +4174,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 5910,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "d17621f3-d627-4f34-b231-f67fc45bc671",
         "activated": [],
@@ -4007,7 +4210,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "bare",
@@ -4016,7 +4220,7 @@
       "iteration": 0,
       "exitCode": 1,
       "ms": 3316,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "a8a9a158-9377-4727-9e91-64a39f5f5c73",
         "activated": [],
@@ -4041,7 +4245,8 @@
         "chars": 16099,
         "withDescription": 26,
         "nameOnly": []
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     },
     {
       "condition": "with",
@@ -4050,7 +4255,7 @@
       "iteration": 2,
       "exitCode": 1,
       "ms": 4842,
-      "ok": true,
+      "ok": false,
       "run": {
         "sid": "ba4e3faa-3f55-4655-afbd-0f70d95fb8e4",
         "activated": [],
@@ -4086,7 +4291,8 @@
       "core": {
         "activated": [],
         "events": 13
-      }
+      },
+      "error": "request ended: error (usage limit reached)"
     }
   ]
 }

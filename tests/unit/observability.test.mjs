@@ -2,10 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { redact, redactDeep, projectKey, promptSummary, markerCounts, attributeCommand, fnv64 } from '../../plugins/workspace-core/lib/events.mjs'
+import { redact, redactDeep, projectKey, markerCounts } from '../../plugins/workspace-core/lib/events.mjs'
 import { createSink, flush } from '../../plugins/workspace-core/lib/sink.mjs'
 import { createReader } from '../../observability/reader.mjs'
-import { deriveSession, summarize } from '../../observability/derive.mjs'
+import { usageForSession, renderUsage } from '../../observability/derive.mjs'
+import { parseUsageSection, createTracker, USAGE_INSTRUCTION } from '../../plugins/workspace-core/lib/usage.mjs'
 import { ROOT } from '../helpers.mjs'
 
 const FIX = join(ROOT, 'tests', 'fixtures', 'events')
@@ -33,26 +34,16 @@ test('redaction scrubs common secret shapes and keeps ordinary text', () => {
   assert.deepEqual(redactDeep({ a: ['token=abcdefgh123'], n: 3 }), { a: ['token=[REDACTED]'], n: 3 })
 })
 
-test('prompt summary stores hash, redacted 80-char preview and length only', () => {
-  const s = promptSummary('deploy with API_KEY=supersecret123 ' + 'x'.repeat(200))
-  assert.equal(s.len, 235)
-  assert.ok(s.preview.length <= 80)
-  assert.ok(!s.preview.includes('supersecret'))
-  assert.equal(s.hash, fnv64('deploy with API_KEY=supersecret123 ' + 'x'.repeat(200)))
-})
-
 test('project keys are stable and filesystem-safe', () => {
   assert.equal(projectKey('/home/u/my proj'), projectKey('/home/u/my proj'))
   assert.notEqual(projectKey('/a/app'), projectKey('/b/app'))
   assert.match(projectKey('/home/u/my proj'), /^my_proj-[0-9a-f]{10}$/)
 })
 
-test('marker counts and command attribution', () => {
+test('marker counts', () => {
   assert.deepEqual(markerCounts('You have superpowers. # claude-mem status'), { superpowers: 1, claudeMem: 1 })
   assert.deepEqual(markerCounts([{ type: 'text', text: 'PONYTAIL MODE ACTIVE' }]), { ponytail: 1 })
   assert.deepEqual(markerCounts(null), {})
-  assert.equal(attributeCommand('claude-mem hook claude-code context'), 'claudeMem')
-  assert.equal(attributeCommand('"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start'), null)
 })
 
 // ---------------------------------------------------------------- mod sink
@@ -83,67 +74,86 @@ test('sink: flush serializes writes so an older body never lands last', async ()
   assert.equal(s.state.failures, 1, 'failed write is counted, not thrown')
 })
 
-// ---------------------------------------------------------------- golden derivation
+
+// ---------------------------------------------------------------- Workspace Usage evidence
+
+test('usage instruction stays short (token budget ≤ 120, ~4 chars/token)', () => {
+  assert.ok(USAGE_INSTRUCTION.length / 4 <= 120, `${USAGE_INSTRUCTION.length} chars`)
+})
+
+test('parse: only the Applied line yields claims; bare names map to full ids', () => {
+  const a = 'Fixed it.\n\n## Workspace Usage\n- Applied: superpowers:systematic-debugging (root cause first); karpathy-guidelines (minimal diff)\n- Active: Caveman (lite)\n- Not used: test-driven-development (no new code)\n'
+  assert.deepEqual(parseUsageSection(a), { present: true, applied: ['superpowers:systematic-debugging', 'andrej-karpathy-skills:karpathy-guidelines'] })
+  assert.deepEqual(parseUsageSection('**Workspace Usage**\n- **Applied:** brainstorming'), { present: true, applied: ['superpowers:brainstorming'] })
+  assert.deepEqual(parseUsageSection('just an answer'), { present: false, applied: [] })
+  assert.deepEqual(parseUsageSection(undefined), { present: false, applied: [] })
+})
+
+test('footer: claims are cross-checked; denied/failed are never "activated"', () => {
+  const t = createTracker()
+  t.injection({ caveman: 2 })
+  t.turnStart()
+  t.skillPrompt('superpowers:systematic-debugging')
+  t.skillCall('caveman:lean-build', { isError: true, errorText: 'Permission to use Skill has been denied' })
+  t.skillPrompt('superpowers:test-driven-development'); t.skillFailed('superpowers:test-driven-development')
+  const r = t.finish('ok\n### Workspace Usage\n- Applied: superpowers:systematic-debugging, superpowers:writing-plans, caveman:lean-build')
+  assert.deepEqual(r.activated, ['superpowers:systematic-debugging'])
+  assert.deepEqual(r.denied, ['caveman:lean-build'])
+  assert.deepEqual(r.failed, ['superpowers:test-driven-development'])
+  assert.deepEqual(r.claimedNotObserved, ['superpowers:writing-plans', 'caveman:lean-build'])
+  assert.match(r.footer, /^Verified by engine: activated superpowers:systematic-debugging · denied caveman:lean-build · failed superpowers:test-driven-development · context injected this session: Caveman · self-reported only \(no engine event\): superpowers:writing-plans, caveman:lean-build/)
+  assert.match(r.footer, /not proof they were followed/)
+  // next request starts clean; a trivial answer with no events and no section gets no footer
+  t.turnStart()
+  assert.equal(t.finish('2 + 2 = 4').footer, null)
+  // section present, nothing invoked, nothing claimed: honest "none observed"
+  t.turnStart()
+  assert.match(t.finish('done\nWorkspace Usage\n- Not used: brainstorming').footer, /no skill activations observed · context injected this session: Caveman · report matches engine events/)
+  // activation not mentioned in the report is flagged too
+  t.turnStart(); t.skillPrompt('superpowers:brainstorming')
+  assert.match(t.finish('x\nWorkspace Usage\n- Applied: none').footer, /activated but not reported: superpowers:brainstorming/)
+})
+
+// ---------------------------------------------------------------- golden replay of recorded sessions
 
 function loadFixture(name) {
-  const dir = join(FIX, name)
-  const sessions = createReader(join(dir, 'events')).sessions()
+  const sessions = createReader(join(FIX, name, 'events')).sessions()
   assert.equal(sessions.size, 1)
   const s = [...sessions.values()][0]
-  const hooks = existsSync(join(dir, 'hooks.json')) ? JSON.parse(readFileSync(join(dir, 'hooks.json'), 'utf8')) : null
-  return deriveSession({ sid: s.sid, projectKey: s.projectKey, events: s.events, hooks })
+  return usageForSession({ sid: s.sid, projectKey: s.projectKey, events: s.events })
 }
 
 function golden(name, view) {
   const f = join(FIX, name, 'expected.json')
-  const got = JSON.stringify(view, null, 2) + '\n'
+  const got = JSON.stringify({ view, text: renderUsage(view).split('\n') }, null, 2) + '\n'
   if (process.env.UPDATE_GOLDEN || !existsSync(f)) writeFileSync(f, got)
   assert.equal(got, readFileSync(f, 'utf8'), `golden ${name} changed (review, then UPDATE_GOLDEN=1)`)
 }
 
-test('golden: live headless session (allowed skill + denied skill)', () => {
+test('golden: live headless session (allowed skill + denied skill), no report section', () => {
   const v = loadFixture('live-skill-deny')
   assert.equal(v.interactive, false)
   assert.equal(v.requests.length, 1)
   const r = v.requests[0]
-  assert.deepEqual(r.models, ['claude-opus-5-5'])
-  assert.deepEqual(r.efforts, ['medium'])
-  assert.equal(r.reason, 'answer')
-  assert.ok(r.usage.out > 0)
-  assert.deepEqual(r.skills.map((s) => [s.skill, s.state]), [
-    ['andrej-karpathy-skills:karpathy-guidelines', 'completed'],
-    ['caveman:lean-build', 'denied'],
-  ])
-  assert.equal(v.capabilities.superpowers.state, 'observed')
-  assert.equal(v.capabilities.ponytail.state, 'observed')
-  assert.equal(v.capabilities.claudeMem.state, 'observed')
-  assert.equal(v.capabilities.caveman.state, 'not-applicable', 'Caveman injects only in interactive sessions')
-  assert.equal(v.capabilities.karpathy.state, 'activated', 'model-invoked skill; evidence is skill.prompt')
-  assert.equal(v.capabilities.router.state, 'disabled')
-  assert.deepEqual(v.failures, [], 'a denied skill is policy, not a failure')
+  assert.deepEqual(r.activated, ['andrej-karpathy-skills:karpathy-guidelines'])
+  assert.deepEqual(r.denied, ['caveman:lean-build'], 'permission-denied Skill call is denied, not activated')
+  assert.equal(r.reportPresent, false)
+  assert.equal(r.footer, 'Verified by engine: activated karpathy:karpathy-guidelines · denied caveman:lean-build (activation = instructions loaded, not proof they were followed)')
   golden('live-skill-deny', v)
 })
 
-test('golden: synthetic mixed session (subagent, router, failures, reload)', () => {
+test('golden: synthetic session across a reload, with a partly false self-report', () => {
   const v = loadFixture('synthetic-mixed')
   assert.equal(v.requests.length, 4, 'requests span two runs (reload) of one session')
   const [r1, r2, r3, r4] = v.requests
-  assert.deepEqual(r1.routing.verdict, 'match')
-  assert.deepEqual(r1.skills.map((s) => [s.skill, s.state]), [['superpowers:systematic-debugging', 'completed'], ['superpowers:test-driven-development', 'failed']])
-  assert.equal(r1.subagents.length, 1)
-  assert.deepEqual([r1.subagents[0].type, r1.subagents[0].steps[0].model], ['Explore', 'claude-haiku-5-5'])
-  assert.deepEqual([r2.routing.verdict, r2.routing.selected, r2.routing.used, r2.reason], ['mismatch', 'claude-haiku-5-5', 'claude-opus-5-5', 'aborted'])
-  assert.deepEqual([r3.routing.verdict, r3.routing.error, r3.routing.used], ['fallback', 'auth', 'claude-opus-5-5'])
-  assert.equal(r4.routing, null)
-  assert.deepEqual(Object.fromEntries(Object.entries(v.capabilities).map(([k, c]) => [k, c.state])), {
-    superpowers: 'observed', caveman: 'observed', claudeMem: 'failed', ponytail: 'unverified', karpathy: 'not-activated', router: 'failed',
-  })
-  assert.ok(v.capabilities.claudeMem.evidence.some((e) => /best-effort/.test(e)))
-  assert.deepEqual(v.failures.map((f) => [f.capability, f.source]), [
-    ['claudeMem', 'transcript (best-effort)'], ['superpowers', 'event'], [null, 'event'],
-  ])
-  assert.deepEqual(v.totals, { requests: 4, steps: 6, in: 1011, out: 206, cacheRead: 5000, cacheWrite: 300, skills: 2 })
-  assert.equal(summarize(v).failures, 3)
+  assert.deepEqual(r1.activated, ['superpowers:systematic-debugging'], 'subagent turns do not split the request')
+  assert.deepEqual(r1.failed, ['superpowers:test-driven-development'])
+  assert.deepEqual(r1.claimedNotObserved, ['andrej-karpathy-skills:karpathy-guidelines'])
+  assert.deepEqual(r1.active, ['superpowers', 'caveman'])
+  assert.match(r1.footer, /self-reported only \(no engine event\): karpathy:karpathy-guidelines/)
+  assert.equal(r2.reason, 'aborted')
+  for (const r of [r2, r3, r4]) assert.equal(r.footer, null)
+  assert.deepEqual(v.usage, { in: 1111, out: 226, cacheRead: 5000, cacheWrite: 300 })
   assert.equal(v.endReason, 'prompt_input_exit')
   golden('synthetic-mixed', v)
 })

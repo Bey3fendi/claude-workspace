@@ -275,8 +275,11 @@ Phase 3M adds:
 
 ## 10. Risks (rev 3)
 
-- **Implicit activation is currently not happening in headless runs.** The baseline (2026-11-01) was 0/36 scored runs in each condition.
-  - Possible causes: the harness, such as the `--allowedTools` set or read-only mode, or real model behavior. **Investigate first** (Phase 2R).
+- **Implicit activation does not happen on its own (opus-5-5/medium).**
+  - Phase 2R found 0 of 51 answered runs activated a skill: headless and interactive, read-only and write-enabled. The Superpowers bootstrap was verified in context.
+  - Explicit requests work.
+  - The harness is ruled out (`docs/baselines/2026-11-02-activation-investigation.md`).
+  - Phase 3 must create activation through workspace contracts and gates (§6), not rely on the bootstrap.
   - This is the central risk to the project's goal.
 - **Self-reported usage can be wrong.** The engine footer exposes mismatches, but it cannot prove instructions were *followed*.
 - **Avenox capture is judgment-based.** A deterministic trigger improves reliability but not correctness of content.
@@ -299,6 +302,29 @@ Phase 3M adds:
 | **4. Enforcement + memory policy** | Mandatory steps | `tool.call` gates, Stop postconditions (including the memory-capture trigger), compaction restore | Gate and memory tests green |
 | **5. Optional router** | Opt-in Jev routing | Enable, test, disable; `view` against `turn.step` | Router tests green |
 | **6. Hardening** | Long-term operation | Update and rollback, upstream canary, devcontainer feature, docs | Full §9 suite |
+
+### Phase 2R status (2026-11-02)
+
+- **Done:**
+  - the mod is trimmed;
+  - the usage instruction is about 400 characters (~100 tokens, a cached session-scoped section);
+  - the engine footer (`turn.complete {text}`);
+  - `lib/usage.mjs`;
+  - `claude-workspace usage`;
+  - the dashboard, server, web UI and transcript reconciler are removed;
+  - goldens adapted (34/34 tests; `--strict` validation passes);
+  - `docs/observability.md` rewritten.
+- **Live:**
+  - the footer renders in the interactive TUI, and is in the transcript and events for `-p`;
+  - the model refused a requested false claim, and the footer agreed.
+- **Baseline:**
+  - 0% activation is genuine model behavior (§10);
+  - the 2026-11-01 report was corrected, because 42 of 84 runs had hit the usage limit and were miscounted as OK;
+  - the runner is fixed.
+- **User check passed (2026-11-02, falling-brick-game, WSL):**
+  - a substantive task got a truthful section ("Applied: none") and a visible footer reading "report matches engine events";
+  - a trivial question got neither.
+- **Gate: met.**
 
 ### Phase 2 status before rev 3 (for the record)
 

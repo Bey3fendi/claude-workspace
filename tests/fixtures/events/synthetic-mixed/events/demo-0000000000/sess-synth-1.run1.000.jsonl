@@ -17,7 +17,7 @@
 {"v":1,"t":1112,"sid":"sess-synth-1","run":"run1","seq":16,"ev":"skill.prompt","skill":"superpowers:test-driven-development","pluginName":"superpowers","source":"plugin","agentId":null}
 {"v":1,"t":1113,"sid":"sess-synth-1","run":"run1","seq":17,"ev":"skill.failed","skill":"superpowers:test-driven-development","error":"skill file unreadable"}
 {"v":1,"t":1114,"sid":"sess-synth-1","run":"run1","seq":18,"ev":"turn.step","turnId":"T1","index":1,"model":"claude-sonnet-5-5","effort":"medium","agentId":null}
-{"v":1,"t":1115,"sid":"sess-synth-1","run":"run1","seq":19,"ev":"turn.complete","turnId":"T1","agentId":null,"reason":"answer","usage":{"model":"claude-sonnet-5-5","in":1000,"out":200,"cacheRead":5000,"cacheWrite":300}}
+{"v":1,"t":1115,"sid":"sess-synth-1","run":"run1","seq":19,"ev":"turn.complete","turnId":"T1","agentId":null,"reason":"answer","usageReport":{"present":true,"claimed":["superpowers:systematic-debugging","andrej-karpathy-skills:karpathy-guidelines"]},"usage":{"model":"claude-sonnet-5-5","in":1000,"out":200,"cacheRead":5000,"cacheWrite":300}}
 {"v":1,"t":1200,"sid":"sess-synth-1","run":"run1","seq":20,"ev":"turn.start","turnId":"T2","agentId":null,"prompt":{"hash":"bbbbbbbbbbbbbbbb","preview":"now refactor it","len":15}}
 {"v":1,"t":1201,"sid":"sess-synth-1","run":"run1","seq":21,"ev":"router.view","phase":"decided","mode":"auto","nativeModel":"claude-opus-5-5","selectedModel":"claude-haiku-5-5","actualModel":"claude-haiku-5-5","tier":"light","effort":"low","reason":"advice","error":null}
 {"v":1,"t":1202,"sid":"sess-synth-1","run":"run1","seq":22,"ev":"turn.step","turnId":"T2","index":0,"model":"claude-opus-5-5","effort":"high","agentId":null}

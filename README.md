@@ -9,7 +9,7 @@ A portable Claude Code workspace that is pinned, reversible and project-local. I
 
 It also includes an optional, disabled-by-default model router.
 
-**Status: Phase 1 (installer foundation).** The evidence pipeline and dashboard arrive in Phase 2. See `docs/PLAN.md`.
+**Status: Phase 2R (Workspace Usage reporting).** Phases 0–1 are done. See `docs/PLAN.md` and `docs/observability.md`.
 
 ## Requirements
 - Linux, macOS, WSL2, or a Linux devcontainer. Native Windows is not supported; use WSL.
@@ -32,6 +32,7 @@ For a team, publish this repo and install with `--marketplace <owner>/<repo>#<ta
 | `doctor` | Verifies pins, duplicates, deny rules, Caveman mode, the claude-mem runtime and worker health, and **claude-mem telemetry OFF**. Exits 1 on any failure |
 | `repair` | Re-applies everything `install` does, reinstalls drifted pins, and repairs the claude-mem runtime |
 | `uninstall` | Removes what the workspace added. A touched file nobody edited since install is restored **byte-for-byte**. An edited file loses only the workspace's own keys |
+| `usage` | Prints the engine-verified Workspace Usage evidence for the latest session in this project (`--session <id>` for another). Reads local files only |
 
 ## What it changes
 

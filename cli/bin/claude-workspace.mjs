@@ -5,7 +5,7 @@ import { UserError } from '../lib/util.mjs'
 import { install } from '../commands/install.mjs'
 import { doctor } from '../commands/doctor.mjs'
 import { uninstall } from '../commands/uninstall.mjs'
-import { dashboard } from '../commands/dashboard.mjs'
+import { usage } from '../commands/usage.mjs'
 
 const HELP = `claude-workspace <command> [options]
 
@@ -14,7 +14,7 @@ Commands
   doctor      Verify the installation from evidence; enforces claude-mem telemetry OFF
   repair      Re-apply everything install does, fix pin mismatches and the claude-mem runtime
   uninstall   Remove what the workspace added; untouched files are restored byte-for-byte
-  dashboard   Serve the evidence dashboard on 127.0.0.1 (read-only)
+  usage       Show the engine-verified Workspace Usage evidence for the last session (or --session)
 
 Options
   --project <dir>        Project directory (default: current directory)
@@ -24,7 +24,7 @@ Options
   --allow-dirty          Proceed although touched files have uncommitted changes (backups are still taken)
   --remove-claude-mem    uninstall: also run claude-mem's own uninstaller (user-level, asks first)
   --no-fix               doctor: verify telemetry only, do not run \`telemetry disable\`
-  --port <n>             dashboard: port (default 47821)
+  --session <id>         usage: session id (or a prefix) instead of the latest
   --json                 Print one JSON result document
   --version, --help
 `
@@ -42,7 +42,7 @@ export function parseArgs(argv) {
       case '--allow-dirty': o.allowDirty = true; break
       case '--remove-claude-mem': o.removeClaudeMem = true; break
       case '--no-fix': o.noFix = true; break
-      case '--port': o.port = val(); break
+      case '--session': o.session = val(); break
       case '--json': o.json = true; break
       case '--help': case '-h': o.help = true; break
       case '--version': case '-v': o.version = true; break
@@ -71,7 +71,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
       result = { ...result, ok: result.ok && d.ok, doctor: d.checks }
     } else if (cmd === 'doctor') result = await doctor(ctx, rep)
     else if (cmd === 'uninstall') result = await uninstall(ctx, rep)
-    else if (cmd === 'dashboard') result = await dashboard(ctx, rep)
+    else if (cmd === 'usage') result = await usage(ctx, rep)
     else throw new UserError(`unknown command ${cmd}`)
   } catch (e) {
     if (!(e instanceof UserError)) throw e

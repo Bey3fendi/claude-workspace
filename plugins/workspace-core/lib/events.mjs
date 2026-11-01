@@ -55,12 +55,6 @@ export function projectKey(root) {
   return `${base.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 40)}-${fnv64(String(root)).slice(0, 10)}`
 }
 
-/** Prompt text is stored as hash + redacted preview + length, never in full. */
-export function promptSummary(text) {
-  const t = typeof text === 'string' ? text : ''
-  return { hash: fnv64(t), preview: redact(t).replace(/\s+/g, ' ').trim().slice(0, PREVIEW_CHARS), len: t.length }
-}
-
 // ---------------------------------------------------------------- attribution
 
 /** Content markers that attribute injected hook context to a workspace capability. */
@@ -82,17 +76,6 @@ export function markerCounts(content) {
     if (n) out[k] = n
   }
   return out
-}
-
-/** Capability that a hook command line belongs to (transcript fallback rows). */
-export function attributeCommand(cmd) {
-  const c = String(cmd || '')
-  if (/claude-mem/i.test(c)) return 'claudeMem'
-  if (/caveman/i.test(c)) return 'caveman'
-  if (/ponytail/i.test(c)) return 'ponytail'
-  if (/superpowers/i.test(c)) return 'superpowers'
-  if (/karpathy/i.test(c)) return 'karpathy'
-  return null
 }
 
 function safeStringify(v) { try { return JSON.stringify(v) } catch { return String(v) } }

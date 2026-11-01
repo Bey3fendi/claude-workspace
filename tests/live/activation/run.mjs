@@ -80,8 +80,9 @@ function runOne({ c, p, i }) {
       try {
         const rows = readFileSync(join(dir, 'probe.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l))
         res.run = analyzeProbe(rows)
-        res.ok = res.run.steps > 0
-        if (!res.ok) res.error = 'no model request observed'
+        // an API error (e.g. a usage limit) still produces a step; only an answered request counts
+        res.ok = res.run.steps > 0 && res.run.reason === 'answer'
+        if (!res.ok) res.error = res.run.steps > 0 ? `request ended: ${res.run.reason}` : 'no model request observed'
         const root = realpathSync(CONDITION[c].cwd)
         const tp = join(CONFIG, 'projects', root.replace(/[^A-Za-z0-9]/g, '-'), `${res.run.sid}.jsonl`)
         res.listing = existsSync(tp) ? listingFromTranscript(readFileSync(tp, 'utf8')) : null

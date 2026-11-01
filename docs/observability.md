@@ -1,83 +1,67 @@
-# Observability: events and evidence states
+# Workspace Usage reporting
 
-The `workspace-core` mod records documented Claude Code engine events. It never treats what the model says as evidence. The dashboard derives every state from those records, and each state names its evidence.
+The workspace answers one question per task: **which installed capabilities did Claude actually use, and can that be checked?** The answer is a short report, not a dashboard. No server runs, and there are no extra model calls.
 
-## Where data lives
+## The two layers
 
-- **Events.** Stored at `~/.local/state/claude-workspace/events/<project-key>/<session>.<run>.<seg>.jsonl`. The base directory follows `$XDG_STATE_HOME`, and `CW_EVENTS_DIR` overrides it.
-  - Each Claude Code process writes its own segment files, up to 500 lines each. This is because the mod file API rewrites whole files rather than appending.
-  - Data stays local; nothing is sent anywhere.
-- **Dashboard.** `claude-workspace dashboard [--port 47821]`.
-  - Binds `127.0.0.1` only and serves read-only GET requests.
-  - Checks the `Host` header, which guards against DNS rebinding.
-  - Uses a strict CSP and renders all data as text.
-  - Never uses ports 37700–37799 (claude-mem worker) or 8000 (Chroma).
-- **Index.** Built in memory from the JSONL files and re-parsed when a file changes. The plan's SQLite index is deferred: `node:sqlite` is still experimental on Node 22.13, and the volume doesn't need it yet.
+1. **Model-written section (self-reported).**
+   - `workspace-core` adds one short system-prompt section (`workspace-core:usage-report`, about 400 characters, roughly 100 tokens, cached per session).
+   - It asks Claude to end substantive development replies with this section:
+     ```
+     Workspace Usage
+     - Applied: superpowers:systematic-debugging (root cause before fix)
+     - Active: Caveman (lite)
+     - Not used: test-driven-development (no new code)
+     ```
+   - Trivial questions get no section.
+2. **Engine footer (observed).**
+   - The mod's `turn.complete` hook returns a single line, which is shown beneath the main-loop answer. For example:
+     ```
+     Verified by engine: activated superpowers:systematic-debugging · denied caveman:lean-build ·
+     self-reported only (no engine event): superpowers:writing-plans (activation = instructions loaded, not proof they were followed)
+     ```
+   - The footer is never sent to the model. It is stored as a transcript notice row, and the model does not see it when the session resumes (verified 2026-11-02).
+   - It appears only when a skill event happened or the reply has a Workspace Usage section.
+   - `claude -p` does not print it. Use `claude-workspace usage` there.
 
-## Privacy
+## What counts as evidence
 
-- **Prompts:** only a hash, a redacted 80-character preview, and the length.
-- **Tool inputs and outputs:** not recorded. Exceptions: the skill name for `Skill` calls, and the subagent type for `Agent` calls.
-- **Redaction:** every string is redacted at write time. This covers API keys (Anthropic, generic `sk-`, GitHub, AWS, Slack), JWTs, bearer and basic credentials, `*_KEY`/`TOKEN`/`SECRET`/`PASSWORD` assignments, URL credentials, and PEM private keys.
-- **Router:** for the router `view`, only decision fields are kept. Credentials and health are dropped.
-
-## Event schema (v1)
-
-Every row contains `v`, `t` (epoch ms), `sid`, `run`, `seq` and `ev`.
-
-| `ev` | Engine event | Fields |
+| Footer term | Engine signal | What it does *not* prove |
 |---|---|---|
-| `session.start` | `session.start` | `cwd`, `root`, `surface`, `interactive`, `model` |
-| `session.end` | `session.end` | `reason` |
-| `turn.start` | `turn.start` | `turnId`, `agentId`, `prompt{hash,preview,len}` (main loop only) |
-| `turn.step` | `turn.step` | `turnId`, `index`, `model`, `effort`, `agentId`: the model and effort **actually sent** |
-| `turn.complete` | `turn.complete` | `turnId`, `agentId`, `reason` (`answer`/`aborted`/`refusal`/`error`), `usage{model,in,out,cacheRead,cacheWrite}` |
-| `skill.prompt` | `skill.prompt` | `skill`, `pluginName`, `source`, `agentId` |
-| `skill.loaded` / `skill.failed` | `classic.PostToolUse` / `PostToolUseFailure` (Skill) | `skill`, `error` |
-| `tool.call` | `tool.call` | `tool`, `skill`, `subagentType`, `agentId`, `denied`, `isError`, `errorText` (Skill only) |
-| `agent.spawn` | `agent.spawn` | `subagentType`, `model`, `agentId` |
-| `subagent.start` / `subagent.stop` | `classic.SubagentStart` / `SubagentStop` | `agentType`, `agentId` |
-| `injection` | `session.append` (door `hook-context`, origin hook) | `hookEvent`, `len`, `markers{capability:count}` |
-| `router.view` | `state.set{plugin:"router", key:"view"}` | `phase`, `mode`, `nativeModel`, `selectedModel`, `actualModel`, `tier`, `effort`, `reason`, `error` |
-| `compact` | `classic.PreCompact` | `trigger` |
+| activated | `skill.prompt` (the skill's instructions entered the context) | that they were followed |
+| denied | Skill `tool.call` refused by a permission rule | — |
+| failed | `PostToolUseFailure` for the Skill tool, or a non-permission error | — |
+| context injected this session | content markers in hook-injected context (`session.append`, door `hook-context`) | that the integration shaped this task |
+| self-reported only | a skill named on the model's `Applied:` line with no `skill.prompt` this request | — |
+| activated but not reported | `skill.prompt` with no matching `Applied:` entry | — |
 
-## Evidence states
+Installed or enabled is never reported as used.
 
-### Capability states (per session)
+## On demand
 
-| State | Meaning |
-|---|---|
-| `observed` | An engine event showed it, for example a `hook-context` injection carrying the capability's content markers |
-| `activated` | A model-invoked skill fired (`skill.prompt`) |
-| `failed` | A hook failure was found (transcript, labeled best-effort), or the router reported an `error` (fallback to the native model) |
-| `not-applicable` | For example Caveman in a headless session, since it injects only in interactive sessions |
-| `not-activated` | For example Karpathy when its skill was never selected. This is not a failure |
-| `unverified` | Only the undocumented transcript showed it, for example a hook ran but no injection was seen |
-| `not-observed` | No evidence at all |
-| `disabled` | The optional router is off |
+```bash
+claude-workspace usage                 # latest session for this project
+claude-workspace usage --session <id>  # or an id prefix; --json for the full evidence
+```
 
-### Skill states (per request)
+## Storage and privacy
 
-| State | Evidence |
-|---|---|
-| `activated` | `skill.prompt` |
-| `completed` | `PostToolUse` |
-| `denied` | `tool.call` deny, or `isError` with a permission-denied message |
-| `failed` | `PostToolUseFailure`, or another `tool.call` error |
+- Events go to `${XDG_STATE_HOME:-~/.local/state}/claude-workspace/events/<projectKey>/<session>.<run>.<seg>.jsonl`. `CW_EVENTS_DIR` overrides the base directory.
+- The files are local and user-level, never inside the project.
+- Rows are redacted for common secret shapes.
+- Prompt text is not stored.
+- What is recorded:
+  - skill loads and outcomes;
+  - injected-context sizes and markers;
+  - request boundaries;
+  - main-loop model and effort;
+  - token usage;
+  - the router's view (Phase 5);
+  - the parsed `Applied:` claims;
+  - the footer text.
 
-A denied skill is a policy decision, not a failure.
+## Limits
 
-### Router verdict (per request)
-
-| Verdict | Meaning |
-|---|---|
-| `match` | The router's expected model equals the `turn.step` model actually sent |
-| `mismatch` | The two differ |
-| `fallback` | The router reported an `error` |
-| `unknown` | Not enough evidence to decide |
-
-## Limits (stated honestly)
-
-- **Attribution of injections uses content markers.** The engine merges the JSON context of all hooks into one row, so a single row can legitimately carry several capabilities. A capability whose text names another capability can produce a false positive.
-- **The transcript fallback reads undocumented attachments.** These are `hook_success`, `hook_non_blocking_error` and `async_hook_response`. Anything derived only from them is labeled best-effort or `unverified`.
-- **The status line (`cw <model>/<effort> · skills N · req N`) appears only in interactive sessions.**
+- **The parsing is heuristic.** Claims are read only from the `Applied:` line of a section headed "Workspace Usage". Full skill ids are recognised, plus a fixed list of bare Superpowers and Karpathy names.
+- **Ambient integrations are visible only as injected context.** This covers Caveman, Ponytail and memory. Caveman injects only in interactive sessions.
+- **Workflow compliance needs separate checks.** Whether Claude actually followed a workflow (for example, root cause before fix) is checked by the Phase 3 outcome evaluations, not by this report.

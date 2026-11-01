@@ -1,164 +1,49 @@
 {
-  "sid": "20610b62-74a0-41c9-91aa-3c1fd4e944ea",
-  "projectKey": "p1-e2701a8315",
-  "root": "/home/user/spikes/p1",
-  "startedAt": 1793568458778,
-  "lastAt": 1793568462459,
-  "endedAt": 1793568462459,
-  "endReason": "other",
-  "interactive": false,
-  "surface": null,
-  "model": "claude-opus-5-5",
-  "requests": [
-    {
-      "n": 1,
-      "turnId": "df8e9cf5-ab10-45e5-8693-0a7fe3b7b01b",
-      "t": 1793568459357,
-      "prompt": {
-        "hash": "1615ca83f5ca59cc",
-        "preview": "First invoke the Skill tool with skill \"andrej-karpathy-skills:karpathy-guidelin",
-        "len": 216
-      },
-      "steps": [
-        {
-          "index": 0,
-          "model": "claude-opus-5-5",
-          "effort": "medium"
-        },
-        {
-          "index": 1,
-          "model": "claude-opus-5-5",
-          "effort": "medium"
-        }
-      ],
-      "subagents": [],
-      "skills": [
-        {
-          "skill": "andrej-karpathy-skills:karpathy-guidelines",
-          "plugin": "andrej-karpathy-skills",
-          "agentId": null,
-          "state": "completed",
-          "evidence": [
-            "skill.prompt",
-            "PostToolUse"
-          ]
-        },
-        {
-          "skill": "caveman:lean-build",
-          "plugin": "caveman",
-          "agentId": null,
-          "state": "denied",
-          "evidence": [
-            "tool.call isError (permission denied)"
-          ],
-          "detail": "Permission to use Skill with skill:caveman:lean-build has been denied."
-        }
-      ],
-      "tools": {
-        "calls": 2,
-        "errors": 1,
-        "denied": 1,
-        "byTool": {
-          "Skill": 2
-        }
-      },
-      "router": [],
-      "reason": "answer",
-      "usage": {
-        "model": "claude-opus-5-5",
-        "in": 6,
-        "out": 163,
-        "cacheRead": 38110,
-        "cacheWrite": 21220
-      },
-      "endedAt": 1793568462308,
-      "models": [
-        "claude-opus-5-5"
-      ],
-      "efforts": [
-        "medium"
-      ],
-      "routing": null
-    }
-  ],
-  "injections": [
-    {
-      "t": 1793568458782,
-      "hookEvent": "SessionStart",
-      "len": 103,
-      "markers": {},
-      "request": null
-    },
-    {
-      "t": 1793568458785,
-      "hookEvent": "SessionStart",
-      "len": 3006,
-      "markers": {
-        "ponytail": 4
-      },
-      "request": null
-    },
-    {
-      "t": 1793568458809,
-      "hookEvent": "SessionStart",
-      "len": 7872,
-      "markers": {
-        "superpowers": 3,
-        "claudeMem": 8
-      },
-      "request": null
-    }
-  ],
-  "capabilities": {
-    "superpowers": {
-      "state": "observed",
-      "evidence": [
-        "injection ×1 (SessionStart; content markers)"
-      ]
-    },
-    "caveman": {
-      "state": "not-applicable",
-      "evidence": [
-        "headless session: Caveman injects only in interactive sessions"
-      ]
-    },
-    "claudeMem": {
-      "state": "observed",
-      "evidence": [
-        "injection ×1 (SessionStart; content markers)"
-      ]
-    },
-    "ponytail": {
-      "state": "observed",
-      "evidence": [
-        "injection ×1 (SessionStart; content markers)"
-      ]
-    },
-    "karpathy": {
-      "state": "activated",
-      "evidence": [
-        "skills activated ×1"
-      ]
-    },
-    "router": {
-      "state": "disabled",
-      "evidence": [
-        "no router.view events (optional, off by default)"
-      ]
+  "view": {
+    "sid": "20610b62-74a0-41c9-91aa-3c1fd4e944ea",
+    "projectKey": "p1-e2701a8315",
+    "root": "/home/user/spikes/p1",
+    "interactive": false,
+    "startedAt": 1793568458778,
+    "endReason": "other",
+    "models": [
+      "claude-opus-5-5"
+    ],
+    "requests": [
+      {
+        "n": 1,
+        "t": 1793568459357,
+        "reason": "answer",
+        "activated": [
+          "andrej-karpathy-skills:karpathy-guidelines"
+        ],
+        "denied": [
+          "caveman:lean-build"
+        ],
+        "failed": [],
+        "active": [
+          "ponytail",
+          "superpowers",
+          "claudeMem"
+        ],
+        "reportPresent": false,
+        "claimed": [],
+        "claimedNotObserved": [],
+        "observedNotClaimed": [],
+        "footer": "Verified by engine: activated karpathy:karpathy-guidelines · denied caveman:lean-build (activation = instructions loaded, not proof they were followed)"
+      }
+    ],
+    "usage": {
+      "in": 6,
+      "out": 163,
+      "cacheRead": 38110,
+      "cacheWrite": 21220
     }
   },
-  "failures": [],
-  "totals": {
-    "requests": 1,
-    "steps": 2,
-    "in": 6,
-    "out": 163,
-    "cacheRead": 38110,
-    "cacheWrite": 21220,
-    "skills": 1
-  },
-  "sources": {
-    "events": 18,
-    "transcript": "5 hook rows (best-effort)"
-  }
+  "text": [
+    "session 20610b62-74a0-41c9-91aa-3c1fd4e944ea · /home/user/spikes/p1 · headless",
+    "models: claude-opus-5-5",
+    "#1 Verified by engine: activated karpathy:karpathy-guidelines · denied caveman:lean-build (activation = instructions loaded, not proof they were followed)",
+    "tokens: in 6, out 163, cache read 38110, cache write 21220"
+  ]
 }

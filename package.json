@@ -1,7 +1,7 @@
 {
   "name": "claude-workspace",
   "version": "0.1.0",
-  "description": "Portable, pinned Claude Code workspace: Superpowers, Caveman, claude-mem, Ponytail, Karpathy skills, optional router, evidence-based observability",
+  "description": "Portable, pinned Claude Code workspace: Superpowers, Caveman, claude-mem, Ponytail, Karpathy skills, optional router, truthful Workspace Usage reporting",
   "type": "module",
   "bin": { "claude-workspace": "cli/bin/claude-workspace.mjs" },
   "engines": { "node": ">=22.13.0" },

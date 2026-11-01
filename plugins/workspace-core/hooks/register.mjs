@@ -1,11 +1,16 @@
-// workspace-core: evidence collection (Phase 2). Observe-only: every hook forwards through
-// next() and returns the engine's own result unchanged. Events come only from documented
-// engine events (plan §4); nothing is inferred from what the model says.
+// workspace-core (Phase 2R): minimal usage evidence + Workspace Usage report.
+//   - Records only the signals in plan §4.1 (skill loads/outcomes, injected-context markers,
+//     request boundaries, model/effort per request, router view) to local JSONL.
+//   - Adds one short system-prompt section asking for a "Workspace Usage" section on substantive tasks.
+//   - Shows an engine-verified footer beneath the main-loop answer (turn.complete {text}); it is
+//     never sent to the model. It compares the model's claims with observed skill events.
 // Validator rules: literal event names, function-literal hooks, `$` spelled at each call site.
 import { createSink, flush } from '../lib/sink.mjs'
-import { promptSummary, markerCounts, short } from '../lib/events.mjs'
+import { markerCounts, short } from '../lib/events.mjs'
+import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
 
 const sink = createSink()
+const tracker = createTracker()
 const st = { model: null, effort: null, skills: 0, requests: 0 }
 const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
@@ -31,63 +36,69 @@ export const register = (on) => {
     return next(e)
   })
 
+  // One cached, session-scoped section (after the shared prefix, so the shared cache is untouched).
+  on('prompt.compose', async ($, e, next) => {
+    const r = await next(e)
+    return { ...r, sections: [...r.sections, { id: 'workspace-core:usage-report', text: USAGE_INSTRUCTION, scope: 'session' }] }
+  }).catch(($, e, next) => next(e))
+
   on('turn.start', async ($, e, next) => {
     const r = await next(e)
     if (e.agentId === undefined) {
       st.requests++
+      tracker.turnStart()
       try { sink.setSid(await $.session.id()) } catch {}
     }
-    const w = sink.record('turn.start', { turnId: r?.turnId ?? e.turnId ?? null, agentId: e.agentId ?? null, prompt: e.agentId === undefined ? promptSummary(e.text) : undefined })
+    const w = sink.record('turn.start', { turnId: r?.turnId ?? e.turnId ?? null, agentId: e.agentId ?? null })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
     return r
   })
 
   on('turn.step', async function* ($, e, next) {
-    const w = sink.record('turn.step', { turnId: e.turnId, index: e.index, model: e.model, effort: e.effort ?? null, agentId: e.agentId ?? null })
-    await flush(sink, w, (p, b) => $.fs.write(p, b))
-    if (e.agentId === undefined) { st.model = e.model; st.effort = e.effort ?? null; $.ui.status(statusText()) }
+    if (e.agentId === undefined) {
+      const w = sink.record('turn.step', { turnId: e.turnId, index: e.index, model: e.model, effort: e.effort ?? null })
+      await flush(sink, w, (p, b) => $.fs.write(p, b))
+      st.model = e.model; st.effort = e.effort ?? null; $.ui.status(statusText())
+    }
     return yield* next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
     const r = await next(e)
     const u = r?.usage ?? e.usage
+    const main = e.agentId === undefined
+    const report = main ? parseUsageSection(e.answer) : null
+    const ev = main ? tracker.finish(e.answer) : null
     const w = sink.record('turn.complete', {
       turnId: e.turnId, agentId: e.agentId ?? null, reason: e.reason ?? null,
       usage: u ? { model: u.model, in: u.input_tokens, out: u.output_tokens, cacheRead: u.cache_read_input_tokens, cacheWrite: u.cache_creation_input_tokens } : null,
+      usageReport: report ? { present: report.present, claimed: report.applied } : undefined,
+      footer: ev?.footer ?? undefined,
     })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
+    if (main && ev?.footer && e.reason === 'answer') return { ...r, text: ev.footer }
     return r
-  })
+  }).catch(($, e, next) => next(e))
 
   on('skill.prompt', async ($, e, next) => {
     const r = await next(e)
     st.skills++
+    tracker.skillPrompt(e.skill)
     const w = sink.record('skill.prompt', { skill: e.skill, pluginName: e.pluginName ?? null, source: e.source ?? null, agentId: e.agentId ?? null })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
     $.ui.status(statusText())
     return r
   })
 
-  on('tool.call', async ($, e, next) => {
+  on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
     const r = await next(e)
-    const isSkill = e.tool === 'Skill'
-    const w = sink.record('tool.call', {
-      tool: e.tool,
-      skill: isSkill ? (e.skill ?? null) : undefined,
-      subagentType: e.subagent_type ?? undefined,
-      agentId: e.agentId ?? null,
+    const outcome = {
       denied: r?.deny !== undefined ? true : undefined,
       isError: r?.isError === true ? true : undefined,
-      errorText: isSkill && (r?.isError || r?.deny !== undefined) ? short(r.deny ?? r.text ?? '', 200) : undefined,
-    })
-    await flush(sink, w, (p, b) => $.fs.write(p, b))
-    return r
-  }).catch(($, e, next) => next(e))
-
-  on('agent.spawn', async ($, e, next) => {
-    const r = await next(e)
-    const w = sink.record('agent.spawn', { subagentType: e.subagentType ?? null, model: r?.model ?? null, agentId: r?.agentId ?? null, denied: r?.deny !== undefined ? true : undefined })
+      errorText: r?.isError || r?.deny !== undefined ? short(r.deny ?? r.text ?? '', 200) : undefined,
+    }
+    tracker.skillCall(e.skill ?? null, outcome)
+    const w = sink.record('tool.call', { tool: 'Skill', skill: e.skill ?? null, agentId: e.agentId ?? null, ...outcome })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
     return r
   }).catch(($, e, next) => next(e))
@@ -97,7 +108,9 @@ export const register = (on) => {
     if (e.door === 'hook-context' && e.origin?.kind === 'hook') {
       const content = e.message?.content
       const len = typeof content === 'string' ? content.length : JSON.stringify(content ?? '').length
-      const w = sink.record('injection', { hookEvent: e.origin.event ?? null, len, markers: markerCounts(content) })
+      const markers = markerCounts(content)
+      tracker.injection(markers)
+      const w = sink.record('injection', { hookEvent: e.origin.event ?? null, len, markers })
       await flush(sink, w, (p, b) => $.fs.write(p, b))
     }
     return r
@@ -118,31 +131,19 @@ export const register = (on) => {
 
   on('classic.PostToolUse', async ($, e, next) => {
     const r = await next(e)
-    if (e?.tool_name === 'Skill') await flush(sink, sink.record('skill.loaded', { skill: e.tool_input?.skill ?? null, agentId: e.agent_id ?? null }), (p, b) => $.fs.write(p, b))
+    if (e?.tool_name === 'Skill') {
+      tracker.skillLoaded(e.tool_input?.skill ?? null)
+      await flush(sink, sink.record('skill.loaded', { skill: e.tool_input?.skill ?? null, agentId: e.agent_id ?? null }), (p, b) => $.fs.write(p, b))
+    }
     return r
   }).catch(($, e, next) => next(e))
 
   on('classic.PostToolUseFailure', async ($, e, next) => {
     const r = await next(e)
-    if (e?.tool_name === 'Skill') await flush(sink, sink.record('skill.failed', { skill: e.tool_input?.skill ?? null, error: short(e.error ?? '', 200) }), (p, b) => $.fs.write(p, b))
-    return r
-  }).catch(($, e, next) => next(e))
-
-  on('classic.SubagentStart', async ($, e, next) => {
-    const r = await next(e)
-    await flush(sink, sink.record('subagent.start', { agentType: e?.agent_type ?? null, agentId: e?.agent_id ?? null }), (p, b) => $.fs.write(p, b))
-    return r
-  }).catch(($, e, next) => next(e))
-
-  on('classic.SubagentStop', async ($, e, next) => {
-    const r = await next(e)
-    await flush(sink, sink.record('subagent.stop', { agentType: e?.agent_type ?? null, agentId: e?.agent_id ?? null }), (p, b) => $.fs.write(p, b))
-    return r
-  }).catch(($, e, next) => next(e))
-
-  on('classic.PreCompact', async ($, e, next) => {
-    const r = await next(e)
-    await flush(sink, sink.record('compact', { trigger: e?.trigger ?? null }), (p, b) => $.fs.write(p, b))
+    if (e?.tool_name === 'Skill') {
+      tracker.skillFailed(e.tool_input?.skill ?? null)
+      await flush(sink, sink.record('skill.failed', { skill: e.tool_input?.skill ?? null, error: short(e.error ?? '', 200) }), (p, b) => $.fs.write(p, b))
+    }
     return r
   }).catch(($, e, next) => next(e))
 }
