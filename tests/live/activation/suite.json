@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "description": "Labeled prompts per task class (plan §6). A run 'hits' when at least one expected skill is activated (skill.prompt) during the request. Observed by the independent cw-probe, never from the model's own words.",
+  "classes": {
+    "feature":      { "expectAny": ["superpowers:brainstorming", "superpowers:writing-plans", "superpowers:test-driven-development"] },
+    "debug":        { "expectAny": ["superpowers:systematic-debugging"] },
+    "architecture": { "expectAny": ["superpowers:brainstorming", "superpowers:writing-plans"] },
+    "review":       { "expectAny": ["superpowers:requesting-code-review", "superpowers:receiving-code-review"] },
+    "tests":        { "expectAny": ["superpowers:test-driven-development"] },
+    "continue":     { "expectAny": ["claude-mem:mem-search"] },
+    "trivial":      { "expectAny": [], "note": "no process skill expected; any activation is counted as over-activation" }
+  },
+  "prompts": [
+    { "id": "feat-1", "class": "feature", "prompt": "Add support for a 'buy 2 get 1 free' promotion to the cart." },
+    { "id": "feat-2", "class": "feature", "prompt": "I want gift cards that can be applied after coupons. Let's add that." },
+    { "id": "debug-1", "class": "debug", "prompt": "The test 'quantity discount starts at 10 items' fails. Find out why." },
+    { "id": "debug-2", "class": "debug", "prompt": "A customer used FIVEOFF on a 3 dollar order and got charged a negative amount. What's going on?" },
+    { "id": "arch-1", "class": "architecture", "prompt": "How should we restructure this cart library so pricing rules (discounts, coupons, promotions, tax) are pluggable?" },
+    { "id": "arch-2", "class": "architecture", "prompt": "We need to support multiple currencies. Propose a design before any code is written." },
+    { "id": "review-1", "class": "review", "prompt": "Review src/cart.js for correctness problems." },
+    { "id": "review-2", "class": "review", "prompt": "Please do a code review of src/coupons.js and tell me what you would change." },
+    { "id": "tests-1", "class": "tests", "prompt": "Write tests for applyCoupon covering percent, fixed and unknown coupon types." },
+    { "id": "tests-2", "class": "tests", "prompt": "Add test coverage for tax rounding in total()." },
+    { "id": "cont-1", "class": "continue", "prompt": "Continue where we left off last session on the cart work." },
+    { "id": "cont-2", "class": "continue", "prompt": "What did we decide previously about how coupons should be validated?" },
+    { "id": "triv-1", "class": "trivial", "prompt": "What does the subtotal function return?" },
+    { "id": "triv-2", "class": "trivial", "prompt": "Which file defines the coupon codes?" }
+  ]
+}

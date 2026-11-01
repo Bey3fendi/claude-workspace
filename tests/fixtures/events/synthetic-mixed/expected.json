@@ -1,0 +1,382 @@
+{
+  "sid": "sess-synth-1",
+  "projectKey": "demo-0000000000",
+  "root": "/work/demo",
+  "startedAt": 1000,
+  "lastAt": 1500,
+  "endedAt": 1500,
+  "endReason": "prompt_input_exit",
+  "interactive": true,
+  "surface": "terminal",
+  "model": "claude-opus-5-5",
+  "requests": [
+    {
+      "n": 1,
+      "turnId": "T1",
+      "t": 1100,
+      "prompt": {
+        "hash": "aaaaaaaaaaaaaaaa",
+        "preview": "fix the failing test",
+        "len": 20
+      },
+      "steps": [
+        {
+          "index": 0,
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        {
+          "index": 1,
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      ],
+      "subagents": [
+        {
+          "agentId": "A1",
+          "type": "Explore",
+          "model": "claude-haiku-5-5",
+          "turns": 1,
+          "steps": [
+            {
+              "index": 0,
+              "model": "claude-haiku-5-5",
+              "effort": "low"
+            }
+          ],
+          "reason": "answer",
+          "usage": {
+            "model": "claude-haiku-5-5",
+            "in": 100,
+            "out": 20,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "skills": [
+        {
+          "skill": "superpowers:systematic-debugging",
+          "plugin": "superpowers",
+          "agentId": null,
+          "state": "completed",
+          "evidence": [
+            "skill.prompt",
+            "PostToolUse"
+          ]
+        },
+        {
+          "skill": "superpowers:test-driven-development",
+          "plugin": "superpowers",
+          "agentId": null,
+          "state": "failed",
+          "evidence": [
+            "skill.prompt",
+            "PostToolUseFailure"
+          ],
+          "detail": "skill file unreadable"
+        }
+      ],
+      "tools": {
+        "calls": 3,
+        "errors": 0,
+        "denied": 0,
+        "byTool": {
+          "Skill": 1,
+          "Grep": 1,
+          "Agent": 1
+        }
+      },
+      "router": [
+        {
+          "t": 1101,
+          "phase": "decided",
+          "mode": "auto",
+          "selectedModel": "claude-sonnet-5-5",
+          "actualModel": "claude-sonnet-5-5",
+          "nativeModel": "claude-opus-5-5",
+          "tier": "standard",
+          "effort": "medium",
+          "reason": "advice",
+          "error": null
+        }
+      ],
+      "reason": "answer",
+      "usage": {
+        "model": "claude-sonnet-5-5",
+        "in": 1000,
+        "out": 200,
+        "cacheRead": 5000,
+        "cacheWrite": 300
+      },
+      "endedAt": 1115,
+      "models": [
+        "claude-sonnet-5-5"
+      ],
+      "efforts": [
+        "medium"
+      ],
+      "routing": {
+        "selected": "claude-sonnet-5-5",
+        "expected": "claude-sonnet-5-5",
+        "used": "claude-sonnet-5-5",
+        "error": null,
+        "reason": "advice",
+        "verdict": "match"
+      }
+    },
+    {
+      "n": 2,
+      "turnId": "T2",
+      "t": 1200,
+      "prompt": {
+        "hash": "bbbbbbbbbbbbbbbb",
+        "preview": "now refactor it",
+        "len": 15
+      },
+      "steps": [
+        {
+          "index": 0,
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        }
+      ],
+      "subagents": [],
+      "skills": [],
+      "tools": {
+        "calls": 0,
+        "errors": 0,
+        "denied": 0,
+        "byTool": {}
+      },
+      "router": [
+        {
+          "t": 1201,
+          "phase": "decided",
+          "mode": "auto",
+          "selectedModel": "claude-haiku-5-5",
+          "actualModel": "claude-haiku-5-5",
+          "nativeModel": "claude-opus-5-5",
+          "tier": "light",
+          "effort": "low",
+          "reason": "advice",
+          "error": null
+        }
+      ],
+      "reason": "aborted",
+      "usage": null,
+      "endedAt": 1203,
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "efforts": [
+        "high"
+      ],
+      "routing": {
+        "selected": "claude-haiku-5-5",
+        "expected": "claude-haiku-5-5",
+        "used": "claude-opus-5-5",
+        "error": null,
+        "reason": "advice",
+        "verdict": "mismatch"
+      }
+    },
+    {
+      "n": 3,
+      "turnId": "T3",
+      "t": 1300,
+      "prompt": {
+        "hash": "cccccccccccccccc",
+        "preview": "try again",
+        "len": 9
+      },
+      "steps": [
+        {
+          "index": 0,
+          "model": "claude-opus-5-5",
+          "effort": "medium"
+        }
+      ],
+      "subagents": [],
+      "skills": [],
+      "tools": {
+        "calls": 0,
+        "errors": 0,
+        "denied": 0,
+        "byTool": {}
+      },
+      "router": [
+        {
+          "t": 1301,
+          "phase": "decided",
+          "mode": "auto",
+          "selectedModel": null,
+          "actualModel": "claude-opus-5-5",
+          "nativeModel": "claude-opus-5-5",
+          "tier": null,
+          "effort": null,
+          "reason": "no-advice",
+          "error": "auth"
+        }
+      ],
+      "reason": "answer",
+      "usage": {
+        "model": "claude-opus-5-5",
+        "in": 10,
+        "out": 5,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "endedAt": 1303,
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "efforts": [
+        "medium"
+      ],
+      "routing": {
+        "selected": null,
+        "expected": "claude-opus-5-5",
+        "used": "claude-opus-5-5",
+        "error": "auth",
+        "reason": "no-advice",
+        "verdict": "fallback"
+      }
+    },
+    {
+      "n": 4,
+      "turnId": "T4",
+      "t": 1400,
+      "prompt": {
+        "hash": "dddddddddddddddd",
+        "preview": "what did we do",
+        "len": 14
+      },
+      "steps": [
+        {
+          "index": 0,
+          "model": "claude-opus-5-5",
+          "effort": "medium"
+        }
+      ],
+      "subagents": [],
+      "skills": [],
+      "tools": {
+        "calls": 0,
+        "errors": 0,
+        "denied": 0,
+        "byTool": {}
+      },
+      "router": [],
+      "reason": "answer",
+      "usage": {
+        "model": "claude-opus-5-5",
+        "in": 1,
+        "out": 1,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "endedAt": 1402,
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "efforts": [
+        "medium"
+      ],
+      "routing": null
+    }
+  ],
+  "injections": [
+    {
+      "t": 1000,
+      "hookEvent": "SessionStart",
+      "len": 3500,
+      "markers": {
+        "superpowers": 2
+      },
+      "request": null
+    },
+    {
+      "t": 1001,
+      "hookEvent": "SessionStart",
+      "len": 2900,
+      "markers": {
+        "caveman": 3
+      },
+      "request": null
+    }
+  ],
+  "capabilities": {
+    "superpowers": {
+      "state": "observed",
+      "evidence": [
+        "injection ×1 (SessionStart; content markers)",
+        "skills activated ×1"
+      ]
+    },
+    "caveman": {
+      "state": "observed",
+      "evidence": [
+        "injection ×1 (SessionStart; content markers)"
+      ]
+    },
+    "claudeMem": {
+      "state": "failed",
+      "evidence": [
+        "hook failures ×1 (transcript, best-effort)"
+      ]
+    },
+    "ponytail": {
+      "state": "unverified",
+      "evidence": [
+        "hook ran ×1 (transcript only, best-effort)"
+      ]
+    },
+    "karpathy": {
+      "state": "not-activated",
+      "evidence": []
+    },
+    "router": {
+      "state": "failed",
+      "evidence": [
+        "3 router.view"
+      ],
+      "detail": "auth"
+    }
+  },
+  "failures": [
+    {
+      "capability": "claudeMem",
+      "source": "transcript (best-effort)",
+      "hookEvent": "SessionStart",
+      "command": "claude-mem hook claude-code context",
+      "detail": "Executable not found in $PATH: \"claude-mem\""
+    },
+    {
+      "capability": "superpowers",
+      "source": "event",
+      "request": 1,
+      "skill": "superpowers:test-driven-development",
+      "detail": "skill file unreadable"
+    },
+    {
+      "capability": null,
+      "source": "event",
+      "request": 2,
+      "detail": "turn ended: aborted"
+    }
+  ],
+  "totals": {
+    "requests": 4,
+    "steps": 6,
+    "in": 1011,
+    "out": 206,
+    "cacheRead": 5000,
+    "cacheWrite": 300,
+    "skills": 2
+  },
+  "sources": {
+    "events": 33,
+    "transcript": "2 hook rows (best-effort)"
+  }
+}

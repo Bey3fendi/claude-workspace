@@ -1,0 +1,4 @@
+[
+  { "t": 1000, "type": "hook_non_blocking_error", "hookEvent": "SessionStart", "command": "claude-mem hook claude-code context", "capability": "claudeMem", "exitCode": 1, "failed": true, "detail": "Executable not found in $PATH: \"claude-mem\"" },
+  { "t": 1000, "type": "hook_success", "hookEvent": "SessionStart", "command": "Loading ponytail mode...", "capability": "ponytail", "exitCode": 0, "failed": false }
+]

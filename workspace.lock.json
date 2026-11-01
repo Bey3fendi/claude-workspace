@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "workspaceVersion": "0.1.0",
+  "marketplace": {
+    "name": "cw-workspace",
+    "owner": "claude-workspace",
+    "description": "Portable Claude Code workspace: upstream plugins pinned by commit SHA plus workspace-core"
+  },
+  "claudeCode": { "min": "2.1.290", "tested": ["2.1.316"] },
+  "node": { "min": "22.13.0" },
+  "plugins": [
+    {
+      "name": "workspace-core",
+      "description": "Workspace observability and enforcement mod (Phase 1 placeholder)",
+      "source": "./plugins/workspace-core",
+      "enabled": true
+    },
+    {
+      "name": "superpowers",
+      "description": "obra/superpowers 7.0.1 - process skills (pinned)",
+      "upstreamVersion": "7.0.1",
+      "source": { "source": "url", "url": "https://github.com/obra/superpowers.git", "sha": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b" },
+      "enabled": true
+    },
+    {
+      "name": "caveman",
+      "description": "JuliusBrussee/caveman 4.0.1 - terse output style, plugin only (pinned)",
+      "upstreamVersion": "4.0.1",
+      "source": { "source": "url", "url": "https://github.com/JuliusBrussee/caveman.git", "sha": "9b68f7ed12b05e7efaff18e65c5a3fc2849fd0a4" },
+      "enabled": true
+    },
+    {
+      "name": "ponytail",
+      "description": "DietrichGebert/ponytail 5.3.3 (pinned)",
+      "upstreamVersion": "5.3.3",
+      "source": { "source": "url", "url": "https://github.com/DietrichGebert/ponytail.git", "sha": "96608e078b2d5ea607c5c3b8b5a54d1c1fba6846" },
+      "enabled": true
+    },
+    {
+      "name": "andrej-karpathy-skills",
+      "description": "multica-ai/andrej-karpathy-skills 1.0.0 (pinned)",
+      "upstreamVersion": "1.0.0",
+      "source": { "source": "url", "url": "https://github.com/multica-ai/andrej-karpathy-skills.git", "sha": "2c606141936f1eeef17fa3043a72095b4765b9c2" },
+      "enabled": true
+    },
+    {
+      "name": "router",
+      "description": "alexei-led/claude-router 1.19.1 - OPTIONAL Jev model router, disabled by default (pinned)",
+      "upstreamVersion": "1.19.1",
+      "source": { "source": "url", "url": "https://github.com/alexei-led/claude-router.git", "sha": "df56298187ec393ff04c54a4f14bf9c7c5606219" },
+      "enabled": false
+    }
+  ],
+  "claudeMem": {
+    "npmPackage": "claude-mem",
+    "version": "15.8.0",
+    "pluginId": "claude-mem@thedotmack",
+    "installArgs": ["install", "--provider", "claude", "--no-auto-start"]
+  },
+  "overlays": {
+    "caveman": { "file": ".caveman.json", "content": { "defaultMode": "lite" } }
+  }
+}

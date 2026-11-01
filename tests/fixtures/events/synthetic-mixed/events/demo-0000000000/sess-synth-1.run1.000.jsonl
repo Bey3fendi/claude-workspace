@@ -1,0 +1,28 @@
+{"v":1,"t":1000,"sid":null,"run":"run1","seq":0,"ev":"injection","hookEvent":"SessionStart","len":3500,"markers":{"superpowers":2}}
+{"v":1,"t":1001,"sid":null,"run":"run1","seq":1,"ev":"injection","hookEvent":"SessionStart","len":2900,"markers":{"caveman":3}}
+{"v":1,"t":1002,"sid":null,"run":"run1","seq":2,"ev":"injection","hookEvent":"SessionStart","len":2,"markers":{}}
+{"v":1,"t":1003,"sid":"sess-synth-1","run":"run1","seq":3,"ev":"session.start","cwd":"/work/demo","root":"/work/demo","surface":"terminal","interactive":true,"model":"claude-opus-5-5"}
+{"v":1,"t":1100,"sid":"sess-synth-1","run":"run1","seq":4,"ev":"turn.start","turnId":"T1","agentId":null,"prompt":{"hash":"aaaaaaaaaaaaaaaa","preview":"fix the failing test","len":20}}
+{"v":1,"t":1101,"sid":"sess-synth-1","run":"run1","seq":5,"ev":"router.view","phase":"decided","mode":"auto","nativeModel":"claude-opus-5-5","selectedModel":"claude-sonnet-5-5","actualModel":"claude-sonnet-5-5","tier":"standard","effort":"medium","reason":"advice","error":null}
+{"v":1,"t":1102,"sid":"sess-synth-1","run":"run1","seq":6,"ev":"turn.step","turnId":"T1","index":0,"model":"claude-sonnet-5-5","effort":"medium","agentId":null}
+{"v":1,"t":1103,"sid":"sess-synth-1","run":"run1","seq":7,"ev":"skill.prompt","skill":"superpowers:systematic-debugging","pluginName":"superpowers","source":"plugin","agentId":null}
+{"v":1,"t":1104,"sid":"sess-synth-1","run":"run1","seq":8,"ev":"skill.loaded","skill":"superpowers:systematic-debugging","agentId":null}
+{"v":1,"t":1105,"sid":"sess-synth-1","run":"run1","seq":9,"ev":"tool.call","tool":"Skill","skill":"superpowers:systematic-debugging","agentId":null}
+{"v":1,"t":1106,"sid":"sess-synth-1","run":"run1","seq":10,"ev":"agent.spawn","subagentType":"Explore","model":"claude-haiku-5-5","agentId":"A1"}
+{"v":1,"t":1107,"sid":"sess-synth-1","run":"run1","seq":11,"ev":"turn.start","turnId":"T1a","agentId":"A1"}
+{"v":1,"t":1108,"sid":"sess-synth-1","run":"run1","seq":12,"ev":"turn.step","turnId":"T1a","index":0,"model":"claude-haiku-5-5","effort":"low","agentId":"A1"}
+{"v":1,"t":1109,"sid":"sess-synth-1","run":"run1","seq":13,"ev":"tool.call","tool":"Grep","agentId":"A1"}
+{"v":1,"t":1110,"sid":"sess-synth-1","run":"run1","seq":14,"ev":"turn.complete","turnId":"T1a","agentId":"A1","reason":"answer","usage":{"model":"claude-haiku-5-5","in":100,"out":20,"cacheRead":0,"cacheWrite":0}}
+{"v":1,"t":1111,"sid":"sess-synth-1","run":"run1","seq":15,"ev":"tool.call","tool":"Agent","subagentType":"Explore","agentId":null}
+{"v":1,"t":1112,"sid":"sess-synth-1","run":"run1","seq":16,"ev":"skill.prompt","skill":"superpowers:test-driven-development","pluginName":"superpowers","source":"plugin","agentId":null}
+{"v":1,"t":1113,"sid":"sess-synth-1","run":"run1","seq":17,"ev":"skill.failed","skill":"superpowers:test-driven-development","error":"skill file unreadable"}
+{"v":1,"t":1114,"sid":"sess-synth-1","run":"run1","seq":18,"ev":"turn.step","turnId":"T1","index":1,"model":"claude-sonnet-5-5","effort":"medium","agentId":null}
+{"v":1,"t":1115,"sid":"sess-synth-1","run":"run1","seq":19,"ev":"turn.complete","turnId":"T1","agentId":null,"reason":"answer","usage":{"model":"claude-sonnet-5-5","in":1000,"out":200,"cacheRead":5000,"cacheWrite":300}}
+{"v":1,"t":1200,"sid":"sess-synth-1","run":"run1","seq":20,"ev":"turn.start","turnId":"T2","agentId":null,"prompt":{"hash":"bbbbbbbbbbbbbbbb","preview":"now refactor it","len":15}}
+{"v":1,"t":1201,"sid":"sess-synth-1","run":"run1","seq":21,"ev":"router.view","phase":"decided","mode":"auto","nativeModel":"claude-opus-5-5","selectedModel":"claude-haiku-5-5","actualModel":"claude-haiku-5-5","tier":"light","effort":"low","reason":"advice","error":null}
+{"v":1,"t":1202,"sid":"sess-synth-1","run":"run1","seq":22,"ev":"turn.step","turnId":"T2","index":0,"model":"claude-opus-5-5","effort":"high","agentId":null}
+{"v":1,"t":1203,"sid":"sess-synth-1","run":"run1","seq":23,"ev":"turn.complete","turnId":"T2","agentId":null,"reason":"aborted","usage":null}
+{"v":1,"t":1300,"sid":"sess-synth-1","run":"run1","seq":24,"ev":"turn.start","turnId":"T3","agentId":null,"prompt":{"hash":"cccccccccccccccc","preview":"try again","len":9}}
+{"v":1,"t":1301,"sid":"sess-synth-1","run":"run1","seq":25,"ev":"router.view","phase":"decided","mode":"auto","nativeModel":"claude-opus-5-5","selectedModel":null,"actualModel":"claude-opus-5-5","tier":null,"effort":null,"reason":"no-advice","error":"auth"}
+{"v":1,"t":1302,"sid":"sess-synth-1","run":"run1","seq":26,"ev":"turn.step","turnId":"T3","index":0,"model":"claude-opus-5-5","effort":"medium","agentId":null}
+{"v":1,"t":1303,"sid":"sess-synth-1","run":"run1","seq":27,"ev":"turn.complete","turnId":"T3","agentId":null,"reason":"answer","usage":{"model":"claude-opus-5-5","in":10,"out":5,"cacheRead":0,"cacheWrite":0}}

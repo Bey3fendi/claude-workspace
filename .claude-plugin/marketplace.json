@@ -1,0 +1,59 @@
+{
+  "name": "cw-workspace",
+  "owner": {
+    "name": "claude-workspace"
+  },
+  "description": "Portable Claude Code workspace: upstream plugins pinned by commit SHA plus workspace-core",
+  "plugins": [
+    {
+      "name": "workspace-core",
+      "description": "Workspace observability and enforcement mod (Phase 1 placeholder)",
+      "source": "./plugins/workspace-core"
+    },
+    {
+      "name": "superpowers",
+      "description": "obra/superpowers 7.0.1 - process skills (pinned)",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/obra/superpowers.git",
+        "sha": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b"
+      }
+    },
+    {
+      "name": "caveman",
+      "description": "JuliusBrussee/caveman 4.0.1 - terse output style, plugin only (pinned)",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/JuliusBrussee/caveman.git",
+        "sha": "9b68f7ed12b05e7efaff18e65c5a3fc2849fd0a4"
+      }
+    },
+    {
+      "name": "ponytail",
+      "description": "DietrichGebert/ponytail 5.3.3 (pinned)",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/DietrichGebert/ponytail.git",
+        "sha": "96608e078b2d5ea607c5c3b8b5a54d1c1fba6846"
+      }
+    },
+    {
+      "name": "andrej-karpathy-skills",
+      "description": "multica-ai/andrej-karpathy-skills 1.0.0 (pinned)",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/multica-ai/andrej-karpathy-skills.git",
+        "sha": "2c606141936f1eeef17fa3043a72095b4765b9c2"
+      }
+    },
+    {
+      "name": "router",
+      "description": "alexei-led/claude-router 1.19.1 - OPTIONAL Jev model router, disabled by default (pinned)",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/alexei-led/claude-router.git",
+        "sha": "df56298187ec393ff04c54a4f14bf9c7c5606219"
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "cw-spike",
+  "owner": { "name": "phase0-spike" },
+  "description": "Phase 0 spike: upstream plugins pinned by SHA",
+  "plugins": [
+    { "name": "superpowers", "source": { "source": "github", "repo": "obra/superpowers", "sha": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b" } },
+    { "name": "caveman", "source": { "source": "github", "repo": "JuliusBrussee/caveman", "sha": "9b68f7ed12b05e7efaff18e65c5a3fc2849fd0a4" } },
+    { "name": "claude-mem", "source": { "source": "git-subdir", "url": "https://github.com/thedotmack/claude-mem.git", "path": "plugin", "sha": "b80b29bc49d08a71312f44b8feacb2e7585edff4" } },
+    { "name": "ponytail", "source": { "source": "github", "repo": "DietrichGebert/ponytail", "sha": "96608e078b2d5ea607c5c3b8b5a54d1c1fba6846" } },
+    { "name": "andrej-karpathy-skills", "source": { "source": "github", "repo": "multica-ai/andrej-karpathy-skills", "sha": "2c606141936f1eeef17fa3043a72095b4765b9c2" } },
+    { "name": "router", "source": { "source": "github", "repo": "alexei-led/claude-router", "sha": "df56298187ec393ff04c54a4f14bf9c7c5606219" } }
+  ]
+}

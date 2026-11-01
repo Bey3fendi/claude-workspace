@@ -1,0 +1,6 @@
+{
+  "name": "cw-l9-spike",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "remoteUser": "node",
+  "workspaceFolder": "/workspaces/devc"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "cw-probe",
+  "version": "1.0.0",
+  "description": "Measurement probe for the activation baseline: records skill activations, models and usage, independently of workspace-core",
+  "author": { "name": "claude-workspace" }
+}
