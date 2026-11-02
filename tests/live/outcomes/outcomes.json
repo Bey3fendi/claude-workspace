@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "description": "Workflow-outcome checks (plan §6) on the activation fixture. Graded from stream-json engine events and the fixture's final git state; never from the model's own words. 'soft' checks are reported but do not fail a run.",
+  "prompts": [
+    {
+      "id": "debug-fix", "class": "debug",
+      "prompt": "The test 'quantity discount starts at 10 items' fails. Fix it.",
+      "checks": [
+        { "type": "rootCauseBeforeFix", "pattern": "qty\\s*>\\s*10|>=\\s*10|off[- ]by[- ]one|strictly greater|10 or more|> 10" },
+        { "type": "reproducedFirst" },
+        { "type": "grader", "name": "discount-test-passes" },
+        { "type": "diffWithin", "files": ["src/cart.js"], "maxLines": 4 }
+      ]
+    },
+    {
+      "id": "feat-design", "class": "feature",
+      "prompt": "Add support for a 'buy 2 get 1 free' promotion to the cart.",
+      "checks": [
+        { "type": "designBeforeEdit", "skills": ["superpowers:brainstorming", "superpowers:writing-plans"] },
+        { "type": "diffWithin", "files": ["src/cart.js", "test/", "README.md"] }
+      ]
+    },
+    {
+      "id": "tdd-new", "class": "tests",
+      "prompt": "Add a function itemCount(items) to src/cart.js that returns the total quantity across all items, with tests.",
+      "checks": [
+        { "type": "testFirst" },
+        { "type": "grader", "name": "itemCount-works" },
+        { "type": "diffWithin", "files": ["src/cart.js", "test/"] }
+      ]
+    },
+    {
+      "id": "coverage", "class": "tests",
+      "prompt": "Add test coverage for tax rounding in total().",
+      "checks": [
+        { "type": "testsRunAfterWrite" },
+        { "type": "diffWithin", "files": ["test/"] }
+      ]
+    }
+  ],
+  "graders": {
+    "discount-test-passes": ["node", "--test", "--test-name-pattern", "quantity discount starts at 10 items", "test/cart.test.js"],
+    "itemCount-works": ["node", "--input-type=module", "-e", "import { itemCount } from './src/cart.js'; if (itemCount([{ price: 1, qty: 2 }, { price: 5, qty: 3 }]) !== 5 || itemCount([]) !== 0) process.exit(1)"]
+  }
+}

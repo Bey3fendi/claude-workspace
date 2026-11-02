@@ -324,8 +324,16 @@ Phase 3M adds:
 
 **Smoke check of the revised contracts (`docs/baselines/2026-11-02-phase3-smoke.md`):** 5/5 scored, trivial with no over-activation, review outcome-only; $1.59 for 7 runs.
 
+**Step 2: workflow-outcome checks (§6)**, see `docs/baselines/2026-11-02-phase3-outcomes.md`.
+- **Tooling:** `tests/live/outcomes/`, graded from stream-json engine events plus the fixture's git state, with an offline re-grader.
+- **Run 1:** 1/4 runs passed all hard checks without contracts vs 2/4 with them. It exposed:
+  - a grader defect and a fixture defect;
+  - a TDD prompt misclassified as feature;
+  - debug contract wording that was too indirect.
+- **After the fixes:** the debug and TDD rechecks pass (root cause before the edit; test → red → src).
+- **Cost:** $2.61 in total.
+
 **Next:**
-- workflow-outcome checks (§6);
 - overlap denies;
 - listing work, gated on A/B evidence.
 

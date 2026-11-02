@@ -6,7 +6,7 @@
 const RULES = [
   ['continue', /\b(continue|pick up|resume|carry on)\b.{0,40}\b(where|from|last|previous|yesterday)\b|\b(last|previous) (session|time)\b|\bwhat did we (decide|do|agree)\b|\bwe (decided|agreed) (earlier|before|previously)\b/i],
   ['review', /\b(code[- ]?review|review (this|the|my|our|src\/|[\w./-]+\.\w+)|audit (this|the) code|look over (this|the|my) (code|diff|pr|changes)|review (pr|pull request|diff|changes))\b/i],
-  ['tests', /\b(write|add|create|improve|increase|missing)\b.{0,40}\b(tests?|test cases?|test coverage|unit tests?|specs?)\b|\btest coverage\b/i],
+  ['tests', /\b(write|add|create|improve|increase|missing)\b.{0,40}\b(tests?|test cases?|test coverage|unit tests?|specs?)\b|\btest coverage\b|\b(with|and|plus|including) (unit )?tests\b|\btest[- ]first\b|\bTDD\b/i],
   ['debug', /\b(bug|fails?|failing|failed|broken|crash(es|ed|ing)?|error|exception|stack ?trace|regression|wrong (result|output|amount|value)|doesn'?t work|not working|why (does|is|did)|what'?s going on|negative amount|flaky|intermittent|segfault|hangs?)\b/i],
   ['architecture', /\b(architect(ure)?|design (a|an|the)|propose (a|an) design|restructure|refactor (the|this) (whole|entire|library|module|codebase)|pluggable|how should we (structure|organi[sz]e|design|restructure)|support multiple)\b/i],
   ['feature', /\b(add|implement|build|create|introduce|support for|let'?s add|we need|i want)\b.{0,60}\b(feature|support|option|command|endpoint|function|promotion|mode|button|page|screen|gift cards?|setting|level|block|power-?up|\w+)\b/i],
@@ -36,7 +36,7 @@ const KARPATHY = 'andrej-karpathy-skills:karpathy-guidelines'
  * `pick`: when the right skill depends on the request, the rule the model applies instead.
  */
 export const CONTRACTS = {
-  debug: { skills: ['superpowers:systematic-debugging'], then: [KARPATHY], outcome: 'state the root cause with evidence before any fix; keep the fix minimal' },
+  debug: { skills: ['superpowers:systematic-debugging'], then: [KARPATHY], outcome: 'before your first edit, write the root cause (file:line and why) in your reply; then make the minimal fix' },
   feature: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans', KARPATHY], outcome: 'agree the design before editing code; minimal diff' },
   architecture: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans'], outcome: 'explore options and trade-offs before proposing code' },
   // No Superpowers skill reviews code the user points at (requesting-code-review is for one's own work).

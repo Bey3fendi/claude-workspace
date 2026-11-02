@@ -18,6 +18,8 @@ test('classifier on held-out phrasings (not in the suite)', () => {
     ['Why is the score wrong after a combo?', 'debug'],
     ['Add a hold-piece feature to the game', 'feature'],
     ['Implement a pause menu', 'feature'],
+    ['Add a function nextPiece() to src/board.c with tests', 'tests'],
+    ['Build the scoring module test-first', 'tests'],
     ['Please write unit tests for the collision code', 'tests'],
     ['Can you review my changes in src/board.c?', 'review'],
     ['How should we structure the rendering layer so it can be swapped later?', 'architecture'],
