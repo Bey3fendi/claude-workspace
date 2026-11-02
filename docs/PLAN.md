@@ -303,6 +303,32 @@ Phase 3M adds:
 | **5. Optional router** | Opt-in Jev routing | Enable, test, disable; `view` against `turn.step` | Router tests green |
 | **6. Hardening** | Long-term operation | Update and rollback, upstream canary, devcontainer feature, docs | Full §9 suite |
 
+### Phase 3 status (in progress, 2026-11-02)
+
+**Step 1: classifier plus advisory contracts.**
+- **Mechanism:** a local keyword classifier (`lib/contracts.mjs`, no model calls). A `prompt.submit` hook attaches one short contract as model-only context, and records only the class. `CW_CONTRACTS=0` turns it off.
+- **A/B** (`docs/baselines/2026-11-02-phase3-contracts-ab.md`, 14 prompts × contracts on/off):
+  - activation 6/12 vs 0/12, +50 points, 95% CI [+15, +75];
+  - classifier 14/14;
+  - overhead is noise (−51 tokens per request);
+  - trivial prompts: no over-activation.
+- **Misses** were disclosed and mostly correct, which led to three changes:
+  - the review contract is outcome-only, since no skill fits and the class is unscored;
+  - the tests contract picks TDD or verification depending on the request;
+  - the activation runner's budget flag is opt-in, because the model sees the budget and economises.
+- **Cost control in the runner:**
+  - smoke mode by default (7 runs, `with` only);
+  - the reference is not re-run;
+  - the run stops at the first usage-limit error;
+  - a cost line in every report.
+
+**Smoke check of the revised contracts (`docs/baselines/2026-11-02-phase3-smoke.md`):** 5/5 scored, trivial with no over-activation, review outcome-only; $1.59 for 7 runs.
+
+**Next:**
+- workflow-outcome checks (§6);
+- overlap denies;
+- listing work, gated on A/B evidence.
+
 ### Phase 2R status (2026-11-02)
 
 - **Done:**

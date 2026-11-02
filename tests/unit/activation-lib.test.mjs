@@ -64,3 +64,11 @@ test('aggregate compares conditions and flags mandatory listing drops', () => {
   assert.deepEqual(rep.listing.with.mandatoryNameOnly, ['claude-mem:mem-search'])
   assert.equal(rep.comparison.contextPerStepDelta, 0)
 })
+
+test('unscored classes never count as hits or misses', () => {
+  const suite = { classes: { review: { expectAny: [], unscored: true }, debug: { expectAny: ['superpowers:systematic-debugging'] } } }
+  const mk = (cls, activated) => ({ condition: 'with', class: cls, promptId: cls, ok: true, run: { activated, denied: [], models: ['m'], steps: 1, usage: { in: 1, out: 1, cacheRead: 1, cacheWrite: 0 } }, listing: null })
+  const rep = aggregate([mk('review', []), mk('debug', ['superpowers:systematic-debugging'])], suite)
+  assert.deepEqual(rep.conditions.with.overall, { n: 1, hits: 1, rate: rep.conditions.with.overall.rate })
+  assert.equal(scoreRun({ activated: ['superpowers:brainstorming'] }, suite.classes.review).unscored, true)
+})

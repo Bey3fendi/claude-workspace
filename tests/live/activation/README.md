@@ -7,13 +7,19 @@ This suite measures two things for each task class:
 These numbers feed the Phase 2 gate and the Phase 3 A/B acceptance.
 
 ```bash
-node tests/live/activation/run.mjs --runs 3 --conditions before,with,bare --concurrency 4
-#   --only feat-1,debug-1   subset of suite.json ids
-#   --budget 0.40           --max-budget-usd per run
-#   --out docs/baselines    report: <date>-activation.{md,json}
+node tests/live/activation/run.mjs                 # smoke (default): 1 prompt per class, `with` only = 7 runs
+node tests/live/activation/run.mjs --full --runs 2 # phase-gate run: all 14 prompts, CIs worth reading
+#   --conditions nocontract,with   re-measure the reference too (doubles the cost)
+#   --only feat-1,debug-1          subset of suite.json ids
+#   --budget 0.40                  opt-in --max-budget-usd per run (the model sees it and economises)
+#   --out docs/baselines           report: <date>-activation.{md,json}
 ```
 
-**Cost:** each run is a real `claude -p` request. Runs are read-only (`Edit`, `Write` and `Bash` are disallowed) and capped by `--max-budget-usd`.
+**Cost.** Every run is a full Claude session of about 60k context tokens, and it counts against your usage limit. To keep that down:
+- **Smoke mode is the default.** It runs one prompt per class, once, in the `with` condition only.
+- **The reference is not re-run.** The no-contract reference is already measured (0/51, `docs/baselines/2026-11-02-activation-investigation.md`).
+- **The run stops at the first usage-limit error.** The report shows the total cost and how many runs were not started.
+- **Runs are read-only.** `Edit`, `Write` and `Bash` are disallowed, and each run has a 300-second timeout. `--budget` is opt-in, because the model sees the budget and skips work to save it.
 
 ## How it measures
 

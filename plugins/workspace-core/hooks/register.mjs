@@ -8,6 +8,7 @@
 import { createSink, flush } from '../lib/sink.mjs'
 import { markerCounts, short } from '../lib/events.mjs'
 import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
+import { classify, contractText } from '../lib/contracts.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
@@ -40,6 +41,17 @@ export const register = (on) => {
   on('prompt.compose', async ($, e, next) => {
     const r = await next(e)
     return { ...r, sections: [...r.sections, { id: 'workspace-core:usage-report', text: USAGE_INSTRUCTION, scope: 'session' }] }
+  }).catch(($, e, next) => next(e))
+
+  // Phase 3 (advise): classify the user's prompt locally and attach a short workflow contract as
+  // model-only context. Only the class is recorded, never the prompt text.
+  on('prompt.submit', async ($, e, next) => {
+    const human = !e.command && !e.isMeta && ['composer', 'bridge', 'sdk'].includes(e.origin?.kind)
+    if (!human || (await $.env.get('CW_CONTRACTS')) === '0') return next(e)
+    const c = classify(e.text)
+    const text = c.class ? contractText(c.class) : null
+    await flush(sink, sink.record('classify', { class: c.class, reason: c.reason, contract: !!text }), (p, b) => $.fs.write(p, b))
+    return text ? next({ ...e, context: [...(e.context ?? []), text] }) : next(e)
   }).catch(($, e, next) => next(e))
 
   on('turn.start', async ($, e, next) => {

@@ -1,12 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "description": "Labeled prompts per task class (plan §6). A run 'hits' when at least one expected skill is activated (skill.prompt) during the request. Observed by the independent cw-probe, never from the model's own words.",
   "classes": {
     "feature":      { "expectAny": ["superpowers:brainstorming", "superpowers:writing-plans", "superpowers:test-driven-development"] },
     "debug":        { "expectAny": ["superpowers:systematic-debugging"] },
     "architecture": { "expectAny": ["superpowers:brainstorming", "superpowers:writing-plans"] },
-    "review":       { "expectAny": ["superpowers:requesting-code-review", "superpowers:receiving-code-review"] },
-    "tests":        { "expectAny": ["superpowers:test-driven-development"] },
+    "review":       { "expectAny": [], "unscored": true, "note": "no installed skill reviews code the user points at (requesting-code-review is for one's own work); judged by outcome checks, not activation" },
+    "tests":        { "expectAny": ["superpowers:test-driven-development", "superpowers:verification-before-completion"] },
     "continue":     { "expectAny": ["claude-mem:mem-search"] },
     "trivial":      { "expectAny": [], "note": "no process skill expected; any activation is counted as over-activation" }
   },

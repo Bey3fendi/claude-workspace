@@ -60,6 +60,7 @@ export function diffCI(ka, na, kb, nb) {
 /** A run result is a hit when any expected skill was activated. Trivial class: hit = no process skill. */
 export function scoreRun(run, cls) {
   const expect = cls.expectAny ?? []
+  if (cls.unscored) return { hit: false, overActivation: [], unscored: true }
   if (!expect.length) return { hit: !run.activated.some((s) => s.startsWith('superpowers:')), overActivation: run.activated.filter((s) => s.startsWith('superpowers:')) }
   return { hit: run.activated.some((s) => expect.includes(s)), overActivation: [] }
 }
@@ -103,13 +104,15 @@ export function aggregate(results, suite) {
     }
     report.listing[c] = summarizeListings(listings)
   }
-  if (conds.includes('before') && conds.includes('with')) {
-    const a = report.conditions.before.overall, b = report.conditions.with.overall
-    const ta = report.conditions.before.tokens, tb = report.conditions.with.tokens
+  const ref = conds.includes('nocontract') ? 'nocontract' : 'before'
+  if (conds.includes(ref) && conds.includes('with')) {
+    const a = report.conditions[ref].overall, b = report.conditions.with.overall
+    const ta = report.conditions[ref].tokens, tb = report.conditions.with.tokens
     report.comparison = {
+      reference: ref,
       activationDiff: diffCI(a.hits, a.n, b.hits, b.n),
       contextPerStepDelta: tb.contextPerStep != null && ta.contextPerStep != null ? tb.contextPerStep - ta.contextPerStep : null,
-      listingCharsDelta: (report.listing.with.chars?.median ?? 0) - (report.listing.before.chars?.median ?? 0),
+      listingCharsDelta: (report.listing.with.chars?.median ?? 0) - (report.listing[ref].chars?.median ?? 0),
     }
   }
   return report
@@ -146,15 +149,15 @@ export function renderMarkdown(report, suite, meta) {
   L.push(`| Class | ${conds.map((c) => `${c} hit rate [95% CI]`).join(' | ')} | Skills activated (${conds.join(' / ')}) |`)
   L.push(`|---|${conds.map(() => '---').join('|')}|---|`)
   for (const k of Object.keys(suite.classes)) {
-    const cells = conds.map((c) => { const b = report.conditions[c].byClass[k]; return `${b.hits}/${b.n} · ${ci(b.rate)}` })
+    const cells = conds.map((c) => { const b = report.conditions[c].byClass[k]; return suite.classes[k].unscored ? `unscored (n=${b.n})` : `${b.hits}/${b.n} · ${ci(b.rate)}` })
     const sk = conds.map((c) => Object.entries(report.conditions[c].byClass[k].skills).map(([s, n]) => `${s.replace(/^superpowers:/, 'sp:')}×${n}`).join(', ') || '—').join(' / ')
     L.push(`| ${k} | ${cells.join(' | ')} | ${sk} |`)
   }
   L.push(`| **overall (scored classes)** | ${conds.map((c) => { const o = report.conditions[c].overall; return `**${o.hits}/${o.n} · ${ci(o.rate)}**` }).join(' | ')} | |`, '')
   if (report.comparison) {
     const d = report.comparison.activationDiff
-    L.push('## Before vs with Phase 2', '')
-    L.push(`- Activation difference (with − before): ${d.d == null ? '—' : `${(d.d * 100).toFixed(1)} pts, 95% CI [${(d.lo * 100).toFixed(1)}, ${(d.hi * 100).toFixed(1)}]`}`)
+    L.push(`## ${report.comparison.reference} vs with`, '')
+    L.push(`- Activation difference (with − ${report.comparison.reference}):${d.d == null ? '—' : `${(d.d * 100).toFixed(1)} pts, 95% CI [${(d.lo * 100).toFixed(1)}, ${(d.hi * 100).toFixed(1)}]`}`)
     L.push(`- Mean context per model request delta (input + cache read + cache write, divided by requests): ${report.comparison.contextPerStepDelta == null ? '—' : Math.round(report.comparison.contextPerStepDelta)} tokens`)
     L.push(`- Skill-listing median size delta: ${report.comparison.listingCharsDelta} chars`, '')
   }
