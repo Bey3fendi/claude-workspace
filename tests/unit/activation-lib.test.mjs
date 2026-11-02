@@ -72,3 +72,13 @@ test('unscored classes never count as hits or misses', () => {
   assert.deepEqual(rep.conditions.with.overall, { n: 1, hits: 1, rate: rep.conditions.with.overall.rate })
   assert.equal(scoreRun({ activated: ['superpowers:brainstorming'] }, suite.classes.review).unscored, true)
 })
+
+test('usage guard reads the latest rate-limit utilization and trips at the threshold', async () => {
+  const { usageFrom, overLimit } = await import('../live/usage-guard.mjs')
+  const ev = (f, s) => JSON.stringify({ type: 'rate_limit_event', rate_limit_info: { unifiedWindows: { five_hour: { utilization: f }, seven_day: { utilization: s } } } })
+  const out = [ev(0.2, 0.27), '{"type":"assistant"}', ev(0.61, 0.3), '{"type":"result"}'].join('\n')
+  assert.deepEqual(usageFrom(out), { five_hour: 0.61, seven_day: 0.3 })
+  assert.match(overLimit(usageFrom(out), 0.6), /five_hour usage 61% ≥ 60%/)
+  assert.equal(overLimit({ five_hour: 0.59, seven_day: 0.3 }, 0.6), null)
+  assert.equal(usageFrom('no events'), null)
+})

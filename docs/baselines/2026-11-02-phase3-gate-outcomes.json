@@ -1,0 +1,385 @@
+{
+  "date": "2026-11-02",
+  "conditions": [
+    "with"
+  ],
+  "summary": {
+    "with": {
+      "runs": 8,
+      "pass": 6,
+      "checks": {
+        "debug-fix/rootCauseBeforeFix": {
+          "n": 2,
+          "pass": 0,
+          "soft": false
+        },
+        "debug-fix/reproducedFirst": {
+          "n": 2,
+          "pass": 2,
+          "soft": true
+        },
+        "debug-fix/grader:discount-test-passes": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        },
+        "debug-fix/diffWithin": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        },
+        "feat-design/designBeforeEdit": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        },
+        "feat-design/diffWithin": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        },
+        "tdd-new/testFirst": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        },
+        "tdd-new/grader:itemCount-works": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        },
+        "tdd-new/diffWithin": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        },
+        "coverage/testsRunAfterWrite": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        },
+        "coverage/diffWithin": {
+          "n": 2,
+          "pass": 2,
+          "soft": false
+        }
+      }
+    }
+  },
+  "costUsd": 1.9706598,
+  "aborted": null,
+  "results": [
+    {
+      "condition": "with",
+      "id": "debug-fix",
+      "class": "debug",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 25431,
+      "costUsd": 0.21872220000000003,
+      "usage": {
+        "five_hour": 0.42,
+        "seven_day": 0.39
+      },
+      "skills": [
+        "superpowers:systematic-debugging"
+      ],
+      "final": {
+        "changed": {
+          "src/cart.js": 2
+        },
+        "graders": {
+          "discount-test-passes": true
+        }
+      },
+      "graded": {
+        "checks": {
+          "rootCauseBeforeFix": {
+            "pass": false,
+            "why": "no root-cause statement before the first src edit"
+          },
+          "reproducedFirst": {
+            "pass": true,
+            "why": "a test run preceded the fix",
+            "soft": true
+          },
+          "grader:discount-test-passes": {
+            "pass": true,
+            "why": "discount-test-passes passed"
+          },
+          "diffWithin": {
+            "pass": true,
+            "why": "src/cart.js · 2 lines"
+          }
+        },
+        "pass": false
+      }
+    },
+    {
+      "condition": "with",
+      "id": "feat-design",
+      "class": "feature",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 26958,
+      "costUsd": 0.23224920000000002,
+      "usage": {
+        "five_hour": 0.42,
+        "seven_day": 0.39
+      },
+      "skills": [
+        "superpowers:brainstorming"
+      ],
+      "final": {
+        "changed": {},
+        "graders": {}
+      },
+      "graded": {
+        "checks": {
+          "designBeforeEdit": {
+            "pass": true,
+            "why": "no src edits this turn (stopped at design/questions)"
+          },
+          "diffWithin": {
+            "pass": true,
+            "why": "no files · 0 lines"
+          }
+        },
+        "pass": true
+      }
+    },
+    {
+      "condition": "with",
+      "id": "tdd-new",
+      "class": "tests",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 27392,
+      "costUsd": 0.2629544,
+      "usage": {
+        "five_hour": 0.44,
+        "seven_day": 0.39
+      },
+      "skills": [
+        "superpowers:test-driven-development"
+      ],
+      "final": {
+        "changed": {
+          "src/cart.js": 4,
+          "test/cart.test.js": 10
+        },
+        "graders": {
+          "itemCount-works": true
+        }
+      },
+      "graded": {
+        "checks": {
+          "testFirst": {
+            "pass": true,
+            "why": "test written first and seen failing before src edit"
+          },
+          "grader:itemCount-works": {
+            "pass": true,
+            "why": "itemCount-works passed"
+          },
+          "diffWithin": {
+            "pass": true,
+            "why": "src/cart.js, test/cart.test.js · 14 lines"
+          }
+        },
+        "pass": true
+      }
+    },
+    {
+      "condition": "with",
+      "id": "debug-fix",
+      "class": "debug",
+      "iteration": 1,
+      "exitCode": 0,
+      "ms": 15694,
+      "costUsd": 0.0961456,
+      "usage": {
+        "five_hour": 0.45,
+        "seven_day": 0.39
+      },
+      "skills": [
+        "superpowers:systematic-debugging"
+      ],
+      "final": {
+        "changed": {
+          "src/cart.js": 2
+        },
+        "graders": {
+          "discount-test-passes": true
+        }
+      },
+      "graded": {
+        "checks": {
+          "rootCauseBeforeFix": {
+            "pass": false,
+            "why": "no root-cause statement before the first src edit"
+          },
+          "reproducedFirst": {
+            "pass": true,
+            "why": "a test run preceded the fix",
+            "soft": true
+          },
+          "grader:discount-test-passes": {
+            "pass": true,
+            "why": "discount-test-passes passed"
+          },
+          "diffWithin": {
+            "pass": true,
+            "why": "src/cart.js · 2 lines"
+          }
+        },
+        "pass": false
+      }
+    },
+    {
+      "condition": "with",
+      "id": "coverage",
+      "class": "tests",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 53391,
+      "costUsd": 0.39851680000000006,
+      "usage": {
+        "five_hour": 0.46,
+        "seven_day": 0.4
+      },
+      "skills": [
+        "superpowers:verification-before-completion"
+      ],
+      "final": {
+        "changed": {
+          "test/cart.test.js": 11
+        },
+        "graders": {}
+      },
+      "graded": {
+        "checks": {
+          "testsRunAfterWrite": {
+            "pass": true,
+            "why": "tests run after the last test edit"
+          },
+          "diffWithin": {
+            "pass": true,
+            "why": "test/cart.test.js · 11 lines"
+          }
+        },
+        "pass": true
+      }
+    },
+    {
+      "condition": "with",
+      "id": "feat-design",
+      "class": "feature",
+      "iteration": 1,
+      "exitCode": 0,
+      "ms": 43091,
+      "costUsd": 0.21869299999999997,
+      "usage": {
+        "five_hour": 0.48,
+        "seven_day": 0.4
+      },
+      "skills": [
+        "superpowers:brainstorming"
+      ],
+      "final": {
+        "changed": {},
+        "graders": {}
+      },
+      "graded": {
+        "checks": {
+          "designBeforeEdit": {
+            "pass": true,
+            "why": "no src edits this turn (stopped at design/questions)"
+          },
+          "diffWithin": {
+            "pass": true,
+            "why": "no files · 0 lines"
+          }
+        },
+        "pass": true
+      }
+    },
+    {
+      "condition": "with",
+      "id": "tdd-new",
+      "class": "tests",
+      "iteration": 1,
+      "exitCode": 0,
+      "ms": 50003,
+      "costUsd": 0.2598638,
+      "usage": {
+        "five_hour": 0.48,
+        "seven_day": 0.4
+      },
+      "skills": [
+        "superpowers:test-driven-development"
+      ],
+      "final": {
+        "changed": {
+          "src/cart.js": 4,
+          "test/cart.test.js": 10
+        },
+        "graders": {
+          "itemCount-works": true
+        }
+      },
+      "graded": {
+        "checks": {
+          "testFirst": {
+            "pass": true,
+            "why": "test written first and seen failing before src edit"
+          },
+          "grader:itemCount-works": {
+            "pass": true,
+            "why": "itemCount-works passed"
+          },
+          "diffWithin": {
+            "pass": true,
+            "why": "src/cart.js, test/cart.test.js · 14 lines"
+          }
+        },
+        "pass": true
+      }
+    },
+    {
+      "condition": "with",
+      "id": "coverage",
+      "class": "tests",
+      "iteration": 1,
+      "exitCode": 0,
+      "ms": 68673,
+      "costUsd": 0.28351479999999996,
+      "usage": {
+        "five_hour": 0.49,
+        "seven_day": 0.4
+      },
+      "skills": [
+        "superpowers:verification-before-completion"
+      ],
+      "final": {
+        "changed": {
+          "test/cart.test.js": 10
+        },
+        "graders": {}
+      },
+      "graded": {
+        "checks": {
+          "testsRunAfterWrite": {
+            "pass": true,
+            "why": "tests run after the last test edit"
+          },
+          "diffWithin": {
+            "pass": true,
+            "why": "test/cart.test.js · 10 lines"
+          }
+        },
+        "pass": true
+      }
+    }
+  ]
+}

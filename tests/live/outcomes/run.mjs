@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { timeline, grade, summarizeOutcomes } from './lib.mjs'
 import { git, changedFiles, runGraders, parseStream } from './fixture.mjs'
+import { usageFrom, overLimit, fmtUsage } from '../usage-guard.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '..', '..', '..')
@@ -22,6 +23,7 @@ const CONDS = String(args.conditions ?? 'nocontract,with').split(',')
 const RUNS = Number(args.runs ?? 1)
 const CONC = Number(args.concurrency ?? 2)
 const CLAUDE = process.env.CW_CLAUDE_BIN || 'claude'
+const MAX_USAGE = Number(args['max-usage'] ?? 0.6) // stop when any usage window (5-hour, 7-day) reaches this
 const spec = JSON.parse(readFileSync(join(HERE, 'outcomes.json'), 'utf8'))
 const prompts = args.only ? spec.prompts.filter((p) => String(args.only).split(',').includes(p.id)) : spec.prompts
 const WORK = resolve(args.workdir ?? join(tmpdir(), `cw-outcomes-${new Date().toISOString().replace(/[:.]/g, '-')}`))
@@ -74,7 +76,11 @@ function runOne({ c, p, i }, dir) {
       if (!fin || fin.is_error || fin.subtype !== 'success') {
         res.error = String(fin?.result ?? fin?.subtype ?? 'no result event').slice(0, 160)
         if (/hit your [\w-]* ?limit|usage limit|rate[- ]limit/i.test(res.error + (fin ? '' : out.slice(-500)))) aborted ??= `usage limit at ${c}/${p.id}`
-      } else {
+      }
+      res.usage = usageFrom(out)
+      const over = overLimit(res.usage, MAX_USAGE)
+      if (over) aborted ??= `${over} after ${c}/${p.id} (--max-usage)`
+      if (!res.error) {
         const steps = timeline(events)
         const final = { changed: changedFiles(dir), graders: runGraders(dir, p, spec.graders) }
         res.skills = [...new Set(steps.filter((s) => s.kind === 'skill').map((s) => s.skill))]
@@ -84,7 +90,7 @@ function runOne({ c, p, i }, dir) {
       }
       writeFileSync(join(rdir, 'result.json'), JSON.stringify(res, null, 2))
       const fails = res.graded ? Object.entries(res.graded.checks).filter(([, v]) => !v.pass).map(([k, v]) => `${k}${v.soft ? '(soft)' : ''}`) : []
-      log(`${res.graded ? (res.graded.pass ? 'PASS' : 'FAIL') : 'ERR '} ${c.padEnd(10)} ${p.id.padEnd(11)} #${i} ${Math.round(res.ms / 1000)}s $${(res.costUsd ?? 0).toFixed(2)} skills=[${(res.skills ?? []).join(', ')}]${fails.length ? ` failed: ${fails.join(', ')}` : ''}${res.error ? ` ${res.error}` : ''}`)
+      log(`${res.graded ? (res.graded.pass ? 'PASS' : 'FAIL') : 'ERR '} ${c.padEnd(10)} ${p.id.padEnd(11)} #${i} ${Math.round(res.ms / 1000)}s $${(res.costUsd ?? 0).toFixed(2)} skills=[${(res.skills ?? []).join(', ')}] usage=${fmtUsage(res.usage)}${fails.length ? ` failed: ${fails.join(', ')}` : ''}${res.error ? ` ${res.error}` : ''}`)
       done(res)
     })
   })
@@ -118,3 +124,4 @@ mkdirSync(OUT, { recursive: true })
 writeFileSync(join(OUT, `${date}-outcomes.md`), L.join('\n'))
 writeFileSync(join(OUT, `${date}-outcomes.json`), JSON.stringify({ date, conditions: CONDS, summary, costUsd, aborted, results }, null, 2) + '\n')
 log(`cost: $${costUsd.toFixed(2)} · report: ${join(OUT, `${date}-outcomes.md`)}`)
+if (aborted) process.exitCode = 3

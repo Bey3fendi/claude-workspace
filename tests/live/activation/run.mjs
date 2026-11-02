@@ -19,6 +19,7 @@ import { join, dirname, resolve } from 'node:path'
 import { homedir, tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { analyzeProbe, listingFromTranscript, aggregate, renderMarkdown } from './lib.mjs'
+import { usageFrom, overLimit, fmtUsage } from '../usage-guard.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '..', '..', '..')
@@ -35,7 +36,8 @@ const CONFIG = process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude')
 const suite = JSON.parse(readFileSync(join(HERE, 'suite.json'), 'utf8'))
 const smoke = suite.prompts.filter((p, i, all) => all.findIndex((q) => q.class === p.class) === i)
 const prompts = args.only ? suite.prompts.filter((p) => String(args.only).split(',').includes(p.id)) : args.full ? suite.prompts : smoke
-let aborted = null // set at the first usage-limit error: no further runs are dispatched
+let aborted = null // set at the first usage-limit error or --max-usage trip: no further runs are dispatched
+const MAX_USAGE = Number(args['max-usage'] ?? 0.6) // stop when any usage window (5-hour, 7-day) reaches this
 const stamp = new Date().toISOString().replace(/[:.]/g, '-')
 const WORK = resolve(args.workdir ?? join(tmpdir(), `cw-baseline-${stamp}`))
 
@@ -76,7 +78,7 @@ function runOne({ c, p, i }) {
   mkdirSync(join(dir, 'core'), { recursive: true })
   const a = ['-p', p.prompt, '--plugin-dir', join(HERE, 'probe'),
     '--allowedTools', 'Skill', 'Read', 'Grep', 'Glob', '--disallowedTools', 'Edit', 'Write', 'NotebookEdit', 'Bash',
-    '--output-format', 'json']
+    '--output-format', 'stream-json', '--verbose'] // stream-json carries rate_limit_event (usage guard)
   if (BUDGET) a.push('--max-budget-usd', BUDGET)
   if (CONDITION[c].settings) a.push('--settings', JSON.stringify(CONDITION[c].settings))
   const env = { ...process.env, ...(CONDITION[c].env ?? {}), CW_PROBE_DIR: dir, CW_EVENTS_DIR: join(dir, 'core') }
@@ -90,11 +92,16 @@ function runOne({ c, p, i }) {
       clearTimeout(timer)
       writeFileSync(join(dir, 'output.txt'), out)
       const res = { condition: c, promptId: p.id, class: p.class, iteration: i, exitCode: code, ms: Date.now() - t0, ok: false }
-      const last = out.trim().split('\n').reverse().find((l) => l.startsWith('{'))
+      // the result event is not always the last line (the workspace footer notice can follow it)
+      const isResult = (l) => { try { return JSON.parse(l).type === 'result' } catch { return false } }
+      const last = out.trim().split('\n').reverse().find((l) => l.includes('"type":"result"') && isResult(l)) ?? out.trim().split('\n').reverse().find((l) => l.startsWith('{'))
       try { const j = JSON.parse(last); res.costUsd = j.total_cost_usd ?? null; res.apiError = j.is_error ? String(j.result ?? '').slice(0, 160) : undefined } catch {}
       if (/hit your [\w-]* ?limit|usage limit|rate[- ]limit/i.test(res.apiError ?? (res.costUsd == null ? out : ''))) {
         aborted ??= `usage limit reached at ${c}/${p.id}: ${(res.apiError ?? out).trim().slice(0, 120)}`
       }
+      res.usage = usageFrom(out)
+      const over = overLimit(res.usage, MAX_USAGE)
+      if (over) aborted ??= `${over} after ${c}/${p.id} (--max-usage)`
       try {
         const rows = readFileSync(join(dir, 'probe.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l))
         res.run = analyzeProbe(rows)
@@ -107,7 +114,7 @@ function runOne({ c, p, i }) {
         if (c !== 'before' && c !== 'bare') res.core = coreActivations(join(dir, 'core'))
       } catch (e) { res.error = `probe: ${e.message.slice(0, 120)}` }
       writeFileSync(join(dir, 'result.json'), JSON.stringify(res, null, 2))
-      log(`${res.ok ? 'ok ' : 'ERR'} ${c.padEnd(6)} ${p.id.padEnd(9)} #${i} ${Math.round(res.ms / 1000)}s skills=[${res.run?.activated.join(', ') ?? ''}]${res.error ? ` ${res.error}` : ''}`)
+      log(`${res.ok ? 'ok ' : 'ERR'} ${c.padEnd(6)} ${p.id.padEnd(9)} #${i} ${Math.round(res.ms / 1000)}s skills=[${res.run?.activated.join(', ') ?? ''}] usage=${fmtUsage(res.usage)}${res.error ? ` ${res.error}` : ''}`)
       done(res)
     })
   })
@@ -151,3 +158,4 @@ writeFileSync(`${base}.json`, JSON.stringify({ meta, suite: { version: suite.ver
 writeFileSync(`${base}.md`, renderMarkdown(report, { ...suite, prompts }, meta) + `\nCondition check: workspace-core off in 'before' runs: ${leaked.length === 0 ? 'yes' : `NO (${leaked.length} leaked)`}\n` +
   `\nCost: $${meta.costUsd} over ${results.length} run(s) (${meta.mode})${aborted ? ` · STOPPED early: ${aborted}; ${meta.notStarted} run(s) not started` : ''}\n`)
 log(`report: ${base}.md`)
+if (aborted) process.exitCode = 3 // lets a calling script skip further live work

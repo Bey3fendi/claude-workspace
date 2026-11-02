@@ -348,7 +348,15 @@ Phase 3M adds:
   - cost per run −6.5%.
 - **Discoverability:** no invocable skill was removed.
 
-**Next:** the Phase 3 gate measurement (`--full --runs 2`, plus outcomes).
+**Gate measurement** (`docs/baselines/2026-11-02-phase3-gate.md`; 36 runs, $7.46; usage guard at 60% never tripped).
+- **Activation: met.** 20/20, 95% CI [84–100], vs 0/51 [0–7]. workspace-core agreed with the probe 28/28.
+- **Outcomes:** 6/8 runs passed all hard checks with contracts, vs 1/4 without.
+  - Feature design-first: 2/2. TDD order: 2/2. Coverage: 2/2.
+  - **Root cause before fix: 0/2.** The model loads systematic-debugging and then edits first; it is 1/3 across all with-contract runs.
+  - The outcome difference is not significant at this sample size.
+- **Handed to Phase 4:** enforce "root cause before fix" with a `tool.call` gate, since advice alone does not secure it.
+
+**Phase 3: complete**, pending the user's acceptance of the gate verdict.
 
 
 ### Phase 2R status (2026-11-02)
