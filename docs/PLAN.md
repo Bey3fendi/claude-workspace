@@ -299,7 +299,7 @@ Phase 3M adds:
 | **2R. Simplified evidence + usage report** | Truthful, minimal feedback | (1) Spike the `turn.complete {text}` footer. (2) Trim the mod (§4.3), add the usage instruction and footer, `claude-workspace usage`. (3) Remove the dashboard, server and transcript reconciler after `git init` plus an initial commit. (4) Adapt the golden tests. (5) **Investigate the 0% activation baseline** (harness against model behavior; add an interactive suite variant) | Footer correct on the golden tests and in a live interactive check by the user; overhead ≤ 120 tokens; root cause of the 0% baseline understood and documented |
 | **3. Orchestration (advise) + workflow-outcome evals + listing optimization** | Implicit, correct workflow use | Classifier, contract injection, Superpowers and Karpathy outcome checks, overlap denies, listing work (rev 2 rules) | Activation and outcome rates above baseline with confidence intervals; listing optimization only on A/B evidence |
 | **3M. Memory backend: Avenox evaluation and migration** | Lightweight local memory | §4a steps 1–6 | All 7 decision criteria plus CR-2 Tests 1–8 in real sessions. Otherwise keep claude-mem and document the gaps |
-| **4. Enforcement + memory policy** | Mandatory steps | `tool.call` gates, Stop postconditions (including the memory-capture trigger), compaction restore | Gate and memory tests green |
+| **4. Enforcement + memory policy** ✅ | Mandatory steps | `tool.call` gates, Stop postconditions (including the memory-capture trigger), compaction restore | Gate and memory tests green |
 | **5. Optional router** | Opt-in Jev routing | Enable, test, disable; `view` against `turn.step` | Router tests green |
 | **6. Hardening** | Long-term operation | Update and rollback, upstream canary, devcontainer feature, docs | Full §9 suite |
 
@@ -310,7 +310,7 @@ Phase 3M adds:
 - **Where it falls short:** retrieval is lexical only (a paraphrase abstained); capture depends on the agent writing notes; notes are filtered by folder label; the bridge's own install edits global settings.
 - **Revisit** after the Phase 4 capture trigger exists.
 
-### Phase 4 status (in progress, 2026-11-03)
+### Phase 4 status (done, 2026-11-03)
 
 **Step 1: root-cause gate** (`docs/baselines/2026-11-03-phase4-root-cause-gate.md`).
 - **Mechanism:** a `tool.call` hold on the first source edit of a debug request, until the streamed visible text states a root cause. At most 2 holds per request; `CW_GATES=0` disables it.
@@ -327,7 +327,18 @@ Phase 3M adds:
 - **Verified:** unit tests, plus a real fixture where `shop-cart` is shared with 5 other directories.
 - **Not changed:** switching to `git-remote` is a user-level claude-mem setting that re-keys new memories. Doctor names it as an option and does not set it.
 
-**Next:** Stop postconditions, only where an outcome check shows a gap. Feature and TDD are already 2/2 and debug is now gated, so none is indicated yet. Then the Phase 4 completion gate.
+**Stop postconditions: not added.** No outcome check shows a gap that one would close (feature 2/2, TDD 2/2, coverage 2/2; debug is now gated). Adding one without evidence would only add turns and tokens.
+
+**Phase 4 completion gate (2026-11-03): met.**
+- Outcome suite with everything on (`outcomes --conditions with --runs 1`, $1.00): **4/4 PASS**. Debug (root cause before fix), feature (design before edit), TDD (red before green) and coverage (tests run): no regression from the gates or the restore.
+- Gate tests: unit, engine and live (A/B 5/5 vs 1/6, one live deny/recover).
+- Memory: compaction restore live 2/2; claude-mem isolation check.
+- Usage: the 5-hour window ended at 95%, the user's limit.
+
+**Outside the repo (user-level, by user request):** `~/.claude/hooks/context-pressure.sh` (WSL), a `UserPromptSubmit` hook.
+- Over 300K context tokens, it asks Claude to recommend CLEAR or COMPACT at a natural stopping point, with a cold-start handoff note.
+- It works alongside claude-mem's own `SessionStart(clear)` injection.
+- Verified: 14 script tests plus a live session.
 
 ### Phase 3 status (in progress, 2026-11-02)
 

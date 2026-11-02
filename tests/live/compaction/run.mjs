@@ -19,7 +19,7 @@ const REPO = resolve(HERE, '..', '..', '..')
 const FIXTURE = join(REPO, 'tests', 'live', 'activation', 'fixture-project')
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, x, i, arr) => (x.startsWith('--') ? [...a, [x.slice(2), arr[i + 1] && !arr[i + 1].startsWith('--') ? arr[i + 1] : true]] : a), []))
 const WORK = resolve(args.workdir ?? join(tmpdir(), `cw-compaction-${Date.now()}`))
-const MAX_USAGE = Number(args['max-usage'] ?? 0.9)
+const MAX_USAGE = Number(args['max-usage'] ?? 0.95)
 const CLAUDE = process.env.CW_CLAUDE_BIN || 'claude'
 const log = (m) => process.stderr.write(`[compaction] ${m}\n`)
 

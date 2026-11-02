@@ -1,6 +1,6 @@
 // Usage guard shared by the live runners. `claude -p --output-format stream-json --verbose` emits
 // rate_limit_event rows with the account's live utilization per window (0..1). The runners stop
-// dispatching new runs once any window reaches the threshold (--max-usage, default 0.9: the user's limit). Runs already
+// dispatching new runs once any window reaches the threshold (--max-usage, default 0.95: the user's limit). Runs already
 // in flight finish, so the final figure can exceed the threshold by up to (concurrency - 1) runs.
 
 /** Latest utilization per window seen in a run's stream output, e.g. { five_hour: 0.31, seven_day: 0.28 }. */

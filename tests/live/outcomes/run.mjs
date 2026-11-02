@@ -23,7 +23,7 @@ const CONDS = String(args.conditions ?? 'nocontract,with').split(',')
 const RUNS = Number(args.runs ?? 1)
 const CONC = Number(args.concurrency ?? 2)
 const CLAUDE = process.env.CW_CLAUDE_BIN || 'claude'
-const MAX_USAGE = Number(args['max-usage'] ?? 0.9) // stop when any usage window (5-hour, 7-day) reaches this
+const MAX_USAGE = Number(args['max-usage'] ?? 0.95) // stop when any usage window (5-hour, 7-day) reaches this
 const spec = JSON.parse(readFileSync(join(HERE, 'outcomes.json'), 'utf8'))
 const prompts = args.only ? spec.prompts.filter((p) => String(args.only).split(',').includes(p.id)) : spec.prompts
 const WORK = resolve(args.workdir ?? join(tmpdir(), `cw-outcomes-${new Date().toISOString().replace(/[:.]/g, '-')}`))
