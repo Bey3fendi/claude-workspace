@@ -315,13 +315,19 @@ Phase 3M adds:
 **Step 1: root-cause gate** (`docs/baselines/2026-11-03-phase4-root-cause-gate.md`).
 - **Mechanism:** a `tool.call` hold on the first source edit of a debug request, until the streamed visible text states a root cause. At most 2 holds per request; `CW_GATES=0` disables it.
 - **Verified:** unit tests and engine-level `claude plugin test` (3/3).
-- **Live:** 2/2 root cause before fix, but the gate never had to deny. Its effect needs an A/B.
+- **Live:** the gate A/B (`nogate` vs `with`, n=3) gave **0/3 vs 3/3**. Pooled: **5/5 [57–100] vs 1/6 [3–56]**. One live deny, after which the model stated the root cause and fixed it.
 
-**Next:**
-1. Gate A/B, when usage allows.
-2. Compaction restore: re-attach the request's contract after `session.compact`.
-3. Stop postconditions, only where an outcome check shows a gap (feature and TDD are already 2/2).
-4. claude-mem project isolation (basename collisions observed).
+**Step 2: compaction restore** (`docs/baselines/2026-11-03-phase4-compaction-restore.md`).
+- **Mechanism:** `classic.SessionStart(source: compact)` re-attaches the active request's contract, marking what is already done and deferring to the user's instructions.
+- **Verified:** unit, engine (2/2), and live twice (restore text in the transcript after the compaction boundary).
+
+**Step 3: claude-mem isolation check** (doctor, read-only, advisory).
+- **Background:** claude-mem keys memories by project *name*. That is the folder basename by default (`CLAUDE_MEM_PROJECT_NAME_SOURCE=path`), or `owner/repo` from the origin remote with `git-remote`, falling back to the basename.
+- **Check:** doctor opens `claude-mem.db` read-only (`node:sqlite`). It warns when this project's key is also recorded for other directories, and prints the count only, never the other paths.
+- **Verified:** unit tests, plus a real fixture where `shop-cart` is shared with 5 other directories.
+- **Not changed:** switching to `git-remote` is a user-level claude-mem setting that re-keys new memories. Doctor names it as an option and does not set it.
+
+**Next:** Stop postconditions, only where an outcome check shows a gap. Feature and TDD are already 2/2 and debug is now gated, so none is indicated yet. Then the Phase 4 completion gate.
 
 ### Phase 3 status (in progress, 2026-11-02)
 

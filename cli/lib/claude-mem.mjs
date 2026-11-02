@@ -2,10 +2,12 @@
 // Policy (plan §3a): telemetry must be OFF. We use only claude-mem's own `telemetry disable`
 // mechanism; we never set DO_NOT_TRACK and never edit the user's shell or settings files.
 import { readdirSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join, delimiter } from 'node:path'
 import { run } from './run.mjs'
 import { readMaybe, readJsonFile, stripAnsi, writeAtomic, exists } from './util.mjs'
 
+const nodeRequire = createRequire(import.meta.url)
 const pkg = (ctx) => `${ctx.lock.claudeMem.npmPackage}@${ctx.lock.claudeMem.version}`
 const npx = (ctx, args, { env = ctx.env, timeoutMs = 300_000 } = {}) =>
   run(ctx.npxBin, ['-y', pkg(ctx), ...args], { cwd: ctx.home, env, timeoutMs })
@@ -170,4 +172,45 @@ export function findOnPath(ctx, name, extra = []) {
   const dirs = [...(ctx.env.PATH || '').split(delimiter), ...extra]
   for (const d of dirs) { if (d && exists(join(d, name))) return join(d, name) }
   return null
+}
+
+// ---------------------------------------------------------------- project isolation (read-only)
+
+/**
+ * claude-mem keys memories by a project *name*: the folder basename by default
+ * (CLAUDE_MEM_PROJECT_NAME_SOURCE=path), or `owner/repo` from the origin remote with `git-remote`
+ * (falling back to the basename without one). Two directories with the same key share memories.
+ * Pure verdict over this project's key and the session cwds recorded under it.
+ */
+export function isolationVerdict({ key, ownCwd, cwds, source }) {
+  const others = [...new Set(cwds)].filter((c) => c && c !== ownCwd)
+  if (!key) return { status: 'info', message: 'no claude-mem sessions recorded for this project yet' }
+  if (!others.length) return { status: 'ok', message: `memories keyed "${key}" (name source: ${source}); no other directory shares the key` }
+  const hint = source === 'git-remote' ? 'give this repo an origin remote, or rename the folder'
+    : 'claude-mem setting CLAUDE_MEM_PROJECT_NAME_SOURCE=git-remote keys repos with an origin remote by owner/repo (user-level; re-keys new memories only)'
+  return { status: 'warn', message: `memories keyed "${key}" are shared with ${others.length} other director${others.length > 1 ? 'ies' : 'y'} (same ${source === 'git-remote' ? 'remote/name' : 'folder name'}); context from those projects can appear here. Option: ${hint}` }
+}
+
+/** Read claude-mem's database read-only and judge this project's isolation. Never writes. */
+export function projectIsolation(ctx) {
+  const dataDir = ctx.env.CLAUDE_MEM_DATA_DIR || join(ctx.home, '.claude-mem')
+  const db = join(dataDir, 'claude-mem.db')
+  if (!exists(db)) return { status: 'info', message: 'no claude-mem database yet' }
+  let source = 'path'
+  try { source = String(ctx.env.CLAUDE_MEM_PROJECT_NAME_SOURCE ?? readJsonFile(join(dataDir, 'settings.json'), { missing: {} }).CLAUDE_MEM_PROJECT_NAME_SOURCE ?? 'path').trim().toLowerCase() } catch {}
+  const emit = process.emitWarning
+  try {
+    process.emitWarning = (w, ...a) => (/SQLite/.test(String(w)) ? undefined : emit.call(process, w, ...a))
+    const { DatabaseSync } = ctx.sqlite ?? nodeRequire('node:sqlite')
+    const d = new DatabaseSync(db, { readOnly: true })
+    try {
+      const own = ctx.projectRoot
+      const row = d.prepare('SELECT project FROM sdk_sessions WHERE cwd = ? ORDER BY started_at_epoch DESC LIMIT 1').get(own)
+      const key = row?.project ?? null
+      const cwds = key ? d.prepare('SELECT DISTINCT cwd FROM sdk_sessions WHERE project = ?').all(key).map((r) => r.cwd) : []
+      return isolationVerdict({ key, ownCwd: own, cwds, source })
+    } finally { d.close() }
+  } catch (e) {
+    return { status: 'info', message: `isolation not checked (${String(e.message ?? e).slice(0, 80)})` }
+  } finally { process.emitWarning = emit }
 }

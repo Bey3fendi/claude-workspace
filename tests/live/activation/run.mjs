@@ -37,7 +37,7 @@ const suite = JSON.parse(readFileSync(join(HERE, 'suite.json'), 'utf8'))
 const smoke = suite.prompts.filter((p, i, all) => all.findIndex((q) => q.class === p.class) === i)
 const prompts = args.only ? suite.prompts.filter((p) => String(args.only).split(',').includes(p.id)) : args.full ? suite.prompts : smoke
 let aborted = null // set at the first usage-limit error or --max-usage trip: no further runs are dispatched
-const MAX_USAGE = Number(args['max-usage'] ?? 0.6) // stop when any usage window (5-hour, 7-day) reaches this
+const MAX_USAGE = Number(args['max-usage'] ?? 0.9) // stop when any usage window (5-hour, 7-day) reaches this
 const stamp = new Date().toISOString().replace(/[:.]/g, '-')
 const WORK = resolve(args.workdir ?? join(tmpdir(), `cw-baseline-${stamp}`))
 

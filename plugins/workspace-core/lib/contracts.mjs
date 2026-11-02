@@ -49,6 +49,22 @@ export const CONTRACTS = {
   continue: { skills: ['claude-mem:mem-search'], then: [], outcome: 'retrieve prior context before answering; say so if none is found' },
 }
 
+/**
+ * Phase 4 compaction restore: the request's contract, re-attached after the conversation is compacted
+ * (the contract rode on the prompt, which the summary may drop). `invoked` = skills already loaded this request.
+ * `rootCauseStated` keeps the debug step from being asked for twice.
+ */
+export function restoreText(cls, { invoked = [], rootCauseStated = false } = {}) {
+  const c = CONTRACTS[cls]
+  if (!c) return null
+  const done = invoked.filter((s) => c.skills.includes(s) || c.then.includes(s))
+  const skillLine = done.length ? `You already invoked ${done.join(', ')} for this request; keep following it.`
+    : c.pick ? `If not yet done, invoke the Skill tool with ${c.pick}.`
+    : c.skills.length ? `If not yet done, invoke the Skill tool with ${c.skills.join(' or ')}.` : ''
+  const outcome = cls === 'debug' && rootCauseStated ? 'root cause already stated; any fix stays minimal and is verified' : c.outcome
+  return `[workspace contract: ${cls}, restored after compaction] Applies to the latest user request until a new one arrives; the user's own instructions take precedence. ${skillLine}${skillLine ? ' ' : ''}Expected: ${outcome}.`
+}
+
 /** The context block attached to the prompt (never shown to the user). Kept short. */
 export function contractText(cls) {
   const c = CONTRACTS[cls]

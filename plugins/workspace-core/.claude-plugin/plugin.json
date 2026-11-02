@@ -1,6 +1,6 @@
 {
   "name": "workspace-core",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "description": "claude-workspace core mod: evidence collection and enforcement (Phase 2: observe-only evidence collection)",
   "author": { "name": "claude-workspace" },
   "license": "MIT"

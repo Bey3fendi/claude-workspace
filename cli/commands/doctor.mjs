@@ -7,7 +7,7 @@ import { claudeVersion, listPlugins, projectInstall } from '../lib/claude.mjs'
 import { loadManifest } from '../lib/manifest.mjs'
 import { missingDenies } from '../lib/settings.mjs'
 import { hasBlock } from '../lib/gitignore.mjs'
-import { enforceTelemetry, findOnPath, workerHealth } from '../lib/claude-mem.mjs'
+import { enforceTelemetry, findOnPath, projectIsolation, workerHealth } from '../lib/claude-mem.mjs'
 import { cmpVersion, readJsonFile, readMaybe } from '../lib/util.mjs'
 
 export async function doctor(ctx, rep) {
@@ -74,6 +74,8 @@ export async function doctor(ctx, rep) {
     add('claude-mem-bun', bun ? 'ok' : 'fail', bun ?? 'Bun not found (run repair)')
     const h = await workerHealth(ctx)
     add('claude-mem-worker', h.up ? 'ok' : 'info', h.up ? `127.0.0.1:${h.port} healthy (v${h.version})` : `not running on 127.0.0.1:${h.port} (starts with a session)`)
+    const iso = projectIsolation(ctx) // read-only; advisory (never a FAIL, never changes claude-mem settings)
+    add('claude-mem-isolation', iso.status, iso.message)
   }
 
   // telemetry gate: applies whenever claude-mem is present on this machine

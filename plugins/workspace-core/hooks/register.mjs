@@ -8,16 +8,16 @@
 import { createSink, flush } from '../lib/sink.mjs'
 import { markerCounts, short } from '../lib/events.mjs'
 import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
-import { classify, contractText } from '../lib/contracts.mjs'
+import { classify, contractText, restoreText } from '../lib/contracts.mjs'
 import { deniedSkills, trimListing } from '../lib/listing.mjs'
-import { decide, denyText } from '../lib/gates.mjs'
+import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
 const st = { model: null, effort: null, skills: 0, requests: 0 }
 // Phase 4: per-request state for the root-cause gate. Reset on each human prompt; text is the
 // model's visible main-loop text in this request (kept in memory only, never written to disk).
-let req = { class: null, text: '', denies: 0, released: false, gates: true }
+let req = { class: null, text: '', denies: 0, released: false, gates: true, contracts: true, skills: [] }
 const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
 
@@ -56,7 +56,7 @@ export const register = (on) => {
     const contracts = (await $.env.get('CW_CONTRACTS')) !== '0'
     const gates = (await $.env.get('CW_GATES')) !== '0'
     const c = classify(e.text)
-    req = { class: c.class, text: '', denies: 0, released: false, gates }
+    req = { class: c.class, text: '', denies: 0, released: false, gates, contracts, skills: [] }
     if (!contracts) return next(e)
     const text = c.class ? contractText(c.class) : null
     await flush(sink, sink.record('classify', { class: c.class, reason: c.reason, contract: !!text }), (p, b) => $.fs.write(p, b))
@@ -141,6 +141,7 @@ export const register = (on) => {
     const r = await next(e)
     st.skills++
     tracker.skillPrompt(e.skill)
+    if (e.agentId === undefined && e.skill && !req.skills.includes(e.skill)) req.skills.push(e.skill)
     const w = sink.record('skill.prompt', { skill: e.skill, pluginName: e.pluginName ?? null, source: e.source ?? null, agentId: e.agentId ?? null })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
     $.ui.status(statusText())
@@ -184,6 +185,18 @@ export const register = (on) => {
       await flush(sink, w, (p, b) => $.fs.write(p, b))
     }
     return r
+  }).catch(($, e, next) => next(e))
+
+  // Phase 4 compaction restore: the contract rode on the request's prompt, which a compaction summary can
+  // drop. After a compaction of the main conversation, re-attach it (with what is already done) as SessionStart
+  // context, the engine's own channel for post-compaction context. Gate state is in memory and survives as is.
+  on('classic.SessionStart', async ($, e, next) => {
+    const r = await next(e)
+    if (e?.source !== 'compact' || e.agent_id || !req.contracts || !req.class) return r
+    const text = restoreText(req.class, { invoked: req.skills, rootCauseStated: req.class === 'debug' && statesRootCause(req.text) })
+    if (!text) return r
+    await flush(sink, sink.record('compact.restore', { class: req.class, len: text.length, invoked: req.skills.length }), (p, b) => $.fs.write(p, b))
+    return { ...r, additionalContext: [...(r?.additionalContext ?? []), text] }
   }).catch(($, e, next) => next(e))
 
   on('classic.PostToolUse', async ($, e, next) => {

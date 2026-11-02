@@ -35,8 +35,27 @@
 | Engine (`claude plugin test plugins/workspace-core`, `tests/gate.test.ts`, no model) | Debug: src edit **held** → test edit passes → streamed "Root cause: src/cart.js:5 …" → src edit **passes**; feature request never held; 2 holds then pass: **3/3** |
 | Live (`outcomes --only debug-fix --runs 2`, $0.45) | **2/2 PASS**, root cause before fix 2/2. The gate loaded (0.6.0) and logged `release: root cause stated` in both. The model stated the cause before editing **unprompted**, so **no deny fired live** |
 
-## Honest status
+## Status after the first live check (superseded by the A/B below)
 
-- **The deny path is proven at engine level, not yet in a live session.**
-- **The 2/2 live result is not attributable to the gate.** With n=2 it is within the earlier advice-only range (1/3). An A/B (`CW_GATES=0` vs on, n≥4 each) is needed to measure the gate's effect.
-- **The live check was stopped by the 60% usage guard.** The 5-hour window was already at 69% at the first run, so no further live runs were made.
+- **The deny path was then proven only at engine level.** The A/B run #1 later proved it live.
+- **The 2/2 live result was not attributable to the gate**: no deny fired.
+- **The first check stopped at the then-60% usage guard.** The user later raised the limit to 90%.
+
+## Gate A/B (2026-11-03, `outcomes --conditions nogate,with --only debug-fix --runs 3`, $0.87)
+
+| | Gate off (`CW_GATES=0`, contracts on) | Gate on |
+|---|---|---|
+| Root cause stated before the first applied src edit | **0/3** | **3/3** |
+| Gate denies | — | 1 (run #1: edit held → "Root cause: src/cart.js:5 — …" → edit applied) |
+| Target test passes, minimal diff | 3/3 | 3/3 |
+
+**Pooled with earlier runs:**
+- Gate on: **5/5 · [57%–100%]**.
+- Advice only: **1/6 · [3%–56%]** (Phase 3 gate 0/2, recheck 1/1, this A/B 0/3).
+- Wilson 95% intervals; they just fail to overlap.
+
+**Caveats:**
+- In 4 of the 5 gate-on runs the model stated the cause before trying to edit, so the gate never fired. The model cannot see the gate before a deny, so that part is run-to-run variance, not a gate effect.
+- What the gate **guarantees** is narrower and deterministic: no source edit is applied in a debug request before a root-cause statement, up to the 2-hold limit. The one live deny shows the recovery path working end to end.
+
+**Usage:** 5-hour window 79% → 82% during the A/B. Live testing stopped at 82% (the user's limit is 90%).
