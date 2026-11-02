@@ -56,7 +56,8 @@ export const runFailed = (s) => s.kind === 'bash' && s.isTest && (s.isError || /
 export function grade(spec, steps, final) {
   const checks = {}
   const firstIdx = (pred) => steps.findIndex(pred)
-  const firstSrcEdit = firstIdx((s) => s.kind === 'edit' && isSrc(s.file))
+  // An edit whose tool result is an error (a Phase 4 gate deny, a failed match) changed nothing: not the fix.
+  const firstSrcEdit = firstIdx((s) => s.kind === 'edit' && isSrc(s.file) && !s.isError)
   const before = (i) => (i < 0 ? steps : steps.slice(0, i))
   const set = (name, pass, why, soft = false) => { checks[name] = { pass, why, ...(soft ? { soft } : {}) } }
 

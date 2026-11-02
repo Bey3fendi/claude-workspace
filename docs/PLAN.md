@@ -303,6 +303,26 @@ Phase 3M adds:
 | **5. Optional router** | Opt-in Jev routing | Enable, test, disable; `view` against `turn.step` | Router tests green |
 | **6. Hardening** | Long-term operation | Update and rollback, upstream canary, devcontainer feature, docs | Full §9 suite |
 
+### Phase 3M result (2026-11-03)
+
+- **Gate not met; claude-mem stays** (`docs/baselines/2026-11-03-phase3m-research.md`).
+- **What Avenox does better:** overhead (≈0.1 s per hook, <1k chars, no LLM capture spend) and receipt isolation (path hash).
+- **Where it falls short:** retrieval is lexical only (a paraphrase abstained); capture depends on the agent writing notes; notes are filtered by folder label; the bridge's own install edits global settings.
+- **Revisit** after the Phase 4 capture trigger exists.
+
+### Phase 4 status (in progress, 2026-11-03)
+
+**Step 1: root-cause gate** (`docs/baselines/2026-11-03-phase4-root-cause-gate.md`).
+- **Mechanism:** a `tool.call` hold on the first source edit of a debug request, until the streamed visible text states a root cause. At most 2 holds per request; `CW_GATES=0` disables it.
+- **Verified:** unit tests and engine-level `claude plugin test` (3/3).
+- **Live:** 2/2 root cause before fix, but the gate never had to deny. Its effect needs an A/B.
+
+**Next:**
+1. Gate A/B, when usage allows.
+2. Compaction restore: re-attach the request's contract after `session.compact`.
+3. Stop postconditions, only where an outcome check shows a gap (feature and TDD are already 2/2).
+4. claude-mem project isolation (basename collisions observed).
+
 ### Phase 3 status (in progress, 2026-11-02)
 
 **Step 1: classifier plus advisory contracts.**

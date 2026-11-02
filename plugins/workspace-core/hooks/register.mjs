@@ -10,10 +10,14 @@ import { markerCounts, short } from '../lib/events.mjs'
 import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
 import { classify, contractText } from '../lib/contracts.mjs'
 import { deniedSkills, trimListing } from '../lib/listing.mjs'
+import { decide, denyText } from '../lib/gates.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
 const st = { model: null, effort: null, skills: 0, requests: 0 }
+// Phase 4: per-request state for the root-cause gate. Reset on each human prompt; text is the
+// model's visible main-loop text in this request (kept in memory only, never written to disk).
+let req = { class: null, text: '', denies: 0, released: false, gates: true }
 const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
 
@@ -48,8 +52,12 @@ export const register = (on) => {
   // model-only context. Only the class is recorded, never the prompt text.
   on('prompt.submit', async ($, e, next) => {
     const human = !e.command && !e.isMeta && ['composer', 'bridge', 'sdk'].includes(e.origin?.kind)
-    if (!human || (await $.env.get('CW_CONTRACTS')) === '0') return next(e)
+    if (!human) return next(e)
+    const contracts = (await $.env.get('CW_CONTRACTS')) !== '0'
+    const gates = (await $.env.get('CW_GATES')) !== '0'
     const c = classify(e.text)
+    req = { class: c.class, text: '', denies: 0, released: false, gates }
+    if (!contracts) return next(e)
     const text = c.class ? contractText(c.class) : null
     await flush(sink, sink.record('classify', { class: c.class, reason: c.reason, contract: !!text }), (p, b) => $.fs.write(p, b))
     return text ? next({ ...e, context: [...(e.context ?? []), text] }) : next(e)
@@ -82,9 +90,35 @@ export const register = (on) => {
       const w = sink.record('turn.step', { turnId: e.turnId, index: e.index, model: e.model, effort: e.effort ?? null })
       await flush(sink, w, (p, b) => $.fs.write(p, b))
       st.model = e.model; st.effort = e.effort ?? null; $.ui.status(statusText())
+      // Collect visible text as it streams, so a tool call later in the same response sees it.
+      if (req.class === 'debug') {
+        for await (const c of next(e)) {
+          if (c?.kind === 'text') req.text += c.text
+          yield c
+        }
+        return // the last next(e)'s result stands
+      }
     }
     return yield* next(e)
   })
+
+  // Phase 4 root-cause gate: hold the first source edit of a debug request until a root cause is stated.
+  on('tool.call', async ($, e, next) => {
+    if (!req.gates || req.class !== 'debug') return next(e)
+    const d = decide(req, e)
+    if (d.action === 'deny') {
+      req.denies++
+      tracker.gate('deny')
+      await flush(sink, sink.record('gate', { gate: 'root-cause', action: 'deny', tool: e.tool, n: req.denies }), (p, b) => $.fs.write(p, b))
+      return { deny: denyText(d.file) }
+    }
+    if (d.reason && !req.released && e.agentId === undefined) {
+      req.released = true // decided once per request; later edits are not re-checked
+      tracker.gate('release', d.reason)
+      await flush(sink, sink.record('gate', { gate: 'root-cause', action: 'release', reason: d.reason, afterDenies: req.denies }), (p, b) => $.fs.write(p, b))
+    }
+    return next(e)
+  }).catch(($, e, next) => next(e))
 
   on('turn.complete', async ($, e, next) => {
     const r = await next(e)

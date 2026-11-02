@@ -22,6 +22,7 @@
         "failed": [
           "superpowers:test-driven-development"
         ],
+        "gate": null,
         "active": [
           "superpowers",
           "caveman"
@@ -44,6 +45,7 @@
         "activated": [],
         "denied": [],
         "failed": [],
+        "gate": null,
         "active": [
           "superpowers",
           "caveman"
@@ -61,6 +63,7 @@
         "activated": [],
         "denied": [],
         "failed": [],
+        "gate": null,
         "active": [
           "superpowers",
           "caveman"
@@ -78,6 +81,7 @@
         "activated": [],
         "denied": [],
         "failed": [],
+        "gate": null,
         "active": [
           "superpowers",
           "caveman"

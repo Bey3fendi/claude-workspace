@@ -78,3 +78,12 @@ test('shell writes into src/ or test/ count as edits (acceptEdits lets them thro
   ])
   assert.deepEqual(steps.map((s) => [s.kind, s.file ?? null]), [['edit', 'test/cart.test.js'], ['edit', 'src/cart.js'], ['bash', null]])
 })
+
+test('a gate-denied edit is not the fix: root cause stated after the deny, before the real edit, passes', () => {
+  const [e1, id1] = use('Edit', { file_path: '/x/src/cart.js', old_string: '>', new_string: '>=' })
+  const [e2, id2] = use('Edit', { file_path: '/x/src/cart.js', old_string: '>', new_string: '>=' })
+  const steps = timeline([e1, result(id1, '[workspace gate: root cause first] ...', true),
+    text('Root cause: src/cart.js:5 uses qty > 10, so exactly 10 gets no discount.'), e2, result(id2, 'ok')])
+  const r = grade(spec['debug-fix'], steps, { changed: { 'src/cart.js': 1 }, graders: { 'discount-test-passes': true } })
+  assert.equal(r.checks.rootCauseBeforeFix.pass, true, r.checks.rootCauseBeforeFix.why)
+})

@@ -47,13 +47,20 @@ export function parseUsageSection(answer) {
 export function createTracker() {
   const session = { active: new Set() }
   let req = null
-  const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set() })
+  const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null })
   return {
     turnStart() { req = fresh() },
     injection(markers) { for (const [k, n] of Object.entries(markers || {})) if (n > 0 && INTEGRATIONS[k]) session.active.add(k) },
     skillPrompt(skill) { if (!skill) return; (req ??= fresh()).activated.add(skill) },
     skillLoaded(skill) { if (!skill) return; (req ??= fresh()).completed.add(skill) },
     skillFailed(skill) { if (!skill) return; (req ??= fresh()).failed.add(skill) },
+    /** Phase 4 gate outcome for this request: action 'deny' | 'release'. */
+    gate(action, reason) {
+      req ??= fresh()
+      const g = (req.gate ??= { held: 0, released: null })
+      if (action === 'deny') g.held++
+      else if (action === 'release') g.released = reason ?? 'released'
+    },
     skillCall(skill, { denied, isError, errorText }) {
       if (!skill) return
       req ??= fresh()
@@ -77,18 +84,23 @@ export function summarize(r, section, active) {
   const matches = (claim) => activated.includes(claim)
   const claimedNotObserved = section.applied.filter((c) => !matches(c))
   const observedNotClaimed = section.present ? activated.filter((s) => !section.applied.includes(s)) : []
-  const evidence = { activated, denied, failed, active, reportPresent: section.present, claimed: section.applied, claimedNotObserved, observedNotClaimed }
+  const evidence = { activated, denied, failed, gate: r.gate ?? null, active, reportPresent: section.present, claimed: section.applied, claimedNotObserved, observedNotClaimed }
   return { ...evidence, footer: renderFooter(evidence) }
 }
 
 const short = (id) => id.replace(/^andrej-karpathy-skills:/, 'karpathy:')
 
 export function renderFooter(e) {
-  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length) return null
+  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held) return null
   const parts = []
   parts.push(e.activated.length ? `activated ${e.activated.map(short).join(', ')}` : 'no skill activations observed')
   if (e.denied.length) parts.push(`denied ${e.denied.map(short).join(', ')}`)
   if (e.failed.length) parts.push(`failed ${e.failed.map(short).join(', ')}`)
+  if (e.gate?.held) {
+    const how = e.gate.released === 'root cause stated' ? ' until a root cause was stated'
+      : e.gate.released === 'gate limit reached' ? ', then let it through (limit reached)' : ''
+    parts.push(`root-cause gate held ${e.gate.held} edit${e.gate.held > 1 ? 's' : ''}${how}`)
+  }
   if (e.reportPresent) {
     if (e.active.length) parts.push(`context injected this session: ${e.active.map((k) => INTEGRATIONS[k]).join(', ')}`)
     if (e.claimedNotObserved.length) parts.push(`self-reported only (no engine event): ${e.claimedNotObserved.map(short).join(', ')}`)
@@ -110,6 +122,7 @@ export function replay(rows) {
       case 'skill.prompt': t.skillPrompt(e.skill); break
       case 'skill.loaded': t.skillLoaded(e.skill); break
       case 'skill.failed': t.skillFailed(e.skill); break
+      case 'gate': t.gate(e.action, e.reason); break
       case 'tool.call': if (e.tool === 'Skill' && e.skill) t.skillCall(e.skill, e); break
       case 'turn.complete':
         if (e.agentId == null && open) {
