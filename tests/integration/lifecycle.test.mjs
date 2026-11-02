@@ -2,7 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { readdirSync, existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
-import { sandbox, cli, tree, git, write, read, calls } from '../helpers.mjs'
+import { sandbox, cli, tree, git, write, read, calls, ROOT } from '../helpers.mjs'
+
+const POLICY_RULES = JSON.parse(readFileSync(join(ROOT, 'policies', 'skill-denies.json'), 'utf8')).rules.length
 
 const LOCK = JSON.parse(readFileSync(new URL('../../workspace.lock.json', import.meta.url), 'utf8'))
 const regOf = (sb) => JSON.parse(read(join(sb.home, '.claude', 'plugins', 'installed_plugins.json'))).plugins
@@ -35,7 +37,7 @@ test('empty project: install, idempotent re-run, doctor, clean uninstall', () =>
 
   const s = JSON.parse(read(join(sb.project, '.claude', 'settings.json')))
   assert.equal(s.enabledPlugins['superpowers@cw-workspace'], true)
-  assert.equal(s.permissions.deny.length, 31)
+  assert.equal(s.permissions.deny.length, POLICY_RULES)
   assert.deepEqual(JSON.parse(read(join(sb.project, '.caveman.json'))), { defaultMode: 'lite' })
   assert.match(read(join(sb.project, '.gitignore')), /\.claude\/workspace\//)
   assert.equal(JSON.parse(read(join(sb.home, '.claude-mem', 'telemetry.json'))).enabled, false)
@@ -67,7 +69,7 @@ test('existing repo: unrelated files untouched, uninstall restores byte-exactly'
   assert.equal(mid['src/index.js'], before['src/index.js'])
   const s = JSON.parse(read(join(sb.project, '.claude', 'settings.json')))
   assert.equal(s.model, 'opus'); assert.ok(s.hooks.Stop); assert.equal(s.permissions.deny[0], 'Bash(rm -rf:*)')
-  assert.equal(s.permissions.deny.length, 32)
+  assert.equal(s.permissions.deny.length, 1 + POLICY_RULES)
 
   // second install in a git repo: our own uncommitted edits are not "dirty"
   const r2 = cli(sb, ['install', '--yes'])

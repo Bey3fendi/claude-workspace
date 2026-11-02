@@ -37,7 +37,7 @@ For a team, publish this repo and install with `--marketplace <owner>/<repo>#<ta
 ## What it changes
 
 **Project files** are the only files it touches:
-- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 31 `permissions.deny` skill rules from `policies/skill-denies.json`.
+- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 36 `permissions.deny` skill rules from `policies/skill-denies.json`.
 - `.caveman.json`: `{"defaultMode":"lite"}`. An existing file is never overwritten.
 - `.claude/workspace.json`: a marker file meant to be committed.
 - `.gitignore`: one managed block for `.claude/workspace/`.

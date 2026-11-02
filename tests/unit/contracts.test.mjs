@@ -55,3 +55,10 @@ test('review is outcome-only (no skill fits); tests pick TDD vs verification by 
   assert.match(t, /test-driven-development for new or changed behaviour/)
   assert.match(t, /verification-before-completion for coverage of existing code/)
 })
+
+test('no skill a contract asks for is denied by the workspace policy', () => {
+  const denied = JSON.parse(readFileSync(join(ROOT, 'policies', 'skill-denies.json'), 'utf8')).rules.map((r) => r.match(/^Skill\(skill:(.+)\)$/)?.[1])
+  const wanted = Object.values(CONTRACTS).flatMap((c) => [...c.skills, ...c.then])
+  assert.deepEqual(wanted.filter((s) => denied.includes(s)), [])
+  assert.ok(denied.every(Boolean), 'every rule is a Skill(skill:…) rule')
+})

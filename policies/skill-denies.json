@@ -1,5 +1,5 @@
 {
-  "description": "permissions.deny rules merged into project .claude/settings.json. They block invocation of overlapping or out-of-scope skills (verified in Phase 0 L7). They do NOT shrink the skill listing; context reduction is Phase 3 and evidence-gated.",
+  "description": "permissions.deny rules merged into project .claude/settings.json. They block invocation of overlapping or out-of-scope skills (verified in Phase 0 L7). They do NOT shrink the skill listing; context reduction is Phase 3 and evidence-gated. Phase 3 (docs/overlaps.md): the five Caveman Cloud skills are denied because the workspace runs Caveman with cloud off.",
   "keepInvocable": {
     "claude-mem": ["mem-search", "smart-explore", "how-it-works", "backup-setup", "timeline-report"]
   },
@@ -34,6 +34,11 @@
     "Skill(skill:caveman:surgical-patch)",
     "Skill(skill:caveman:safe-refactor)",
     "Skill(skill:caveman:migration)",
-    "Skill(skill:caveman:verify-and-stop)"
+    "Skill(skill:caveman:verify-and-stop)",
+    "Skill(skill:caveman:caveman-setup)",
+    "Skill(skill:caveman:caveman-discover)",
+    "Skill(skill:caveman:caveman-evidence-review)",
+    "Skill(skill:caveman:caveman-manage)",
+    "Skill(skill:caveman:caveman-optimize)"
   ]
 }

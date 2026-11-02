@@ -333,8 +333,13 @@ Phase 3M adds:
 - **After the fixes:** the debug and TDD rechecks pass (root cause before the edit; test → red → src).
 - **Cost:** $2.61 in total.
 
+**Step 3: overlap denies** (`docs/overlaps.md`).
+- **Added:** 5 deny rules for the Caveman Cloud skills, out of scope because cloud is off, bringing the total to 36.
+- **Reviewed and allowed:** the review, minimal-change, delegation and local-tooling overlaps. Across the 45 Phase 3 runs, all 16 activations were contract skills.
+- **New test:** no contract skill may ever be denied.
+- **Existing installs:** `doctor` warns and `repair` adds the rules.
+
 **Next:**
-- overlap denies;
 - listing work, gated on A/B evidence.
 
 ### Phase 2R status (2026-11-02)
