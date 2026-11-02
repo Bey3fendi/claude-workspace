@@ -1,0 +1,1041 @@
+{
+  "meta": {
+    "date": "2026-11-02",
+    "claudeVersion": "2.1.316 (Claude Code)",
+    "runsPerPrompt": 1,
+    "mode": "smoke",
+    "costUsd": 3.13,
+    "aborted": null,
+    "notStarted": 0,
+    "conditionNotes": {
+      "notrim": "workspace-core enabled, Phase 3 listing trim off (CW_LISTING_TRIM=0)",
+      "with": "workspace-core enabled incl. Phase 3 workflow contracts (events cross-checked against cw-probe)",
+      "reference": "not re-run: no-contract reference is 0/51 answered runs (docs/baselines/2026-11-02-activation-investigation.md)"
+    }
+  },
+  "suite": {
+    "version": 2,
+    "prompts": [
+      "feat-1",
+      "debug-1",
+      "arch-1",
+      "review-1",
+      "tests-1",
+      "cont-1",
+      "triv-1"
+    ]
+  },
+  "report": {
+    "conditions": {
+      "with": {
+        "runs": 7,
+        "ok": 7,
+        "failedRuns": [],
+        "overall": {
+          "n": 5,
+          "hits": 5,
+          "rate": {
+            "p": 1,
+            "lo": 0.5655085052479191,
+            "hi": 1
+          }
+        },
+        "byClass": {
+          "feature": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "superpowers:brainstorming": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "debug": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "superpowers:systematic-debugging": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "architecture": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "superpowers:brainstorming": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "review": {
+            "n": 1,
+            "hits": 0,
+            "rate": {
+              "p": 0,
+              "lo": 0,
+              "hi": 0.7934567085261071
+            },
+            "skills": {},
+            "overActivation": [],
+            "denied": []
+          },
+          "tests": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "superpowers:verification-before-completion": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "continue": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "claude-mem:mem-search": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "trivial": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {},
+            "overActivation": [],
+            "denied": []
+          }
+        },
+        "tokens": {
+          "in": 9.142857142857142,
+          "out": 1486.142857142857,
+          "cacheRead": 84725.14285714286,
+          "cacheWrite": 21153.285714285714,
+          "steps": 3.5714285714285716,
+          "contextPerStep": 28935.068027210888
+        },
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "listingModelChars": 20381,
+        "agreement": {
+          "runs": 7,
+          "matching": 7
+        }
+      },
+      "notrim": {
+        "runs": 7,
+        "ok": 7,
+        "failedRuns": [],
+        "overall": {
+          "n": 5,
+          "hits": 5,
+          "rate": {
+            "p": 1,
+            "lo": 0.5655085052479191,
+            "hi": 1
+          }
+        },
+        "byClass": {
+          "feature": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "superpowers:brainstorming": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "debug": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "superpowers:systematic-debugging": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "architecture": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "superpowers:brainstorming": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "review": {
+            "n": 1,
+            "hits": 0,
+            "rate": {
+              "p": 0,
+              "lo": 0,
+              "hi": 0.7934567085261071
+            },
+            "skills": {},
+            "overActivation": [],
+            "denied": []
+          },
+          "tests": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "superpowers:verification-before-completion": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "continue": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {
+              "claude-mem:mem-search": 1
+            },
+            "overActivation": [],
+            "denied": []
+          },
+          "trivial": {
+            "n": 1,
+            "hits": 1,
+            "rate": {
+              "p": 1,
+              "lo": 0.20654329147389294,
+              "hi": 1
+            },
+            "skills": {},
+            "overActivation": [],
+            "denied": []
+          }
+        },
+        "tokens": {
+          "in": 8.571428571428571,
+          "out": 1381.2857142857142,
+          "cacheRead": 87215.28571428571,
+          "cacheWrite": 23253.14285714286,
+          "steps": 3.4285714285714284,
+          "contextPerStep": 32052.91190476191
+        },
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "listingModelChars": null,
+        "agreement": {
+          "runs": 7,
+          "matching": 7
+        }
+      }
+    },
+    "comparison": {
+      "reference": "notrim",
+      "activationDiff": {
+        "d": 0,
+        "lo": -0.43449149475208093,
+        "hi": 0.43449149475208093
+      },
+      "contextPerStepDelta": -3117.843877551022,
+      "listingCharsDelta": 0
+    },
+    "listing": {
+      "with": {
+        "sessions": 7,
+        "skillCount": [
+          99
+        ],
+        "chars": {
+          "min": 29939,
+          "median": 29939,
+          "max": 29939
+        },
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ],
+        "mandatoryNameOnly": [],
+        "workspaceNameOnly": []
+      },
+      "notrim": {
+        "sessions": 7,
+        "skillCount": [
+          99
+        ],
+        "chars": {
+          "min": 29939,
+          "median": 29939,
+          "max": 29939
+        },
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ],
+        "mandatoryNameOnly": [],
+        "workspaceNameOnly": []
+      }
+    },
+    "conditionCheck": {
+      "beforeModOff": true
+    }
+  },
+  "results": [
+    {
+      "condition": "with",
+      "promptId": "feat-1",
+      "class": "feature",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 19919,
+      "ok": true,
+      "costUsd": 0.2332818,
+      "run": {
+        "sid": "689faf7f-e13e-4ac4-a1d6-daa3dedfd7c6",
+        "activated": [
+          "superpowers:brainstorming"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 4,
+        "reason": "answer",
+        "usage": {
+          "in": 10,
+          "out": 1299,
+          "cacheRead": 97549,
+          "cacheWrite": 23469
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "superpowers:brainstorming"
+        ],
+        "events": 25,
+        "listingModelChars": 20381
+      }
+    },
+    {
+      "condition": "notrim",
+      "promptId": "feat-1",
+      "class": "feature",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 21355,
+      "ok": true,
+      "costUsd": 0.2529706,
+      "run": {
+        "sid": "de27838d-a464-42dd-bbd8-8ed29ad2f435",
+        "activated": [
+          "superpowers:brainstorming"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 8,
+          "out": 1232,
+          "cacheRead": 72933,
+          "cacheWrite": 26714
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "superpowers:brainstorming"
+        ],
+        "events": 23,
+        "listingModelChars": null
+      }
+    },
+    {
+      "condition": "notrim",
+      "promptId": "debug-1",
+      "class": "debug",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 15188,
+      "ok": true,
+      "costUsd": 0.2274006,
+      "run": {
+        "sid": "aa0d0e6d-b802-49e5-91f3-2c854079affc",
+        "activated": [
+          "superpowers:systematic-debugging"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 8,
+          "out": 1050,
+          "cacheRead": 74123,
+          "cacheWrite": 23943
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "superpowers:systematic-debugging"
+        ],
+        "events": 23,
+        "listingModelChars": null
+      }
+    },
+    {
+      "condition": "with",
+      "promptId": "debug-1",
+      "class": "debug",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 18305,
+      "ok": true,
+      "costUsd": 0.195228,
+      "run": {
+        "sid": "1fb90b58-d1c0-4e3b-9969-1117f77e2a6e",
+        "activated": [
+          "superpowers:systematic-debugging"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 8,
+          "out": 1005,
+          "cacheRead": 67840,
+          "cacheWrite": 20191
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "superpowers:systematic-debugging"
+        ],
+        "events": 24,
+        "listingModelChars": 20381
+      }
+    },
+    {
+      "condition": "notrim",
+      "promptId": "arch-1",
+      "class": "architecture",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 22621,
+      "ok": true,
+      "costUsd": 0.24876199999999998,
+      "run": {
+        "sid": "5abc121b-8afe-42a2-ae01-6e92cdde43d9",
+        "activated": [
+          "superpowers:brainstorming"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 4,
+        "reason": "answer",
+        "usage": {
+          "in": 10,
+          "out": 1364,
+          "cacheRead": 108930,
+          "cacheWrite": 24957
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "superpowers:brainstorming"
+        ],
+        "events": 26,
+        "listingModelChars": null
+      }
+    },
+    {
+      "condition": "with",
+      "promptId": "arch-1",
+      "class": "architecture",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 23325,
+      "ok": true,
+      "costUsd": 0.21079360000000003,
+      "run": {
+        "sid": "f97953d8-c435-4074-b42e-cec0dfaeb7a9",
+        "activated": [
+          "superpowers:brainstorming"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 8,
+          "out": 1417,
+          "cacheRead": 68468,
+          "cacheWrite": 21091
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "superpowers:brainstorming"
+        ],
+        "events": 25,
+        "listingModelChars": 20381
+      }
+    },
+    {
+      "condition": "notrim",
+      "promptId": "review-1",
+      "class": "review",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 21685,
+      "ok": true,
+      "costUsd": 0.20764660000000001,
+      "run": {
+        "sid": "c8e04296-a588-4858-a1b3-5b942f3b4d0e",
+        "activated": [],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 6,
+          "out": 1557,
+          "cacheRead": 70573,
+          "cacheWrite": 20296
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [],
+        "events": 21,
+        "listingModelChars": null
+      }
+    },
+    {
+      "condition": "with",
+      "promptId": "review-1",
+      "class": "review",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 23362,
+      "ok": true,
+      "costUsd": 0.179848,
+      "run": {
+        "sid": "f36c411a-5d9f-4d1b-8818-feab03485443",
+        "activated": [],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 6,
+          "out": 1694,
+          "cacheRead": 64360,
+          "cacheWrite": 16634
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [],
+        "events": 22,
+        "listingModelChars": 20381
+      }
+    },
+    {
+      "condition": "notrim",
+      "promptId": "tests-1",
+      "class": "tests",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 26202,
+      "ok": true,
+      "costUsd": 0.2257032,
+      "run": {
+        "sid": "d998a8cd-a362-4645-b076-8ac3c096fee1",
+        "activated": [
+          "superpowers:verification-before-completion"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 8,
+          "out": 1705,
+          "cacheRead": 72096,
+          "cacheWrite": 22144
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "superpowers:verification-before-completion"
+        ],
+        "events": 24,
+        "listingModelChars": null
+      }
+    },
+    {
+      "condition": "with",
+      "promptId": "tests-1",
+      "class": "tests",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 21916,
+      "ok": true,
+      "costUsd": 0.20035799999999998,
+      "run": {
+        "sid": "3b4b3ae1-8fe4-4af9-aab8-ee4fbd784319",
+        "activated": [
+          "superpowers:verification-before-completion"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 8,
+          "out": 1923,
+          "cacheRead": 66010,
+          "cacheWrite": 18583
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "superpowers:verification-before-completion"
+        ],
+        "events": 25,
+        "listingModelChars": 20381
+      }
+    },
+    {
+      "condition": "notrim",
+      "promptId": "cont-1",
+      "class": "continue",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 32401,
+      "ok": true,
+      "costUsd": 0.2740356,
+      "run": {
+        "sid": "c5a4e279-1eb0-43b0-8fd5-d21d018b10cf",
+        "activated": [
+          "claude-mem:mem-search"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 5,
+        "reason": "answer",
+        "usage": {
+          "in": 14,
+          "out": 2221,
+          "cacheRead": 141718,
+          "cacheWrite": 25152
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "claude-mem:mem-search"
+        ],
+        "events": 27,
+        "listingModelChars": null
+      }
+    },
+    {
+      "condition": "notrim",
+      "promptId": "triv-1",
+      "class": "trivial",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 9868,
+      "ok": true,
+      "costUsd": 0.18137880000000003,
+      "run": {
+        "sid": "02ba888f-ac27-430a-ac55-d6db4aea91d3",
+        "activated": [],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 3,
+        "reason": "answer",
+        "usage": {
+          "in": 6,
+          "out": 540,
+          "cacheRead": 70134,
+          "cacheWrite": 19566
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [],
+        "events": 19,
+        "listingModelChars": null
+      }
+    },
+    {
+      "condition": "with",
+      "promptId": "cont-1",
+      "class": "continue",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 44257,
+      "ok": true,
+      "costUsd": 0.3524497999999999,
+      "run": {
+        "sid": "d2152bad-ed1b-4bf1-9d2b-32ce701e2141",
+        "activated": [
+          "claude-mem:mem-search"
+        ],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 7,
+        "reason": "answer",
+        "usage": {
+          "in": 20,
+          "out": 2734,
+          "cacheRead": 193289,
+          "cacheWrite": 32379
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [
+          "claude-mem:mem-search"
+        ],
+        "events": 30,
+        "listingModelChars": 20381
+      }
+    },
+    {
+      "condition": "with",
+      "promptId": "triv-1",
+      "class": "trivial",
+      "iteration": 0,
+      "exitCode": 0,
+      "ms": 7623,
+      "ok": true,
+      "costUsd": 0.139556,
+      "run": {
+        "sid": "75f31739-62ba-49ea-a471-27d0afc2d56b",
+        "activated": [],
+        "denied": [],
+        "models": [
+          "claude-opus-5-5"
+        ],
+        "efforts": [
+          "medium"
+        ],
+        "steps": 2,
+        "reason": "answer",
+        "usage": {
+          "in": 4,
+          "out": 331,
+          "cacheRead": 35560,
+          "cacheWrite": 15726
+        }
+      },
+      "listing": {
+        "skillCount": 99,
+        "chars": 29939,
+        "withDescription": 93,
+        "nameOnly": [
+          "anthropic-skills:google-workspace",
+          "anthropic-skills:morning",
+          "anthropic-skills:pdf",
+          "anthropic-skills:pptx",
+          "anthropic-skills:skill-creator",
+          "anthropic-skills:xlsx"
+        ]
+      },
+      "core": {
+        "activated": [],
+        "events": 18,
+        "listingModelChars": 20381
+      }
+    }
+  ]
+}

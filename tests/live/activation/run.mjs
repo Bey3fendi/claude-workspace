@@ -60,6 +60,7 @@ const claudeVersion = sh(CLAUDE, ['--version']).trim()
 
 const CONDITION = {
   before: { cwd: project, settings: { enabledPlugins: { 'workspace-core@cw-workspace': false } }, note: 'Phase 1 install; workspace-core disabled via --settings' },
+  notrim: { cwd: project, settings: null, env: { CW_LISTING_TRIM: '0' }, note: 'workspace-core enabled, Phase 3 listing trim off (CW_LISTING_TRIM=0)' },
   nocontract: { cwd: project, settings: null, env: { CW_CONTRACTS: '0' }, note: 'workspace-core enabled, Phase 3 contracts off (CW_CONTRACTS=0)' },
   with: { cwd: project, settings: null, note: 'workspace-core enabled incl. Phase 3 workflow contracts (events cross-checked against cw-probe)' },
   bare: { cwd: bareProject, settings: { enabledPlugins: { 'claude-mem@thedotmack': false } }, note: 'listing reference: empty dir, no workspace plugins, claude-mem disabled (1 trivial prompt)' },
@@ -118,7 +119,9 @@ function coreActivations(dir) {
   const walk = (d) => { for (const n of readdirSync(d, { withFileTypes: true })) { const p = join(d, n.name); if (n.isDirectory()) walk(p); else if (n.name.endsWith('.jsonl')) for (const l of readFileSync(p, 'utf8').split('\n')) if (l.trim()) rows.push(JSON.parse(l)) } }
   try { walk(dir) } catch { return null }
   if (!rows.length) return { activated: [], events: 0 }
-  return { activated: [...new Set(rows.filter((r) => r.ev === 'skill.prompt').map((r) => r.skill))], events: rows.length }
+  // the transcript keeps the engine's full listing; the model-facing (trimmed) size comes from the mod
+  const listing = rows.find((r) => r.ev === 'listing' && r.agentId == null)
+  return { activated: [...new Set(rows.filter((r) => r.ev === 'skill.prompt').map((r) => r.skill))], events: rows.length, listingModelChars: listing ? listing.after : null }
 }
 
 // ---------------------------------------------------------------- run pool

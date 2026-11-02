@@ -339,8 +339,17 @@ Phase 3M adds:
 - **New test:** no contract skill may ever be denied.
 - **Existing installs:** `doctor` warns and `repair` adds the rules.
 
-**Next:**
-- listing work, gated on A/B evidence.
+**Step 4: listing work** (`docs/baselines/2026-11-02-phase3-listing-ab.md`).
+- **Change:** a `prompt.attachment` hook drops the skills denied by `permissions.deny` from the model-facing listing (workspace-core 0.5.0).
+- **A/B, trim off vs on (14 runs, $3.13):**
+  - activation 5/5 in both, with identical skills;
+  - listing 30,004 → 20,381 characters;
+  - context per request −3.1k tokens;
+  - cost per run −6.5%.
+- **Discoverability:** no invocable skill was removed.
+
+**Next:** the Phase 3 gate measurement (`--full --runs 2`, plus outcomes).
+
 
 ### Phase 2R status (2026-11-02)
 

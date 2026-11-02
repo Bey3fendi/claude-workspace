@@ -97,6 +97,7 @@ export function aggregate(results, suite) {
       tokens: { in: mean((r) => r.run.usage.in), out: mean((r) => r.run.usage.out), cacheRead: mean((r) => r.run.usage.cacheRead), cacheWrite: mean((r) => r.run.usage.cacheWrite), steps: mean((r) => r.run.steps),
         contextPerStep: mean((r) => (r.run.usage.in + r.run.usage.cacheRead + r.run.usage.cacheWrite) / Math.max(1, r.run.steps)) },
       models: [...new Set(rs.flatMap((r) => r.run.models))],
+      listingModelChars: (() => { const xs = rs.map((r) => r.core?.listingModelChars).filter((x) => x != null).sort((a, b) => a - b); return xs.length ? xs[Math.floor(xs.length / 2)] : null })(),
       agreement: rs.some((r) => r.core) ? {
         runs: rs.filter((r) => r.core).length,
         matching: rs.filter((r) => r.core && sameSet(r.core.activated, r.run.activated)).length,
@@ -104,7 +105,7 @@ export function aggregate(results, suite) {
     }
     report.listing[c] = summarizeListings(listings)
   }
-  const ref = conds.includes('nocontract') ? 'nocontract' : 'before'
+  const ref = conds.includes('nocontract') ? 'nocontract' : conds.includes('notrim') ? 'notrim' : 'before'
   if (conds.includes(ref) && conds.includes('with')) {
     const a = report.conditions[ref].overall, b = report.conditions.with.overall
     const ta = report.conditions[ref].tokens, tb = report.conditions.with.tokens
@@ -170,7 +171,7 @@ export function renderMarkdown(report, suite, meta) {
   }
   L.push('', '## Tokens and models', '')
   for (const [c, v] of Object.entries(report.conditions)) {
-    L.push(`- **${c}**: ${v.ok}/${v.runs} runs ok; mean tokens in ${Math.round(v.tokens.in ?? 0)}, out ${Math.round(v.tokens.out ?? 0)}, cache read ${Math.round(v.tokens.cacheRead ?? 0)}, cache write ${Math.round(v.tokens.cacheWrite ?? 0)}; mean requests ${(v.tokens.steps ?? 0).toFixed(1)}; mean context per request ${Math.round(v.tokens.contextPerStep ?? 0)}; models ${v.models.join(', ')}${v.agreement ? `; workspace-core vs probe agreement ${v.agreement.matching}/${v.agreement.runs}` : ''}${v.failedRuns.length ? `; failed runs: ${v.failedRuns.map((f) => `${f.id} (${f.error})`).join('; ')}` : ''}`)
+    L.push(`- **${c}**: ${v.ok}/${v.runs} runs ok; mean tokens in ${Math.round(v.tokens.in ?? 0)}, out ${Math.round(v.tokens.out ?? 0)}, cache read ${Math.round(v.tokens.cacheRead ?? 0)}, cache write ${Math.round(v.tokens.cacheWrite ?? 0)}; mean requests ${(v.tokens.steps ?? 0).toFixed(1)}; mean context per request ${Math.round(v.tokens.contextPerStep ?? 0)}${v.listingModelChars != null ? `; model-facing listing ${v.listingModelChars} chars` : ''}; models ${v.models.join(', ')}${v.agreement ? `; workspace-core vs probe agreement ${v.agreement.matching}/${v.agreement.runs}` : ''}${v.failedRuns.length ? `; failed runs: ${v.failedRuns.map((f) => `${f.id} (${f.error})`).join('; ')}` : ''}`)
   }
   L.push('')
   return L.join('\n')

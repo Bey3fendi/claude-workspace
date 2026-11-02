@@ -1,6 +1,6 @@
 # Skill overlaps and deny rules
 
-`policies/skill-denies.json` is merged into the project's `permissions.deny`. A deny rule blocks **invocation** of a skill. It does not shrink the skill listing; that is Phase 3 listing work, gated on A/B evidence.
+`policies/skill-denies.json` is merged into the project's `permissions.deny`. A deny rule blocks **invocation** of a skill. Since workspace-core 0.5.0, denied skills are also left out of the model-facing skill listing, because they cannot be invoked anyway. That saves about 2.4k tokens per session; see `docs/baselines/2026-11-02-phase3-listing-ab.md`. `CW_LISTING_TRIM=0` turns this off.
 
 **Rule of thumb:** deny only when a skill is out of scope for this workspace, or when evidence shows it displaces the workflow a contract asks for. Never deny a skill a contract needs; `tests/unit/contracts.test.mjs` enforces that.
 

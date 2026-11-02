@@ -9,6 +9,7 @@ import { createSink, flush } from '../lib/sink.mjs'
 import { markerCounts, short } from '../lib/events.mjs'
 import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
 import { classify, contractText } from '../lib/contracts.mjs'
+import { deniedSkills, trimListing } from '../lib/listing.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
@@ -52,6 +53,16 @@ export const register = (on) => {
     const text = c.class ? contractText(c.class) : null
     await flush(sink, sink.record('classify', { class: c.class, reason: c.reason, contract: !!text }), (p, b) => $.fs.write(p, b))
     return text ? next({ ...e, context: [...(e.context ?? []), text] }) : next(e)
+  }).catch(($, e, next) => next(e))
+
+  // Phase 3 listing work: drop denied (uninvocable) skills from the model-facing skill listing.
+  // The transcript keeps the engine's full record; only what the model reads changes.
+  on('prompt.attachment', { type: 'skill_listing' }, async ($, e, next) => {
+    const r = await next(e)
+    if (typeof r?.text !== 'string' || (await $.env.get('CW_LISTING_TRIM')) === '0') return r
+    const t = trimListing(r.text, deniedSkills(await $.settings.read({ key: 'permissions' })))
+    await flush(sink, sink.record('listing', { before: t.before, after: t.after, removed: t.removed.length, agentId: e.agentId ?? null }), (p, b) => $.fs.write(p, b))
+    return t.removed.length ? { ...r, text: t.text } : r
   }).catch(($, e, next) => next(e))
 
   on('turn.start', async ($, e, next) => {
