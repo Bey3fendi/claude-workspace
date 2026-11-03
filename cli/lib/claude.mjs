@@ -36,6 +36,8 @@ function op(ctx, args, what) {
 export const marketplaceAdd = (ctx, source) => op(ctx, ['marketplace', 'add', source, '--scope', 'project'], `marketplace add ${source}`)
 export const marketplaceRemove = (ctx, name) => op(ctx, ['marketplace', 'remove', name, '--scope', 'project'], `marketplace remove ${name}`)
 export const pluginInstall = (ctx, id) => op(ctx, ['install', id, '--scope', 'project'], `install ${id}`)
+export const marketplaceUpdate = (ctx, name) => op(ctx, ['marketplace', 'update', name], `marketplace update ${name}`)
+export const pluginUpdate = (ctx, id) => op(ctx, ['update', id, '--scope', 'project'], `update ${id}`)
 export const pluginEnable = (ctx, id) => op(ctx, ['enable', id, '--scope', 'project'], `enable ${id}`)
 export const pluginUninstall =(ctx, id) => op(ctx, ['uninstall', id, '--scope', 'project', '-y'], `uninstall ${id}`)
 

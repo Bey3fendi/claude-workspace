@@ -1,0 +1,40 @@
+{
+  "id": "claude-workspace",
+  "version": "0.7.1",
+  "name": "Claude Workspace",
+  "description": "Installs the pinned claude-workspace CLI and, when the container is created, installs Claude Code and the workspace into the project folder.",
+  "options": {
+    "source": {
+      "type": "string",
+      "default": "bundled",
+      "description": "Where the workspace CLI comes from: 'bundled' (the copy packaged with this feature) or an npx spec such as github:<owner>/<repo>#v0.7.1"
+    },
+    "marketplace": {
+      "type": "string",
+      "default": "",
+      "description": "Marketplace source written to the project's .claude/settings.json (e.g. <owner>/<repo>#v0.7.1). Empty: the CLI's own copy inside the container (works, but that path is container-only)."
+    },
+    "installClaudeCode": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install Claude Code with the native installer when 'claude' is not on PATH"
+    },
+    "claudeCodeVersion": {
+      "type": "string",
+      "default": "tested",
+      "description": "'tested' (the version the workspace lock was tested with), 'latest', or an exact version"
+    },
+    "claudeMem": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install claude-mem (user level inside the container; telemetry is forced off). Enabling this feature option is the consent the CLI's --yes stands for."
+    },
+    "installOnCreate": {
+      "type": "boolean",
+      "default": true,
+      "description": "Run 'claude-workspace install' on the workspace folder after the container is created. False: only the CLI is installed."
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/node", "ghcr.io/devcontainers/features/common-utils"],
+  "postCreateCommand": "/usr/local/share/claude-workspace/post-create.sh"
+}

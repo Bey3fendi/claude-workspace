@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "workspaceVersion": "0.1.0",
+  "workspaceVersion": "0.7.1",
   "marketplace": {
     "name": "cw-workspace",
     "owner": "claude-workspace",
@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "workspace-core",
-      "description": "Workspace observability and enforcement mod (Phase 1 placeholder)",
+      "description": "Workspace usage evidence, workflow contracts, root-cause gate, compaction restore, context pressure",
       "source": "./plugins/workspace-core",
       "enabled": true
     },
@@ -53,7 +53,7 @@
   ],
   "claudeMem": {
     "npmPackage": "claude-mem",
-    "version": "15.8.0",
+    "version": "15.9.0",
     "pluginId": "claude-mem@thedotmack",
     "installArgs": ["install", "--provider", "claude", "--no-auto-start"]
   },

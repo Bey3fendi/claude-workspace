@@ -303,6 +303,49 @@ Phase 3M adds:
 | **5. Optional router** | Opt-in Jev routing | Enable, test, disable; `view` against `turn.step` | Router tests green |
 | **6. Hardening** | Long-term operation | Update and rollback, upstream canary, devcontainer feature, docs | Full §9 suite |
 
+### Phase 6 status (in progress, 2026-11-03; Phase 5 deferred by the user)
+
+**1. Context pressure, built into workspace-core (0.7.1).** The user wanted it in every new environment without a separate install.
+- **Mechanism:** on each human prompt, read the engine's live context fill (`$.session.usage().context.tokens`, the status line's figure). It survives `--resume` and is absent after `/clear` or compaction. Over 300K, attach the CLEAR/COMPACT note (same spec as the user's hook), and show `context ~NK: /clear-or-/compact advice attached` in the footer.
+- **Switches:** `CW_CONTEXT_PRESSURE=0` disables it; `CW_CONTEXT_PRESSURE_TOKENS` sets the threshold. A user-level `context-pressure` hook takes precedence (no double note).
+- **Verified:** unit; engine 5/5; live precedence (user hook fired, built-in silent); live built-in note on a resumed session with `--setting-sources project,local` (note delivered, Claude answered CLEAR plus a handoff note).
+- **Bug found by the live check:** the first version used only in-process step usage, so a resumed process started at 0. Fixed with the engine figure.
+
+**2. Upstream canary** (`claude-workspace canary`, read-only).
+- **What it does:** `git ls-remote` per pin and `npm view claude-mem`.
+- **First run:** router 1.19.2 available; claude-mem 15.9.0 (pin was 15.8.0, installed 15.9.0 through auto-update); caveman and ponytail are current but pinned to commits other than the tagged ones.
+
+**3. Update and rollback.**
+- **`repair`:**
+  - refreshes the marketplace (`claude plugin marketplace update`);
+  - updates workspace-core when its version differs from this checkout. It has no SHA pin, so before this fix repair never updated it, which matters for GitHub installs, where the cached copy runs;
+  - re-points the marketplace with `--marketplace` (update or rollback by tag);
+  - records the previous versions in the manifest (last 5).
+- **`rollback`:** prints the exact steps (`git checkout <recorded commit>` plus `repair`, or `npx github:<repo>#<old-tag> repair`). It does not run another version's code itself.
+- **Verified:** fixture 0.7.0 → 0.7.1 updated; a second run made 0 changes; rollback named commit `51884cd`.
+
+**4. Pins:** claude-mem 15.8.0 → 15.9.0 (in use all session; telemetry OFF verified). Workspace version 0.1.0 → 0.7.1 (lock and package.json).
+
+**5. Devcontainer feature** (`devcontainer/src/claude-workspace`).
+- **Image build (root):** installs the CLI only.
+  - Default source: a bundled `npm pack` payload (`npm run build:feature`), so it needs no published repo.
+  - Alternative: an npx spec (`github:<owner>/<repo>#<tag>`).
+- **Post-create (remote user, in the workspace folder):**
+  - installs Claude Code at the lock's tested version;
+  - runs `claude-workspace install`. claude-mem consent comes from the `claudeMem` option.
+  - Never fails container creation.
+- **Verified live** (Docker 29.9.2, devcontainer CLI 0.90.0, `javascript-node:22`; no model usage):
+  - Claude Code 2.1.316 installed;
+  - all pins verified, claude-mem 15.9.0 installed with telemetry OFF;
+  - `doctor` passed all required checks;
+  - a second install made 0 changes.
+- **Runner:** `tests/live/devcontainer/run.sh`.
+- **Caveat:** without the `marketplace` option, `.claude/settings.json` points at a container-only path. Teams set `marketplace` to a published `<owner>/<repo>#<tag>`.
+
+**Open:**
+- **Publishing the repo and the feature (GHCR):** the user's decision.
+- **macOS run.**
+
 ### Phase 3M result (2026-11-03)
 
 - **Gate not met; claude-mem stays** (`docs/baselines/2026-11-03-phase3m-research.md`).

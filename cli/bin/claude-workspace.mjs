@@ -6,15 +6,20 @@ import { install } from '../commands/install.mjs'
 import { doctor } from '../commands/doctor.mjs'
 import { uninstall } from '../commands/uninstall.mjs'
 import { usage } from '../commands/usage.mjs'
+import { canary } from '../commands/canary.mjs'
+import { rollback } from '../commands/rollback.mjs'
 
 const HELP = `claude-workspace <command> [options]
 
 Commands
   install     Install the pinned workspace into a project (idempotent)
   doctor      Verify the installation from evidence; enforces claude-mem telemetry OFF
-  repair      Re-apply everything install does, fix pin mismatches and the claude-mem runtime
+  repair      Re-apply everything install does; refreshes the marketplace, updates workspace-core,
+              fixes pin mismatches and the claude-mem runtime (with --marketplace: re-point = update/rollback)
   uninstall   Remove what the workspace added; untouched files are restored byte-for-byte
   usage       Show the engine-verified Workspace Usage evidence for the last session (or --session)
+  canary      Read-only: compare pinned upstream versions with the latest releases (network)
+  rollback    Show the exact steps back to the previous recorded workspace version
 
 Options
   --project <dir>        Project directory (default: current directory)
@@ -72,6 +77,8 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     } else if (cmd === 'doctor') result = await doctor(ctx, rep)
     else if (cmd === 'uninstall') result = await uninstall(ctx, rep)
     else if (cmd === 'usage') result = await usage(ctx, rep)
+    else if (cmd === 'canary') result = await canary(ctx, rep)
+    else if (cmd === 'rollback') result = await rollback(ctx, rep)
     else throw new UserError(`unknown command ${cmd}`)
   } catch (e) {
     if (!(e instanceof UserError)) throw e

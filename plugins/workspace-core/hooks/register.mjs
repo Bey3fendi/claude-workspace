@@ -11,12 +11,15 @@ import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usag
 import { classify, contractText, restoreText } from '../lib/contracts.mjs'
 import { deniedSkills, trimListing } from '../lib/listing.mjs'
 import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
+import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
 const st = { model: null, effort: null, skills: 0, requests: 0 }
 // Phase 4: per-request state for the root-cause gate. Reset on each human prompt; text is the
 // model's visible main-loop text in this request (kept in memory only, never written to disk).
+// Context pressure: the main loop's latest request size (tokens), and a note pending for the footer.
+let ctx = { tokens: 0, pending: null }
 let req = { class: null, text: '', denies: 0, released: false, gates: true, contracts: true, skills: [] }
 const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
@@ -57,10 +60,35 @@ export const register = (on) => {
     const gates = (await $.env.get('CW_GATES')) !== '0'
     const c = classify(e.text)
     req = { class: c.class, text: '', denies: 0, released: false, gates, contracts, skills: [] }
-    if (!contracts) return next(e)
-    const text = c.class ? contractText(c.class) : null
-    await flush(sink, sink.record('classify', { class: c.class, reason: c.reason, contract: !!text }), (p, b) => $.fs.write(p, b))
-    return text ? next({ ...e, context: [...(e.context ?? []), text] }) : next(e)
+    const add = []
+    if (contracts) {
+      const text = c.class ? contractText(c.class) : null
+      await flush(sink, sink.record('classify', { class: c.class, reason: c.reason, contract: !!text }), (p, b) => $.fs.write(p, b))
+      if (text) add.push(text)
+    }
+    // Phase 6 context pressure (built in; CW_CONTEXT_PRESSURE=0 disables; skipped when a user-level
+    // context-pressure hook already adds the same note).
+    // Context size: the engine's live window fill (the status line's figure; survives --resume, is absent
+    // after /clear or compaction until the next response). Falls back to the last step seen in-process.
+    let tokens = ctx.tokens
+    try {
+      const u = await $.session.usage()
+      if (u?.context) tokens = typeof u.context.tokens === 'number' ? u.context.tokens : 0
+    } catch { tokens = ctx.tokens }
+    let hooksCfg = null
+    if (tokens > 0) { try { hooksCfg = await $.settings.read({ key: 'hooks' }) } catch { hooksCfg = null } }
+    const p = decidePressure({
+      tokens,
+      threshold: thresholdFrom(await $.env.get('CW_CONTEXT_PRESSURE_TOKENS'), await $.env.get('CONTEXT_PRESSURE_TOKENS')),
+      disabled: (await $.env.get('CW_CONTEXT_PRESSURE')) === '0',
+      external: hasExternalPressureHook(hooksCfg),
+    })
+    if (p) {
+      add.push(p.note)
+      ctx.pending = p.tokens
+      await flush(sink, sink.record('pressure', { tokens: p.tokens }), (q, b) => $.fs.write(q, b))
+    }
+    return add.length ? next({ ...e, context: [...(e.context ?? []), ...add] }) : next(e)
   }).catch(($, e, next) => next(e))
 
   // Phase 3 listing work: drop denied (uninvocable) skills from the model-facing skill listing.
@@ -78,6 +106,7 @@ export const register = (on) => {
     if (e.agentId === undefined) {
       st.requests++
       tracker.turnStart()
+      if (ctx.pending) { tracker.pressure(ctx.pending); ctx.pending = null }
       try { sink.setSid(await $.session.id()) } catch {}
     }
     const w = sink.record('turn.start', { turnId: r?.turnId ?? e.turnId ?? null, agentId: e.agentId ?? null })
@@ -90,14 +119,15 @@ export const register = (on) => {
       const w = sink.record('turn.step', { turnId: e.turnId, index: e.index, model: e.model, effort: e.effort ?? null })
       await flush(sink, w, (p, b) => $.fs.write(p, b))
       st.model = e.model; st.effort = e.effort ?? null; $.ui.status(statusText())
-      // Collect visible text as it streams, so a tool call later in the same response sees it.
-      if (req.class === 'debug') {
-        for await (const c of next(e)) {
-          if (c?.kind === 'text') req.text += c.text
-          yield c
-        }
-        return // the last next(e)'s result stands
+      // Collect visible text as it streams (debug: a tool call later in the same response sees it), and the
+      // request's usage from its stop chunk (context pressure).
+      const debug = req.class === 'debug'
+      for await (const c of next(e)) {
+        if (debug && c?.kind === 'text') req.text += c.text
+        else if (c?.kind === 'stop' && c.usage) { const t = contextTokens(c.usage); if (t > 0) ctx.tokens = t }
+        yield c
       }
+      return // the last next(e)'s result stands
     }
     return yield* next(e)
   })
@@ -192,6 +222,7 @@ export const register = (on) => {
   // context, the engine's own channel for post-compaction context. Gate state is in memory and survives as is.
   on('classic.SessionStart', async ($, e, next) => {
     const r = await next(e)
+    if (!e.agent_id && ['clear', 'compact', 'startup'].includes(e?.source)) { ctx.tokens = 0; ctx.pending = null }
     if (e?.source !== 'compact' || e.agent_id || !req.contracts || !req.class) return r
     const text = restoreText(req.class, { invoked: req.skills, rootCauseStated: req.class === 'debug' && statesRootCause(req.text) })
     if (!text) return r

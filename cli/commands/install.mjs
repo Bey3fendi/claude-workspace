@@ -1,7 +1,8 @@
 // install (and repair): idempotent. A second run with nothing to do reports zero changes and
 // leaves every project file byte-identical.
 import { preflight, findDuplicates, findRouterConflicts, dirtyTouchedFiles } from '../lib/detect.mjs'
-import { listPlugins, marketplaceAdd, pluginInstall, pluginUninstall, pluginEnable, projectInstall } from '../lib/claude.mjs'
+import { listPlugins, marketplaceAdd, marketplaceRemove, marketplaceUpdate, pluginInstall, pluginUninstall, pluginEnable, pluginUpdate, projectInstall } from '../lib/claude.mjs'
+import { pinState, pushHistory, localPluginVersion } from '../lib/history.mjs'
 import { loadManifest, newManifest, snapshot, finalize, saveManifest } from '../lib/manifest.mjs'
 import { addDenies } from '../lib/settings.mjs'
 import { upsertBlock } from '../lib/gitignore.mjs'
@@ -43,8 +44,19 @@ export async function install(ctx, rep, { repair = false } = {}) {
     if (!r.ok) throw new UserError(`claude plugin marketplace add failed: ${r.message}`)
     rep.change(`marketplace ${name} declared in .claude/settings.json (source: ${source})`)
   } else if (o.marketplace && m.marketplace.source && o.marketplace !== m.marketplace.source) {
-    throw new UserError(`marketplace ${name} is already declared from ${m.marketplace.source}; run uninstall first to switch sources`)
+    if (!repair) throw new UserError(`marketplace ${name} is already declared from ${m.marketplace.source}; use \`repair --marketplace ${o.marketplace}\` to switch (update/rollback), or uninstall first`)
+    // Phase 6 update/rollback: re-point the marketplace at another ref (e.g. owner/repo#v0.8.0); pins below follow this CLI's lock.
+    const rm = marketplaceRemove(ctx, name)
+    if (!rm.ok) throw new UserError(`could not re-point marketplace ${name}: ${rm.message}`)
+    const add = marketplaceAdd(ctx, o.marketplace)
+    if (!add.ok) throw new UserError(`claude plugin marketplace add ${o.marketplace} failed: ${add.message} (the previous source was ${m.marketplace.source})`)
+    rep.change(`marketplace ${name} re-pointed: ${m.marketplace.source} -> ${o.marketplace}`)
+  } else if (repair) {
+    // Refresh the marketplace catalog from its source so updated entries (new pins, new workspace-core) are seen.
+    const u = marketplaceUpdate(ctx, name)
+    if (!u.ok) rep.warn(`marketplace ${name} could not be refreshed (${u.message}); continuing with the cached catalog`)
   }
+  const before = pinState(ctx, ctx.lock.plugins.filter((p) => p.enabled).map((p) => `${p.name}@${name}`), projectInstall)
   if (!o.marketplace && source === ctx.repoRoot && !m.marketplace.source)
     rep.warn(`marketplace source is this checkout's absolute path (${source}); for a team-shared .claude/settings.json use --marketplace <owner>/<repo>#<tag>`)
   m.marketplace.source = source
@@ -54,6 +66,20 @@ export async function install(ctx, rep, { repair = false } = {}) {
     const id = `${p.name}@${name}`
     const want = typeof p.source === 'object' ? p.source.sha : null
     let rec = projectInstall(ctx, id)
+    // Local plugins (workspace-core) have no commit pin: compare versions with this checkout's plugin.json.
+    const wantVersion = want ? null : localPluginVersion(ctx, p)
+    if (rec && wantVersion && rec.version !== wantVersion) {
+      if (!repair) rep.warn(`${id} is installed at ${rec.version} but this workspace ships ${wantVersion}; run \`claude-workspace repair\``)
+      else {
+        let u = pluginUpdate(ctx, id)
+        rec = projectInstall(ctx, id)
+        if (!u.ok || rec?.version !== wantVersion) { // fall back to a clean reinstall
+          const un = pluginUninstall(ctx, id)
+          if (!un.ok) throw new UserError(`could not update ${id}: ${u.message}; uninstall failed: ${un.message}`)
+          rec = null
+        } else rep.change(`updated ${id} to ${wantVersion}`)
+      }
+    }
     if (rec && want && rec.gitCommitSha !== want) {
       if (!repair) { rep.warn(`${id} is installed at ${rec.gitCommitSha?.slice(0, 12) ?? 'unknown'} but the lock pins ${want.slice(0, 12)}; run \`claude-workspace repair\``); continue }
       const u = pluginUninstall(ctx, id)
@@ -77,6 +103,11 @@ export async function install(ctx, rep, { repair = false } = {}) {
     }
   }
   m.plugins = ctx.pluginIds
+  // Phase 6: record what changed so `rollback` can say exactly what to return to.
+  const after = pinState(ctx, ctx.pluginIds, projectInstall)
+  if (pushHistory(m, { at: new Date().toISOString(), source: m.marketplace.source, workspaceVersion: m.workspaceVersion, plugins: before },
+    { source, workspaceVersion: ctx.lock.workspaceVersion, plugins: after })) rep.info('recorded the previous versions in the manifest (see `claude-workspace rollback`)')
+  m.workspaceVersion = ctx.lock.workspaceVersion
 
   // ---- skill deny rules (invocation overlap policy)
   settings = readJsonFile(ctx.p('.claude/settings.json'))

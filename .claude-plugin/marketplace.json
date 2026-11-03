@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "workspace-core",
-      "description": "Workspace observability and enforcement mod (Phase 1 placeholder)",
+      "description": "Workspace usage evidence, workflow contracts, root-cause gate, compaction restore, context pressure",
       "source": "./plugins/workspace-core"
     },
     {
