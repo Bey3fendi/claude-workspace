@@ -3,7 +3,7 @@
 // "files" list) -> devcontainer/src/claude-workspace/payload.tgz. Also checks the feature's version
 // matches package.json, so a published feature always carries the CLI version it names.
 import { execFileSync } from 'node:child_process'
-import { readFileSync, renameSync, rmSync } from 'node:fs'
+import { readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -18,4 +18,8 @@ if (feat.version !== pkg.version) {
 const out = execFileSync('npm', ['pack', '--silent', '--pack-destination', dir], { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' }).trim().split('\n').at(-1)
 rmSync(join(dir, 'payload.tgz'), { force: true })
 renameSync(join(dir, out), join(dir, 'payload.tgz'))
+// The Claude Code version the lock was tested with; post-create installs it for claudeCodeVersion=tested,
+// whatever the CLI source is.
+const lock = JSON.parse(readFileSync(join(root, 'workspace.lock.json'), 'utf8'))
+writeFileSync(join(dir, 'tested-claude-version'), lock.claudeCode.tested.at(-1) + '\n')
 console.log(`payload.tgz built from ${pkg.name}@${pkg.version}`)

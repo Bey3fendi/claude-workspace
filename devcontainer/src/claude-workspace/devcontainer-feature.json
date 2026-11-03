@@ -1,18 +1,18 @@
 {
   "id": "claude-workspace",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "name": "Claude Workspace",
   "description": "Installs the pinned claude-workspace CLI and, when the container is created, installs Claude Code and the workspace into the project folder.",
   "options": {
     "source": {
       "type": "string",
       "default": "bundled",
-      "description": "Where the workspace CLI comes from: 'bundled' (the copy packaged with this feature) or an npx spec such as github:<owner>/<repo>#v0.7.1"
+      "description": "Where the workspace CLI comes from: 'bundled' (the copy packaged with this feature) or an npx spec such as github:<owner>/<repo>#v0.7.2"
     },
     "marketplace": {
       "type": "string",
       "default": "",
-      "description": "Marketplace source written to the project's .claude/settings.json (e.g. <owner>/<repo>#v0.7.1). Empty: the CLI's own copy inside the container (works, but that path is container-only)."
+      "description": "Marketplace source written to the project's .claude/settings.json (e.g. <owner>/<repo>#v0.7.2). Empty: the CLI's own copy inside the container (works, but that path is container-only)."
     },
     "installClaudeCode": {
       "type": "boolean",

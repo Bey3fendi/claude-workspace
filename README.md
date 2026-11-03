@@ -37,7 +37,7 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.7.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.1
+npx -y github:Bey3fendi/claude-workspace#v0.7.2 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.2
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

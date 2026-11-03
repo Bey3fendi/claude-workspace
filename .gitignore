@@ -1,3 +1,4 @@
 node_modules/
 .claude/workspace/
 devcontainer/src/claude-workspace/payload.tgz
+devcontainer/src/claude-workspace/tested-claude-version

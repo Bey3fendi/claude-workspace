@@ -45,6 +45,6 @@ chmod 755 /usr/local/bin/claude-workspace
   cat "$HERE/post-create.sh"
 } > "$DEST/post-create.sh"
 chmod 755 "$DEST/post-create.sh"
-[ "$SOURCE" = "bundled" ] && TESTED="$(node -e 'console.log(require(process.argv[1]).claudeCode.tested.at(-1))' "$DEST/cli-root/workspace.lock.json")" || TESTED=""
-echo "$TESTED" > "$DEST/tested-claude-version"
+if [ -f "$HERE/tested-claude-version" ]; then cp "$HERE/tested-claude-version" "$DEST/tested-claude-version"
+else echo "claude-workspace feature: tested-claude-version missing (build with npm run build:feature); claudeCodeVersion=tested will install the latest" >&2; : > "$DEST/tested-claude-version"; fi
 echo "claude-workspace feature: CLI installed ($SOURCE)."
