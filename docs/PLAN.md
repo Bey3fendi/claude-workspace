@@ -348,6 +348,10 @@ Phase 3M adds:
 - Verified live in Docker: feature with `source: github:Bey3fendi/claude-workspace#v0.7.2` and `marketplace: Bey3fendi/claude-workspace#v0.7.2` installed Claude Code 2.1.316 and all pinned plugins from the GitHub marketplace; `doctor` passed.
 - v0.7.2 fixes the feature installing the latest Claude Code instead of the tested version for non-bundled sources.
 
+**7. QA pass on the released versions** (see `docs/baselines/2026-11-03-phase6-qa.md`):
+- Live: outcomes 8/8, activation smoke, `/clear` handoff with claude-mem (new runner), compaction restore, and a GitHub-installed project. All on Claude Code 2.1.317, which is now in the tested list.
+- Two bugs fixed in v0.7.3: rollback history lost on a re-point, and a debug classifier miss.
+
 **Open:**
 - **macOS run.**
 

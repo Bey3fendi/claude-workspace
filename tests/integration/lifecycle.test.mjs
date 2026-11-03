@@ -209,3 +209,21 @@ test('repair restores a missing claude-mem runtime and deleted project pieces', 
   assert.ok(existsSync(join(sb.project, '.caveman.json')))
 })
 
+
+test('update by re-pointing the marketplace records history, and rollback names the previous source', () => {
+  const sb = sandbox()
+  // A second marketplace source with the same catalog (stands in for another release tag).
+  const B = join(sb.base, 'release-b')
+  write(join(B, '.claude-plugin', 'marketplace.json'), read(join(ROOT, '.claude-plugin', 'marketplace.json')))
+  assert.equal(cli(sb, ['install', '--yes', '--marketplace', ROOT]).code, 0)
+  const r = cli(sb, ['repair', '--yes', '--marketplace', B])
+  assert.equal(r.code, 0, r.stdout + r.stderr)
+  const m = JSON.parse(read(join(sb.project, '.claude', 'workspace', 'manifest.json')))
+  assert.equal(m.marketplace.source, B)
+  assert.equal(m.history?.length, 1, 'the re-point must record the previous state')
+  assert.equal(m.history[0].source, ROOT)
+  assert.ok(m.history[0].plugins['superpowers@cw-workspace']?.sha, 'previous pins were captured before the marketplace was removed')
+  const rb = cli(sb, ['rollback'])
+  assert.equal(rb.code, 0, rb.stdout + rb.stderr)
+  assert.ok(rb.stdout.includes(ROOT), rb.stdout)
+})

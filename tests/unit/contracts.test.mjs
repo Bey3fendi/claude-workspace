@@ -16,6 +16,11 @@ test('classifier on held-out phrasings (not in the suite)', () => {
   const cases = [
     ['The game crashes when two rows clear at once', 'debug'],
     ['Why is the score wrong after a combo?', 'debug'],
+    ['The cart total is wrong when a discount code is applied twice. Investigate why.', 'debug'],
+    ['Totals come out incorrect for orders with two coupons', 'debug'],
+    ['Investigate the issue with checkout on Safari', 'debug'],
+    ['Add validation that rejects the wrong input type', 'feature'],
+    ['Which function computes the total?', 'trivial'],
     ['Add a hold-piece feature to the game', 'feature'],
     ['Implement a pause menu', 'feature'],
     ['Add a function nextPiece() to src/board.c with tests', 'tests'],

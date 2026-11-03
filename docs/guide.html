@@ -1,0 +1,348 @@
+<title>Claude Workspace Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field manual. Sticky section index on the left, one reading column, commands set as labelled "tickets". */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --ink: #18212c;
+  --muted: #566372;
+  --line: #d9e0e7;
+  --accent: #1d6a86;
+  --accent-soft: #e2eff4;
+  --warn: #9a5b00;
+  --warn-soft: #fbf0dc;
+  --ok: #2f7a4a;
+  --ok-soft: #e3f2e8;
+  --code-bg: #eef2f5;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111820; --surface: #18212b; --ink: #e5ebf0; --muted: #9aa8b6; --line: #2b3742;
+    --accent: #6cbfdc; --accent-soft: #1b3440; --warn: #f0b45a; --warn-soft: #3a2c15;
+    --ok: #7fd09b; --ok-soft: #173326; --code-bg: #0e141a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111820; --surface: #18212b; --ink: #e5ebf0; --muted: #9aa8b6; --line: #2b3742;
+  --accent: #6cbfdc; --accent-soft: #1b3440; --warn: #f0b45a; --warn-soft: #3a2c15;
+  --ok: #7fd09b; --ok-soft: #173326; --code-bg: #0e141a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.6; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 24px 64px; } nav.index { position: static; } }
+nav.index { position: sticky; top: calc(24px + env(safe-area-inset-top, 0px)); align-self: start; font-size: 14px; }
+nav.index p { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.index ol { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 2px; }
+nav.index a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--ink); text-decoration: none; }
+nav.index a:hover { border-left-color: var(--accent); color: var(--accent); }
+@media (max-width: 860px) { nav.index ol { display: flex; flex-wrap: wrap; gap: 6px; } nav.index a { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; } }
+main { min-width: 0; }
+header.top { margin-bottom: 40px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(2.1rem, 5vw, 3.2rem); line-height: 1.05; margin: 0 0 16px; text-wrap: balance; letter-spacing: -0.01em; }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 62ch; margin: 0; }
+.meta { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; font-family: var(--mono); font-size: 12.5px; }
+.meta span { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; color: var(--muted); background: var(--surface); }
+section { padding-top: 28px; margin-top: 28px; border-top: 1px solid var(--line); }
+h2 { font-family: var(--display); font-weight: 700; font-size: 1.65rem; line-height: 1.2; margin: 0 0 6px; text-wrap: balance; }
+h2 + .sub { color: var(--muted); margin: 0 0 20px; max-width: 64ch; }
+h3 { font-family: var(--display); font-weight: 500; font-size: 1.15rem; margin: 22px 0 6px; }
+p, li { max-width: 68ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.tool { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.tool h4 { margin: 0 0 2px; font-family: var(--display); font-weight: 500; font-size: 1.05rem; }
+.tool .role { font-family: var(--mono); font-size: 11.5px; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+.tool p { margin: 8px 0 0; font-size: 15px; color: var(--muted); }
+.tool.core { border-color: var(--accent); background: var(--accent-soft); }
+.tool.core p { color: var(--ink); }
+.ticket { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin: 14px 0; overflow: hidden; }
+.ticket .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 12px 8px 16px; border-bottom: 1px dashed var(--line); font-size: 14px; font-weight: 600; }
+.ticket .head small { font-weight: 400; color: var(--muted); }
+.ticket pre { margin: 0; padding: 14px 16px; background: var(--code-bg); overflow-x: auto; font-family: var(--mono); font-size: 13.5px; line-height: 1.55; }
+.ticket .note { padding: 10px 16px; font-size: 14.5px; color: var(--muted); border-top: 1px solid var(--line); }
+button.copy { font: 500 12px var(--mono); color: var(--accent); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+button.copy:hover { border-color: var(--accent); }
+code { font-family: var(--mono); font-size: .9em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.path { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.path .who { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.path h4 { margin: 0; font-family: var(--display); font-weight: 500; font-size: 1.1rem; }
+.path p { margin: 0; font-size: 15px; color: var(--muted); }
+.path .ticket { margin: 6px 0 0; }
+.screen { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; font-family: var(--mono); font-size: 13px; line-height: 1.6; overflow-x: auto; }
+.screen .dim { color: var(--muted); }
+.screen .hl { color: var(--accent); }
+.callout { border-radius: 10px; padding: 14px 18px; margin: 16px 0; font-size: 15px; }
+.callout.warn { background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+.callout.ok { background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
+.callout strong { display: block; margin-bottom: 2px; }
+.versus { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 620px) { .versus { grid-template-columns: 1fr; } }
+.versus .tool h4 { font-family: var(--mono); font-size: 1rem; }
+.versus ul { margin: 8px 0 0; padding-left: 18px; font-size: 15px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 40px; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: 600 13px/26px var(--mono); text-align: center; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 10px 0; }
+details summary { cursor: pointer; font-weight: 600; }
+details p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
+.maint { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 22px 22px; margin-top: 28px; }
+.maint section:first-child { border-top: 0; margin-top: 0; }
+.badge { display: inline-block; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 1px 8px; vertical-align: middle; margin-left: 8px; }
+footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: no-preference) { nav.index a, button.copy { transition: color .15s, border-color .15s; } }
+</style>
+
+<div class="wrap">
+  <nav class="index" aria-label="Sections">
+    <p>Using it</p>
+    <ol>
+      <li><a href="#what">What it is</a></li>
+      <li><a href="#inside">What's inside</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#daily">Day to day</a></li>
+      <li><a href="#clear">Clear or compact?</a></li>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#switches">Turning things off</a></li>
+      <li><a href="#update">Update & roll back</a></li>
+      <li><a href="#privacy">Privacy & safety</a></li>
+      <li><a href="#help">When something's off</a></li>
+    </ol>
+    <p>Maintaining it</p>
+    <ol>
+      <li><a href="#release">Shipping a release</a></li>
+      <li><a href="#testing">Testing</a></li>
+      <li><a href="#later">Parked for later</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top" id="what">
+      <p class="eyebrow">Claude Code · ready-made setup</p>
+      <h1>Claude Workspace Guide</h1>
+      <p class="lede">One command gives any project a well-tested Claude Code setup. It adds good working habits, memory between sessions, and an honest note under each answer that says which tools Claude actually used.</p>
+      <div class="meta"><span>version 0.7.2</span><span>MIT licence</span><span>Linux · macOS · WSL · devcontainers</span><span>github.com/Bey3fendi/claude-workspace</span></div>
+    </header>
+
+    <section id="inside" style="border-top:0;margin-top:0;padding-top:0">
+      <h2>What's inside</h2>
+      <p class="sub">Five well-known add-ons, each fixed to a version that has been tested together, plus one small piece of our own that ties them together.</p>
+      <div class="grid">
+        <div class="tool core"><span class="role">our own · always on</span><h4>workspace-core</h4><p>Notices what kind of request you made (a bug, a new feature, tests) and points Claude to the right method. It also asks Claude to name a bug's cause before editing code, suggests when to clear the conversation, and writes the honest usage note.</p></div>
+        <div class="tool"><span class="role">working methods</span><h4>Superpowers</h4><p>Proven step-by-step methods: debug systematically, brainstorm before building, write tests first, check before calling something done.</p></div>
+        <div class="tool"><span class="role">memory</span><h4>claude-mem</h4><p>Remembers what happened in earlier sessions, so a new conversation can pick up where the last one stopped. Its usage reporting (telemetry) is always switched off.</p></div>
+        <div class="tool"><span class="role">shorter answers</span><h4>Caveman</h4><p>Runs in “lite” mode: answers are shorter and less wordy. It doesn't change what Claude does.</p></div>
+        <div class="tool"><span class="role">keep it simple</span><h4>Ponytail</h4><p>“Lazy senior dev” mode: pushes Claude toward the simplest, shortest solution that works, with no extra layers nobody asked for.</p></div>
+        <div class="tool"><span class="role">coding guidelines</span><h4>Karpathy skills</h4><p>Guidelines that steer Claude away from the coding mistakes AI models commonly make, based on Andrej Karpathy's observations.</p></div>
+      </div>
+      <p style="margin-top:14px;color:var(--muted);font-size:15px">There is also an optional model “router”. It is switched off and not installed unless you ask for it.</p>
+    </section>
+
+    <section id="install">
+      <h2>Install</h2>
+      <p class="sub">Pick the way that matches how you work. All three end in the same place. Run them inside the project you want to set up.</p>
+      <div class="paths">
+        <div class="path">
+          <span class="who">Most people</span>
+          <h4>One command</h4>
+          <p>Needs Node 22+, git and Claude Code already installed.</p>
+          <div class="ticket"><div class="head">In your project folder <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.2 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.2">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.2 install --yes \
+  --marketplace Bey3fendi/claude-workspace#v0.7.2</pre></div>
+        </div>
+        <div class="path">
+          <span class="who">Containers</span>
+          <h4>Devcontainer</h4>
+          <p>Add one line to <code>.devcontainer/devcontainer.json</code>. Each new container installs Claude Code and the workspace by itself.</p>
+          <div class="ticket"><div class="head">devcontainer.json <button class="copy" data-copy='"features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.7.2" } }'>Copy</button></div>
+<pre>"features": {
+  "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": {
+    "marketplace": "Bey3fendi/claude-workspace#v0.7.2"
+  }
+}</pre></div>
+        </div>
+        <div class="path">
+          <span class="who">Working on the workspace itself</span>
+          <h4>From a local copy</h4>
+          <p>Use your own checkout. Changes you make show up the next time you start Claude.</p>
+          <div class="ticket"><div class="head">In your project folder <button class="copy" data-copy="node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes">Copy</button></div>
+<pre>node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes</pre></div>
+        </div>
+      </div>
+      <h3>Then check it</h3>
+      <div class="ticket"><div class="head">Health check <small>safe to run any time</small> <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.2 doctor">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.2 doctor</pre>
+      <div class="note">Every line should be a ✓, or a “-” for optional parts. A “!” is a warning worth reading. The last line says whether everything required passed.</div></div>
+      <div class="callout warn"><strong>About <code>--yes</code></strong>It lets the installer set up claude-mem for your user account. That's the one part that reaches outside the project. Leave <code>--yes</code> out and the installer asks first. Use <code>--no-claude-mem</code> to skip memory entirely.</div>
+      <p>On Windows, use WSL. Native Windows isn't supported.</p>
+    </section>
+
+    <section id="daily">
+      <h2>Day to day</h2>
+      <p class="sub">Nothing new to learn. Start <code>claude</code> in the project and talk to it as usual. You'll notice four things.</p>
+      <ol class="steps">
+        <li><strong>Claude picks a method that fits your request.</strong> “The total is wrong, find out why” leads to careful debugging. “Add a pause menu” leads to brainstorming first. “Write tests for…” leads to test-first work.</li>
+        <li><strong>On a bug, Claude names the cause before editing.</strong> If it tries to change code before saying what's actually wrong, the first edit is held back and Claude is asked to state the cause first. It's held back at most twice; edits to tests and docs are never held.</li>
+        <li><strong>A short note appears under each answer.</strong> It shows what really happened, based on what Claude Code recorded rather than on what Claude says about itself. Only you see it; Claude doesn't.</li>
+        <li><strong>In very long conversations, Claude suggests a fresh start.</strong> Past about 300,000 tokens it recommends <code>/clear</code> or <code>/compact</code> and writes a handoff note. More on that below.</li>
+      </ol>
+      <h3>What the note under an answer looks like</h3>
+      <div class="screen"><span class="dim">… Claude's answer …</span><br><br><span class="hl">Verified by engine:</span> activated systematic-debugging · root-cause gate held 1 edit · report matches engine events <span class="dim">(activation = instructions loaded, not proof they were followed)</span></div>
+      <p style="font-size:15px;color:var(--muted)">“Activated” means the method's instructions were loaded. It doesn't promise Claude followed every step. The note is careful to say only what it can prove.</p>
+    </section>
+
+    <section id="clear">
+      <h2>Clear or compact?</h2>
+      <p class="sub">A long conversation gets slower, costs more and gets less sharp. When that happens, Claude will end an answer with a recommendation and a handoff note in a box.</p>
+      <div class="versus">
+        <div class="tool core"><h4>/clear <span class="badge" style="color:var(--ok)">usually best</span></h4>
+          <ul><li>Starts a fresh, empty conversation.</li><li>You paste the handoff note back in, and Claude carries on from it.</li><li>claude-mem also brings back recent memories by itself.</li><li>Cheaper and sharper than a long summary.</li></ul></div>
+        <div class="tool"><h4>/compact</h4>
+          <ul><li>Squeezes the current conversation into a summary.</li><li>Pick it when something can't be written down easily, like a long chain of reasoning in progress or a large paste you haven't saved.</li><li>workspace-core reminds Claude afterwards which method it was using.</li></ul></div>
+      </div>
+      <ol class="steps">
+        <li>Claude says <strong>CLEAR</strong> (or <strong>COMPACT</strong>) and gives a one-line reason.</li>
+        <li>Copy the handoff note. It covers the goal, what's done, the decisions, the dead ends, the next step and the files involved.</li>
+        <li>Type <code>/clear</code>, paste the note, and carry on.</li>
+      </ol>
+      <p style="font-size:15px;color:var(--muted)">Claude only suggests this at a natural pause, when a piece of work is finished, never in the middle of a task.</p>
+    </section>
+
+    <section id="commands">
+      <h2>Commands</h2>
+      <p class="sub">All of them run in the project folder. If you installed with npx, put <code>npx -y github:Bey3fendi/claude-workspace#v0.7.2</code> in front of the command word.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Command</th><th>What it does</th><th>When to use it</th></tr></thead>
+        <tbody>
+          <tr><td><code>install</code></td><td>Sets the workspace up. Running it again changes nothing.</td><td>Once per project</td></tr>
+          <tr><td><code>doctor</code></td><td>Checks that everything is in place and that memory telemetry is off.</td><td>When unsure; after updates</td></tr>
+          <tr><td><code>repair</code></td><td>Puts back anything missing or changed, and updates to the version you name.</td><td>When doctor complains; to update</td></tr>
+          <tr><td><code>usage</code></td><td>Shows the verified notes for your latest session.</td><td>To see what really happened</td></tr>
+          <tr><td><code>canary</code></td><td>Looks up whether the add-ons have newer releases. Changes nothing.</td><td>Now and then</td></tr>
+          <tr><td><code>rollback</code></td><td>Prints the exact steps back to the previous version.</td><td>If an update misbehaves</td></tr>
+          <tr><td><code>uninstall</code></td><td>Removes everything it added. Files you didn't edit come back exactly as they were.</td><td>To remove it</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="switches">
+      <h2>Turning things off</h2>
+      <p class="sub">Each extra can be switched off with a setting, for one session or for good. For one session, put it in front of the command, e.g. <code>CW_GATES=0 claude</code>. To make it permanent, add it to your shell profile.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Setting</th><th>What it turns off or changes</th></tr></thead>
+        <tbody>
+          <tr><td><code>CW_CONTRACTS=0</code></td><td>Matching methods to your requests (and the reminder after compacting)</td></tr>
+          <tr><td><code>CW_GATES=0</code></td><td>“Name the cause before editing” on bugs</td></tr>
+          <tr><td><code>CW_CONTEXT_PRESSURE=0</code></td><td>The clear-or-compact suggestion</td></tr>
+          <tr><td><code>CW_CONTEXT_PRESSURE_TOKENS=250000</code></td><td>How long a conversation gets before the suggestion (default 300,000)</td></tr>
+          <tr><td><code>CW_LISTING_TRIM=0</code></td><td>Keeps rarely-useful skills in the list Claude sees</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:15px;color:var(--muted)">If you already have your own clear-or-compact hook (a hook named “context-pressure”), the workspace sees it and stays quiet, so you never get two notes.</p>
+    </section>
+
+    <section id="update">
+      <h2>Update & roll back</h2>
+      <p class="sub">Each release is a numbered version on GitHub, and a project stays on its version until you move it.</p>
+      <div class="ticket"><div class="head">Move a project to a new version <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.2 repair --marketplace Bey3fendi/claude-workspace#v0.7.2">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.2 repair \
+  --marketplace Bey3fendi/claude-workspace#v0.7.2</pre>
+      <div class="note">Change both <code>v0.7.2</code>s to the version you want. The workspace remembers your last five versions.</div></div>
+      <div class="ticket"><div class="head">Going back <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.2 rollback">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.2 rollback</pre>
+      <div class="note">It prints the exact command to run, without running anything itself. Check the command, then run it.</div></div>
+    </section>
+
+    <section id="privacy">
+      <h2>Privacy & safety</h2>
+      <div class="grid">
+        <div class="tool"><h4>Stays in your project</h4><p>Only a few settings files in the project change. Your code is never touched. It refuses to run over unsaved changes in those files unless you say so.</p></div>
+        <div class="tool"><h4>Fully reversible</h4><p>Uninstall puts every file back exactly as it was. If you edited a file afterwards, only the workspace's own lines are removed.</p></div>
+        <div class="tool"><h4>Telemetry off</h4><p>claude-mem's usage reporting is switched off during install and checked again by every <code>doctor</code> run, which also names any setting that tries to turn it back on.</p></div>
+        <div class="tool"><h4>No secrets stored</h4><p>No keys, logins or tokens are written into the project or printed. Your Claude login stays where Claude Code keeps it.</p></div>
+      </div>
+    </section>
+
+    <section id="help">
+      <h2>When something's off</h2>
+      <details><summary>Doctor shows a red line</summary><p>Run <code>repair</code>. It puts back whatever is missing and fixes plugins that have moved off their fixed version. Then run <code>doctor</code> again.</p></details>
+      <details><summary>“Uncommitted changes in files the workspace would modify”</summary><p>Commit or stash your changes to <code>.claude/settings.json</code> or <code>.gitignore</code> first. If you're sure, add <code>--allow-dirty</code>. A backup is still taken.</p></details>
+      <details><summary>“Claude Code 2.1.x (tested: …)”</summary><p>Claude Code updated itself to a version this release hasn't been tested on. It's a warning, not an error, and things normally keep working.</p></details>
+      <details><summary>No method was used on my request</summary><p>The request didn't sound like a bug, a feature, tests or a review, so nothing was added. Using a clear word helps (“bug”, “add”, “write tests”, “review”). You can also ask for a method by name.</p></details>
+      <details><summary>Memory doesn't seem to work</summary><p>Run <code>doctor</code> and look at the claude-mem lines. Its background helper starts with your first session, so “not running” before that is normal.</p></details>
+    </section>
+
+    <div class="maint">
+      <section id="release">
+        <p class="eyebrow" style="margin-top:22px">For you, the maintainer</p>
+        <h2>Shipping a release</h2>
+        <ol class="steps">
+          <li>Raise the version to the same number in three places: <code>package.json</code>, <code>workspace.lock.json</code> (workspaceVersion) and <code>devcontainer/src/claude-workspace/devcontainer-feature.json</code>. If workspace-core changed, also raise <code>plugins/workspace-core/.claude-plugin/plugin.json</code>, so <code>repair</code> picks it up.</li>
+          <li>Run <code>npm run gen:marketplace</code> and <code>npm test</code>.</li>
+          <li>Commit, then tag: <code>git tag -a v0.7.3 -m "…"</code> and <code>git push origin main v0.7.3</code>.</li>
+          <li>GitHub then runs the tests and publishes the devcontainer feature automatically. Check the Actions tab.</li>
+        </ol>
+        <div class="callout warn"><strong>Never move a published tag</strong>Projects are pinned to it. If a release is broken, ship the next number instead.</div>
+      </section>
+      <section id="testing">
+        <h2>Testing</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Kind</th><th>Command</th><th>Costs Claude usage?</th></tr></thead>
+          <tbody>
+            <tr><td>Unit and install tests</td><td><code>npm test</code></td><td>No</td></tr>
+            <tr><td>workspace-core engine tests</td><td><code>claude plugin test plugins/workspace-core</code></td><td>No</td></tr>
+            <tr><td>Devcontainer in Docker</td><td><code>npm run build:feature && tests/live/devcontainer/run.sh</code></td><td>No</td></tr>
+            <tr><td>Method matching on real prompts</td><td><code>node tests/live/activation/run.mjs --max-usage 0.6</code></td><td>Yes, about $1.50</td></tr>
+            <tr><td>Real coding tasks, graded</td><td><code>node tests/live/outcomes/run.mjs --conditions with --max-usage 0.6</code></td><td>Yes, about $0.25–0.50 per task</td></tr>
+            <tr><td>Reminder after compacting</td><td><code>node tests/live/compaction/run.mjs</code></td><td>Yes, small</td></tr>
+          </tbody>
+        </table></div>
+        <p style="font-size:15px;color:var(--muted)"><code>--max-usage</code> stops the live tests once your usage limit reaches that share (0.6 = 60%). Runs already started still finish.</p>
+        <p style="font-size:15px;color:var(--muted)">Before raising an add-on's version, run <code>canary</code> to see what changed upstream, then rerun the live tests.</p>
+      </section>
+      <section id="later">
+        <h2>Parked for later</h2>
+        <ul>
+          <li><strong>macOS run:</strong> the install has been tested on Linux, WSL and in containers, but not yet on a Mac.</li>
+          <li><strong>Model router (Phase 5):</strong> deferred; it stays off.</li>
+          <li><strong>Upstream updates:</strong> <code>canary</code> reports a newer router release (1.19.2). Two add-ons are fixed to a commit that isn't their tagged release, though the version number matches.</li>
+        </ul>
+      </section>
+    </div>
+
+    <footer class="end">Source: <code>docs/guide.html</code> in the repository · plain-language companion to the README.</footer>
+  </main>
+</div>
+
+<script>
+document.querySelectorAll('button.copy').forEach((b) => {
+  b.addEventListener('click', () => {
+    const text = b.dataset.copy
+    const done = () => { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy' }, 1500) }
+    const fallback = () => {
+      const pre = b.closest('.ticket')?.querySelector('pre')
+      if (!pre) return
+      const r = document.createRange(); r.selectNodeContents(pre)
+      const s = window.getSelection(); s.removeAllRanges(); s.addRange(r)
+      b.textContent = 'Selected, press Ctrl+C'
+      setTimeout(() => { b.textContent = 'Copy' }, 2500)
+    }
+    try { navigator.clipboard.writeText(text).then(done, fallback) } catch { fallback() }
+  })
+})
+</script>

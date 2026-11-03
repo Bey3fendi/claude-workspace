@@ -37,6 +37,10 @@ export async function install(ctx, rep, { repair = false } = {}) {
   // ---- marketplace (Claude Code writes extraKnownMarketplaces itself)
   const name = ctx.marketplaceName
   const source = o.marketplace || m.marketplace.source || ctx.repoRoot
+  // Rollback history: capture the installed state BEFORE the marketplace is touched (re-pointing removes the
+  // marketplace, which uninstalls its plugins, so a later snapshot would see nothing installed).
+  const prevSource = m.marketplace.source
+  const before = pinState(ctx, ctx.lock.plugins.filter((p) => p.enabled).map((p) => `${p.name}@${name}`), projectInstall)
   let settings = readJsonFile(ctx.p('.claude/settings.json'))
   const declared = settings.extraKnownMarketplaces?.[name]
   if (!declared) {
@@ -56,7 +60,6 @@ export async function install(ctx, rep, { repair = false } = {}) {
     const u = marketplaceUpdate(ctx, name)
     if (!u.ok) rep.warn(`marketplace ${name} could not be refreshed (${u.message}); continuing with the cached catalog`)
   }
-  const before = pinState(ctx, ctx.lock.plugins.filter((p) => p.enabled).map((p) => `${p.name}@${name}`), projectInstall)
   if (!o.marketplace && source === ctx.repoRoot && !m.marketplace.source)
     rep.warn(`marketplace source is this checkout's absolute path (${source}); for a team-shared .claude/settings.json use --marketplace <owner>/<repo>#<tag>`)
   m.marketplace.source = source
@@ -105,7 +108,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
   m.plugins = ctx.pluginIds
   // Phase 6: record what changed so `rollback` can say exactly what to return to.
   const after = pinState(ctx, ctx.pluginIds, projectInstall)
-  if (pushHistory(m, { at: new Date().toISOString(), source: m.marketplace.source, workspaceVersion: m.workspaceVersion, plugins: before },
+  if (pushHistory(m, { at: new Date().toISOString(), source: prevSource, workspaceVersion: m.workspaceVersion, plugins: before },
     { source, workspaceVersion: ctx.lock.workspaceVersion, plugins: after })) rep.info('recorded the previous versions in the manifest (see `claude-workspace rollback`)')
   m.workspaceVersion = ctx.lock.workspaceVersion
 

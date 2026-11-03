@@ -9,7 +9,7 @@ A portable Claude Code workspace that is pinned, reversible and project-local. I
 
 It also includes an optional, disabled-by-default model router.
 
-**Status: Phase 6 (hardening) in progress.** Phases 0–4 are done; Phase 5 (router) is deferred. See `docs/PLAN.md`.
+**Status: Phase 6 (hardening) done; released on GitHub.** Phases 0–4 and 6 are done; Phase 5 (router) and the macOS run are deferred. See `docs/PLAN.md`.
 
 ## What workspace-core adds to every session
 - **Workflow contracts:** a local keyword classifier attaches a short contract to each request (debug → systematic-debugging, feature → brainstorming, tests → TDD or verification, …). Measured: activation 20/20 vs 0/51 without.
@@ -31,13 +31,13 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Requirements
 - Linux, macOS, WSL2, or a Linux devcontainer. Native Windows is not supported; use WSL.
 - Node ≥ 22.13.
-- Claude Code ≥ 2.1.290 (tested: 2.1.316).
+- Claude Code ≥ 2.1.290 (tested: 2.1.316, 2.1.317).
 - git.
 
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.7.2 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.2
+npx -y github:Bey3fendi/claude-workspace#v0.7.3 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.3
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

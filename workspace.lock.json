@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "workspaceVersion": "0.7.2",
+  "workspaceVersion": "0.7.3",
   "marketplace": {
     "name": "cw-workspace",
     "owner": "claude-workspace",
     "description": "Portable Claude Code workspace: upstream plugins pinned by commit SHA plus workspace-core"
   },
-  "claudeCode": { "min": "2.1.290", "tested": ["2.1.316"] },
+  "claudeCode": { "min": "2.1.290", "tested": ["2.1.316", "2.1.317"] },
   "node": { "min": "22.13.0" },
   "plugins": [
     {
