@@ -1,0 +1,25 @@
+# Publishes the devcontainer feature to GHCR (ghcr.io/<owner>/<repo>/claude-workspace) when a v* tag is pushed.
+# The first publish creates a private package; make it public once in the package settings.
+name: publish devcontainer feature
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm run build:feature
+      - uses: devcontainers/action@v1
+        with:
+          publish-features: 'true'
+          base-path-to-features: ./devcontainer/src
+          generate-docs: 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

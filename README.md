@@ -36,12 +36,15 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 
 ## Use
 ```bash
-# from a checkout of this repo
+# straight from GitHub (pinned release; no checkout needed)
+npx -y github:Bey3fendi/claude-workspace#v0.7.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.1
+
+# or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs doctor
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs uninstall
 ```
-For a team, publish this repo and install with `--marketplace <owner>/<repo>#<tag>`. Otherwise the committed `.claude/settings.json` holds this checkout's absolute path.
+For a team, install with `--marketplace Bey3fendi/claude-workspace#<tag>` (or your fork). Otherwise the committed `.claude/settings.json` holds this checkout's absolute path.
 
 | Command | What it does |
 |---|---|
@@ -54,7 +57,7 @@ For a team, publish this repo and install with `--marketplace <owner>/<repo>#<ta
 | `rollback` | Prints the exact steps back to the previous recorded version (the pins live in that version's lock, so its own `repair` restores them) |
 
 ### Update and rollback
-- **Update:** get the new workspace version (`git pull` in the checkout, or the new `<owner>/<repo>#<tag>`), then run its `repair` in each project. The previous versions are recorded in `.claude/workspace/manifest.json`.
+- **Update:** get the new workspace version (`git pull` in the checkout, or the new `Bey3fendi/claude-workspace#<tag>`), then run its `repair` in each project. The previous versions are recorded in `.claude/workspace/manifest.json`.
 - **Rollback:** `claude-workspace rollback` prints the steps, e.g. `git -C <checkout> checkout <commit>` then `repair`, or `npx -y github:<owner>/<repo>#<old-tag> repair --marketplace <owner>/<repo>#<old-tag>`.
 - **Before bumping pins:** `claude-workspace canary` shows what changed upstream; re-run the live suites (`tests/live/`) after a bump.
 
@@ -88,3 +91,7 @@ npm test                    # node:test, hermetic (fake claude/npx), runs on Lin
 npm run gen:marketplace     # regenerate .claude-plugin/marketplace.json from workspace.lock.json
 claude plugin validate .    # marketplace; plugins/workspace-core with --strict
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE). The plugins it installs (Superpowers, Caveman, Ponytail, Karpathy skills, claude-mem, the router) are separate projects under their own licenses; this repo pins them by commit and does not copy their code.

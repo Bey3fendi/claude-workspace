@@ -34,11 +34,11 @@ You can use the feature without a registry by copying it into the project's `.de
 {
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
   "remoteUser": "node",
-  "features": { "./claude-workspace": { "marketplace": "<owner>/<repo>#v0.7.1" } }
+  "features": { "./claude-workspace": { "marketplace": "Bey3fendi/claude-workspace#v0.7.1" } }
 }
 ```
 
-Once the feature is published to a registry (e.g. `ghcr.io/<owner>/<repo>/claude-workspace:0`), reference it by that id instead of the local path.
+Once the feature is published to GHCR, reference it as `ghcr.io/bey3fendi/claude-workspace/claude-workspace:0` instead of the local path. A `v*` tag push publishes it (`.github/workflows/publish-feature.yml`).
 
 ### Logins and the host project
 
