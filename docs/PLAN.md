@@ -342,8 +342,13 @@ Phase 3M adds:
 - **Runner:** `tests/live/devcontainer/run.sh`.
 - **Caveat:** without the `marketplace` option, `.claude/settings.json` points at a container-only path. Teams set `marketplace` to a published `<owner>/<repo>#<tag>`.
 
+**6. Published (2026-11-03):** public repo https://github.com/Bey3fendi/claude-workspace (MIT, copyright Bey3fendi).
+- Tags v0.7.1 and v0.7.2; CI runs the tests and publishes the feature on each `v*` tag.
+- Feature: `ghcr.io/bey3fendi/claude-workspace/claude-workspace:0`, anonymously pullable.
+- Verified live in Docker: feature with `source: github:Bey3fendi/claude-workspace#v0.7.2` and `marketplace: Bey3fendi/claude-workspace#v0.7.2` installed Claude Code 2.1.316 and all pinned plugins from the GitHub marketplace; `doctor` passed.
+- v0.7.2 fixes the feature installing the latest Claude Code instead of the tested version for non-bundled sources.
+
 **Open:**
-- **Publishing the repo and the feature (GHCR):** the user's decision.
 - **macOS run.**
 
 ### Phase 3M result (2026-11-03)

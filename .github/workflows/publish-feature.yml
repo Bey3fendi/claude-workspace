@@ -1,5 +1,5 @@
 # Publishes the devcontainer feature to GHCR (ghcr.io/<owner>/<repo>/claude-workspace) when a v* tag is pushed.
-# The first publish creates a private package; make it public once in the package settings.
+# The package inherits the public repo's visibility (verified: anonymous pull works).
 name: publish devcontainer feature
 on:
   push:
