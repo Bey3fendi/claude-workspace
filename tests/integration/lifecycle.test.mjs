@@ -40,7 +40,7 @@ test('empty project: install, idempotent re-run, doctor, clean uninstall', () =>
   assert.equal(s.enabledPlugins['superpowers@cw-workspace'], true)
   assert.equal(s.permissions.deny.length, POLICY_RULES)
   assert.equal(s.permissions.allow, undefined, 'the shared settings get no allow rules (Claude Code ignores them there)')
-  assert.deepEqual(JSON.parse(read(join(sb.project, '.claude', 'settings.local.json'))), { permissions: { allow: ['Edit(.memory/**)'] } }, 'md-memory writes need no prompt')
+  assert.deepEqual(JSON.parse(read(join(sb.project, '.claude', 'settings.local.json'))), { permissions: { allow: ['Edit(.memory/**)', 'Edit(.explain/**)'] } }, 'md-memory and explain writes need no prompt')
   assert.ok(!existsSync(join(sb.project, '.caveman.json')), 'Caveman is not part of the workspace')
   assert.ok(!regOf(sb)['caveman@cw-workspace'], 'no caveman plugin')
   assert.match(read(join(sb.project, '.gitignore')), /\.claude\/workspace\//)

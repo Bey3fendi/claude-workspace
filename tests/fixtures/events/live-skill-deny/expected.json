@@ -23,6 +23,7 @@
         "failed": [],
         "gate": null,
         "pressure": null,
+        "explain": null,
         "active": [
           "ponytail",
           "superpowers",

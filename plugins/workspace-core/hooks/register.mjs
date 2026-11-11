@@ -14,6 +14,7 @@ import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 import { executionNote } from '../lib/execution.mjs'
 import { capRequest } from '../lib/subagent-cap.mjs'
+import { EXPLAIN_DIR, UNIT_RE, buildRecord, citedPaths, exitFrom, feedbackText, isCommit, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
 import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
 import { FILES, appendBlock, injectText, matchSections, maxLinesFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
 
@@ -28,9 +29,75 @@ let ctx = { tokens: 0, pending: null }
 let mem = { injected: new Set() }
 const MEMORY_TOOLS = new Set(['Read', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 const readText = async ($, p) => { try { return await $.fs.read(p) } catch { return '' } }
+// Explain (lib/explain.mjs): facts for the next change record, kept in memory only. `since` is where the
+// current unit's commands start; `attempts` counts validator runs per unit (feedback is given at most twice).
+let ex = { commands: [], since: 0, lastEditAt: 0, requests: [], skills: [], attempts: new Map() }
+const EXPLAIN_EXCLUDES = ['--', '.', `:(exclude)${EXPLAIN_DIR}`, ':(exclude).memory', ':(exclude).claude']
+const SOURCE_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 let req = { class: null, text: '', denies: 0, released: false, gates: true, contracts: true, skills: [] }
 const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
+
+// Explain: when the developer runs /explain, capture the change record by code and hand it to the skill.
+// (Called from the skill.prompt hook: one unmatched hook per event.)
+async function explainPrompt($, e, r) {
+  if (e.pluginName !== 'workspace-core' || !/(^|:)explain$/.test(e.skill ?? '') || typeof r?.text !== 'string') return r
+  if ((await $.env.get('CW_EXPLAIN')) === '0') return { ...r, text: `${r.text}\n\nExplain is turned off (CW_EXPLAIN=0). Tell the developer; write no file.` }
+  const root = await $.session.root().catch(() => null)
+  const target = parseTarget(r.text)
+  if (!root || target?.invalid) return { ...r, text: `${r.text}\n\nCannot explain ${target?.invalid ? `"${target.invalid}" (not a commit name)` : 'here (no project root)'}. Tell the developer; write no file.` }
+  const git = async (argv) => { try { const x = await $.process.run(['git', '-c', 'core.quotePath=false', ...argv], { cwd: root }); return x.exitCode === 0 ? x.stdout : null } catch { return null } }
+  let base
+  if (target) base = ['show', '--format=', '-M', target]
+  else base = (await git(['rev-parse', '--verify', '-q', 'HEAD'])) !== null ? ['diff', '-M', 'HEAD'] : ['diff', '-M', '--cached']
+  const numstat = await git([...base, '--numstat', ...EXPLAIN_EXCLUDES])
+  if (numstat === null) return { ...r, text: `${r.text}\n\ngit could not read ${target ?? 'the changes'}. Tell the developer; write no file.` }
+  const hunks = parseHunks(await git([...base, '-U0', ...EXPLAIN_EXCLUDES]))
+  const decisions = newDecisions(await git([...base, '-U0', '--', '.memory/decisions.md']))
+  const untracked = []
+  if (!target) {
+    const names = ((await git(['ls-files', '--others', '--exclude-standard', ...EXPLAIN_EXCLUDES])) ?? '').split('\n').filter(Boolean).slice(0, 50)
+    for (const n of names) untracked.push({ path: n, lines: (await readText($, `${root}/${n}`)).split('\n').filter((l, i, a) => i < a.length - 1 || l).length })
+  }
+  let names = []
+  try { names = (await $.fs.list(`${root}/${EXPLAIN_DIR}/records`)).map((x) => x.name) } catch {}
+  const unit = nextUnitId(names)
+  const rec = buildRecord({ unit, target, requests: ex.requests, numstat: parseNumstat(numstat), hunks, untracked, commands: ex.commands.slice(ex.since), lastEditAt: ex.lastEditAt, skills: ex.skills, decisions, closedAt: new Date().toISOString() })
+  const rel = `${EXPLAIN_DIR}/records/${unit}.json`
+  if (rec.files.length) {
+    await $.fs.write(`${root}/${rel}`, JSON.stringify(rec, null, 2) + '\n')
+    ex.since = ex.commands.length; ex.requests = []; ex.skills = []; ex.attempts.set(unit, 0)
+    tracker.explain({ unit, files: rec.files.length })
+  }
+  await flush(sink, sink.record('explain', { action: 'record', unit: rec.files.length ? unit : null, target: rec.target, files: rec.files.length, commands: rec.commands.length, verified: rec.verifiedAfterLastEdit !== false }), (p, b) => $.fs.write(p, b))
+  return { ...r, text: r.text + recordText(rec, rel) }
+}
+
+// Explain: check a written explanation against its record (mechanical). Feedback rides on the tool result,
+// at most twice per unit; nothing is ever blocked. Other source edits mark the time of the last edit.
+// (Called from the root-cause gate's tool.call hook with the call's result.)
+async function explainCheck($, e, r) {
+  if (!SOURCE_EDIT_TOOLS.has(e.tool)) return r
+  const path = e.file_path ?? e.notebook_path
+  if (typeof path !== 'string' || r?.deny !== undefined || r?.isError === true) return r
+  const m = UNIT_RE.exec(path)
+  if (!m) { if (!/[\\/]\.(explain|memory|claude)[\\/]/.test(path)) ex.lastEditAt = Date.now(); return r }
+  if ((await $.env.get('CW_EXPLAIN')) === '0') return r
+  const root = await $.session.root().catch(() => null)
+  const unit = m[1]
+  let rec = null
+  try { rec = JSON.parse(await $.fs.read(`${root}/${EXPLAIN_DIR}/records/${unit}.json`)) } catch { return r }
+  const md = await readText($, path)
+  const there = new Set()
+  for (const p of citedPaths(md)) { try { if (await $.fs.exists(`${root}/${p}`)) there.add(p) } catch {} }
+  const res = validate(md, rec, { maxWords: wordsFrom(await $.env.get('CW_EXPLAIN_WORDS')), exists: (p) => there.has(p) })
+  const n = ex.attempts.get(unit) ?? 0
+  ex.attempts.set(unit, n + 1)
+  tracker.explain({ unit, passed: res.passed.length, total: res.passed.length + res.failed.length, failedRules: res.failed.map((f) => f.rule) })
+  await flush(sink, sink.record('explain', { action: 'validate', unit, attempt: n + 1, passed: res.passed, failed: res.failed.map((f) => f.rule) }), (p, b) => $.fs.write(p, b))
+  if (!res.failed.length || n >= 2) return r
+  return { ...r, context: [...(r?.context ?? []), feedbackText(unit, res, n === 1)] }
+}
 
 export const register = (on) => {
   on('session.start', async ($, e, next) => {
@@ -64,6 +131,7 @@ export const register = (on) => {
   on('prompt.submit', async ($, e, next) => {
     const human = !e.command && !e.isMeta && ['composer', 'bridge', 'sdk'].includes(e.origin?.kind)
     if (!human) return next(e)
+    ex.requests = [...ex.requests, short(e.text ?? '', 300)].slice(-10)
     const contracts = (await $.env.get('CW_CONTRACTS')) !== '0'
     const gates = (await $.env.get('CW_GATES')) !== '0'
     const c = classify(e.text)
@@ -157,8 +225,10 @@ export const register = (on) => {
   }).catch(($, e, next) => next(e))
 
   // Phase 4 root-cause gate: hold the first source edit of a debug request until a root cause is stated.
+  // Also runs Explain's check on edits (explainCheck below), after the call; a failed check never fails the call.
   on('tool.call', async ($, e, next) => {
-    if (!req.gates || req.class !== 'debug') return next(e)
+    const after = async (r) => { try { return await explainCheck($, e, r) } catch { return r } }
+    if (!req.gates || req.class !== 'debug') return after(await next(e))
     const d = decide(req, e)
     if (d.action === 'deny') {
       req.denies++
@@ -171,7 +241,7 @@ export const register = (on) => {
       tracker.gate('release', d.reason)
       await flush(sink, sink.record('gate', { gate: 'root-cause', action: 'release', reason: d.reason, afterDenies: req.denies }), (p, b) => $.fs.write(p, b))
     }
-    return next(e)
+    return after(await next(e))
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', async ($, e, next) => {
@@ -196,9 +266,11 @@ export const register = (on) => {
     st.skills++
     tracker.skillPrompt(e.skill)
     if (e.agentId === undefined && e.skill && !req.skills.includes(e.skill)) req.skills.push(e.skill)
+    if (e.skill && !/(^|:)explain$/.test(e.skill)) ex.skills = [...ex.skills, e.skill].slice(-30)
     const w = sink.record('skill.prompt', { skill: e.skill, pluginName: e.pluginName ?? null, source: e.source ?? null, agentId: e.agentId ?? null })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
     $.ui.status(statusText())
+    if (e.pluginName === 'workspace-core' && /(^|:)explain$/.test(e.skill ?? '')) { try { return await explainPrompt($, e, r) } catch { return r } }
     return r
   })
 
@@ -212,6 +284,19 @@ export const register = (on) => {
     tracker.skillCall(e.skill ?? null, outcome)
     const w = sink.record('tool.call', { tool: 'Skill', skill: e.skill ?? null, agentId: e.agentId ?? null, ...outcome })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
+    return r
+  }).catch(($, e, next) => next(e))
+
+  // Explain: remember each Bash command and its exit code for the next change record; a successful
+  // `git commit` gets a footer hint. Kept in memory only (never written unless /explain runs).
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    const r = await next(e)
+    if (typeof e.command !== 'string' || (await $.env.get('CW_EXPLAIN')) === '0') return r
+    const exit = exitFrom(r)
+    if (exit === null) return r
+    ex.commands = [...ex.commands, { cmd: e.command, exit, at: Date.now(), agent: e.agentId !== undefined }]
+    if (ex.commands.length > 200) { const drop = ex.commands.length - 200; ex.commands = ex.commands.slice(drop); ex.since = Math.max(0, ex.since - drop) }
+    if (exit === 0 && e.agentId === undefined && isCommit(e.command)) tracker.explain({ commit: true })
     return r
   }).catch(($, e, next) => next(e))
 

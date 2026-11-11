@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "workspaceVersion": "0.11.0",
+  "workspaceVersion": "0.12.0",
   "marketplace": {
     "name": "cw-workspace",
     "owner": "claude-workspace",

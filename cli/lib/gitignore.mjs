@@ -6,7 +6,8 @@ export const END = '# <<< claude-workspace (managed) <<<'
 // .claude/workspace/ holds backups and the manifest (per machine), except CLAUDE.workspace.md, which the
 // committed CLAUDE.md imports and so must be committed too. A file under an ignored *directory* cannot be
 // re-included, hence `/*` plus the negation.
-export const ENTRIES = ['.claude/workspace/*', '!.claude/workspace/CLAUDE.workspace.md', '.claude/settings.local.json']
+// .explain/ holds Explain's local, per-developer explanations (never committed).
+export const ENTRIES = ['.claude/workspace/*', '!.claude/workspace/CLAUDE.workspace.md', '.claude/settings.local.json', '.explain/']
 const MARKERS = { begin: BEGIN, end: END }
 
 /** Insert or update the managed block. Returns the new text (identical text means no change). */

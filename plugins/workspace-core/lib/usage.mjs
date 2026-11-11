@@ -46,15 +46,18 @@ export function parseUsageSection(answer) {
 export function createTracker() {
   const session = { active: new Set() }
   let req = null
-  const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null, pressure: null })
+  const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null, pressure: null, explain: null })
   return {
-    turnStart() { req = fresh() },
+    // Keep what arrived since the last finish (a slash-command skill loads before its turn starts).
+    turnStart() { req ??= fresh() },
     injection(markers) { for (const [k, n] of Object.entries(markers || {})) if (n > 0 && INTEGRATIONS[k]) session.active.add(k) },
     skillPrompt(skill) { if (!skill) return; (req ??= fresh()).activated.add(skill) },
     skillLoaded(skill) { if (!skill) return; (req ??= fresh()).completed.add(skill) },
     skillFailed(skill) { if (!skill) return; (req ??= fresh()).failed.add(skill) },
     /** Phase 6: the context-pressure note was attached to this request (context size in tokens). */
     pressure(tokens) { (req ??= fresh()).pressure = tokens },
+    /** Explain in this request: { commit } (a commit was made), { unit, files } (record), { unit, passed, total, failedRules } (check). */
+    explain(info) { req ??= fresh(); req.explain = { ...(req.explain ?? {}), ...info } },
     /** Phase 4 gate outcome for this request: action 'deny' | 'release'. */
     gate(action, reason) {
       req ??= fresh()
@@ -85,14 +88,14 @@ export function summarize(r, section, active) {
   const matches = (claim) => activated.includes(claim)
   const claimedNotObserved = section.applied.filter((c) => !matches(c))
   const observedNotClaimed = section.present ? activated.filter((s) => !section.applied.includes(s)) : []
-  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, active, reportPresent: section.present, claimed: section.applied, claimedNotObserved, observedNotClaimed }
+  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, active, reportPresent: section.present, claimed: section.applied, claimedNotObserved, observedNotClaimed }
   return { ...evidence, footer: renderFooter(evidence) }
 }
 
 const short = (id) => id.replace(/^andrej-karpathy-skills:/, 'karpathy:')
 
 export function renderFooter(e) {
-  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure) return null
+  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain) return null
   const parts = []
   parts.push(e.activated.length ? `activated ${e.activated.map(short).join(', ')}` : 'no skill activations observed')
   if (e.denied.length) parts.push(`denied ${e.denied.map(short).join(', ')}`)
@@ -103,6 +106,12 @@ export function renderFooter(e) {
     parts.push(`root-cause gate held ${e.gate.held} edit${e.gate.held > 1 ? 's' : ''}${how}`)
   }
   if (e.pressure) parts.push(`context ~${Math.round(e.pressure / 1000)}K: /clear-or-/compact advice attached`)
+  if (e.explain?.unit) {
+    const x = e.explain
+    parts.push(x.total === undefined ? `explain ${x.unit}: record captured, no file written`
+      : `explain ${x.unit}: ${x.passed}/${x.total} checks${x.failedRules?.length ? ` (failed: ${x.failedRules.join(', ')})` : ''}`)
+  }
+  if (e.explain?.commit) parts.push('commit made: /explain HEAD explains it')
   if (e.reportPresent) {
     if (e.active.length) parts.push(`context injected this session: ${e.active.map((k) => INTEGRATIONS[k]).join(', ')}`)
     if (e.claimedNotObserved.length) parts.push(`self-reported only (no engine event): ${e.claimedNotObserved.map(short).join(', ')}`)
@@ -127,6 +136,10 @@ export function replay(rows) {
       case 'skill.failed': t.skillFailed(e.skill); break
       case 'gate': t.gate(e.action, e.reason); break
       case 'pressure': pendingPressure = e.tokens; break
+      case 'explain':
+        if (e.action === 'record' && e.unit) t.explain({ unit: e.unit, files: e.files })
+        else if (e.action === 'validate') t.explain({ unit: e.unit, passed: e.passed.length, total: e.passed.length + e.failed.length, failedRules: e.failed })
+        break
       case 'tool.call': if (e.tool === 'Skill' && e.skill) t.skillCall(e.skill, e); break
       case 'turn.complete':
         if (e.agentId == null && open) {

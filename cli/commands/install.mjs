@@ -10,6 +10,7 @@ import { upsertBlock } from '../lib/gitignore.mjs'
 import { OWNED, TARGETS, addImport, importState, removeImport, targetOf, workspaceMd } from '../lib/claude-md.mjs'
 import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
 import { FILES as MEMORY_FILES, TEMPLATES as MEMORY_TEMPLATES, MEMORY_ALLOWS } from '../../plugins/workspace-core/lib/md-memory.mjs'
+import { EXPLAIN_ALLOWS } from '../../plugins/workspace-core/lib/explain.mjs'
 import { readJsonFile, readMaybe, writeAtomic, writeJsonIfChanged, hashFile, UserError } from '../lib/util.mjs'
 
 export async function install(ctx, rep, { repair = false } = {}) {
@@ -153,12 +154,12 @@ export async function install(ctx, rep, { repair = false } = {}) {
   }
   m.addedDenies = [...new Set([...m.addedDenies, ...added])]
 
-  // ---- md-memory allow rules: Claude writes its notes in .memory/ without a prompt each time. They go in
+  // ---- md-memory and Explain allow rules: Claude writes .memory/ notes and .explain/ files without a prompt each time. They go in
   // the per-user settings.local.json: Claude Code ignores allow rules in the shared, committed settings.json.
-  const allow = addRules(readJsonFile(ctx.p('.claude/settings.local.json')), 'allow', MEMORY_ALLOWS)
+  const allow = addRules(readJsonFile(ctx.p('.claude/settings.local.json')), 'allow', [...MEMORY_ALLOWS, ...EXPLAIN_ALLOWS])
   if (allow.added.length) {
     writeJsonIfChanged(ctx.p('.claude/settings.local.json'), allow.settings)
-    rep.change(`added ${allow.added.length} permissions.allow rule(s) for .memory/ to .claude/settings.local.json`)
+    rep.change(`added ${allow.added.length} permissions.allow rule(s) for .memory/ and .explain/ to .claude/settings.local.json`)
   }
   m.addedAllows = [...new Set([...(m.addedAllows ?? []), ...allow.added])]
 

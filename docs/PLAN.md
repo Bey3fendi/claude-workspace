@@ -406,6 +406,22 @@ Phase 3M adds:
   - Fable main loop, Agent call with no model: the subagent's requests went to Opus 5.5 (the Fable entry in `modelUsage` is the main loop's own).
   - **Finding:** rewriting the model in the result after `next(e)` of `agent.spawn` did not change the subagent's identity line (it still said Fable while Opus served it). Rewriting the input before `next` does. In the inherited case the identity line still names Fable; only the requests are capped.
 
+**13. Explain, slim version (2026-11-11, v0.12.0).** From `docs/explain-spec.md` (the user's proposal). Agreed with the user: no gates, local only, build the slim version first and judge it.
+- **Built:** a `workspace-core:explain` skill with `disable-model-invocation: true` (only the developer runs it, so it costs nothing in normal turns and is not in the model's listing). workspace-core:
+  - remembers each Bash command and its exit code (in memory), the human prompts, the skills used and the time of the last source edit;
+  - on `/explain [commit]`, builds the change record with git (`diff HEAD` plus untracked files, or `show <commit>`; `.explain/`, `.memory/` and `.claude/` excluded), writes it to `.explain/records/u-NNNN.json` and appends it to the skill's prompt;
+  - when the model saves `.explain/units/u-NNNN.md`, runs the validator (8 rules, `lib/explain.mjs`) and returns failures in the tool result, at most twice; nothing is denied;
+  - adds footer lines: `explain u-NNNN: n/8 checks`, and `commit made: /explain HEAD explains it`.
+- **Install:** `.explain/` joins the managed gitignore block; `Edit(.explain/**)` joins the allow rules in `settings.local.json`; doctor has an `explain` check. `CW_EXPLAIN=0` and `CW_EXPLAIN_WORDS`.
+- **Not built (from the spec):** Stop and commit gates, comprehension checks and understanding debt, the developer profile, MAP.md, TIMELINE.md, commit roll-ups, the post-commit git hook. The spec's `.claude/explain/` would not work: Claude Code treats every `.claude/` path as sensitive (see md-memory), hence `.explain/`.
+- **Tests:** `tests/unit/explain.test.mjs` (10: parsing, record, every validator rule passing and failing, footer, install wiring), engine `tests/explain.test.ts` (5).
+- **Live (2.1.317, `claude -p` with two messages in one process, Sonnet, about $0.29 in all):**
+  - Change + `/workspace-core:explain`: the record held both files with the right line ranges and both `node --test` runs; the model's file passed 8/8 at the first save; the footer showed `explain u-0001: 8/8 checks`.
+  - Commit + `/explain HEAD` (the short name works): the footer suggested it after the commit; u-0002 passed 8/8 and said "The tests were not run in this session" (the commands were from the previous process).
+  - **Finding:** `node --test 2>&1 | tail -10` records `tail`'s exit code. The model noticed and said so; the record now flags piped commands and names such a run as verification only with that caveat.
+  - **Fixed on the way:** a skill typed as a slash command loads before its turn starts, and the footer dropped it ("no skill activations observed"). The tracker now keeps what arrived since the last answer.
+- **Judge it by:** whether you read the "In short" and the file, and whether a teammate who didn't watch can say what changed, why, and where to start in 2 minutes (the spec's acceptance test).
+
 **Open:**
 - **macOS run.**
 

@@ -24,6 +24,7 @@
         ],
         "gate": null,
         "pressure": null,
+        "explain": null,
         "active": [
           "superpowers",
           "caveman"
@@ -48,6 +49,7 @@
         "failed": [],
         "gate": null,
         "pressure": null,
+        "explain": null,
         "active": [
           "superpowers",
           "caveman"
@@ -67,6 +69,7 @@
         "failed": [],
         "gate": null,
         "pressure": null,
+        "explain": null,
         "active": [
           "superpowers",
           "caveman"
@@ -86,6 +89,7 @@
         "failed": [],
         "gate": null,
         "pressure": null,
+        "explain": null,
         "active": [
           "superpowers",
           "caveman"

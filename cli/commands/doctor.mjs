@@ -8,6 +8,7 @@ import { hasBlock, upsertBlock } from '../lib/gitignore.mjs'
 import { OWNED, TARGETS, importState, karpathyPin, lengthLimit, readVendored, workspaceMd } from '../lib/claude-md.mjs'
 import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
 import { FILES as MEMORY_FILES, MEMORY_ALLOWS } from '../../plugins/workspace-core/lib/md-memory.mjs'
+import { EXPLAIN_ALLOWS } from '../../plugins/workspace-core/lib/explain.mjs'
 import { cmpVersion, readJsonFile, readMaybe } from '../lib/util.mjs'
 
 export async function doctor(ctx, rep) {
@@ -69,6 +70,10 @@ export async function doctor(ctx, rep) {
   add('memory-allow-rules', allowMiss.length ? 'warn' : 'ok', allowMiss.length
     ? `${allowMiss.join(', ')} missing: Claude will ask before each memory write (run repair)`
     : `${MEMORY_ALLOWS.length} present`)
+  const explainMiss = EXPLAIN_ALLOWS.filter((r) => !(local?.permissions?.allow ?? []).includes(r))
+  add('explain', explainMiss.length ? 'warn' : 'ok', explainMiss.length
+    ? `${explainMiss.join(', ')} missing: Claude will ask before writing each /explain file (run repair)`
+    : `/explain ready (local files in .explain/)${ctx.env.CW_EXPLAIN === '0' ? '; CW_EXPLAIN=0 turns it off in this shell' : ''}`)
 
   // CLAUDE.md integration: the owned file, the import block in the target, its size, the vendored pin
   const pin = karpathyPin(ctx.lock)
