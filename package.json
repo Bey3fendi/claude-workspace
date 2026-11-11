@@ -1,6 +1,6 @@
 {
   "name": "claude-workspace",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Portable, pinned Claude Code workspace: Superpowers, Ponytail, a default CLAUDE.md with the Karpathy guidelines, file-based md-memory, optional router, truthful Workspace Usage reporting",
   "type": "module",
   "bin": { "claude-workspace": "cli/bin/claude-workspace.mjs" },

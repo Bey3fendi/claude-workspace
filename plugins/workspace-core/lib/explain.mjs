@@ -220,7 +220,20 @@ export function feedbackText(unit, res, final) {
 }
 
 /** The text appended to the skill's prompt: the record, and where to write. */
-export function recordText(rec, relRecord) {
+export const DIFF_CAP = 12000
+/** The diff for the prompt (old and new lines, so the model never needs to run git), capped. */
+export function diffExcerpt(diff, cap = DIFF_CAP) {
+  const d = (diff ?? '').trim()
+  if (!d) return ''
+  if (d.length <= cap) return d
+  const cut = d.lastIndexOf('\n', cap)
+  return `${d.slice(0, cut > 0 ? cut : cap)}\n... (diff truncated at ${cap} characters: read the changed files for the rest)`
+}
+
+export function recordText(rec, relRecord, diff = '') {
   if (!rec.files.length) return `\n\n## Change record\nNo changes found for ${rec.target}. Tell the developer there is nothing to explain; write no file.`
-  return `\n\n## Change record (captured by workspace-core: explain only these facts)\nUnit: ${rec.unit} · write the explanation to \`${EXPLAIN_DIR}/units/${rec.unit}.md\` · record saved at \`${relRecord}\`\n\`\`\`json\n${JSON.stringify(rec, null, 1)}\n\`\`\``
+  const d = diffExcerpt(diff)
+  const fence = d.includes('```') ? '~~~~' : '```'
+  return `\n\n## Change record (captured by workspace-core: explain only these facts)\nUnit: ${rec.unit} · write the explanation to \`${EXPLAIN_DIR}/units/${rec.unit}.md\` · record saved at \`${relRecord}\`\n\`\`\`json\n${JSON.stringify(rec, null, 1)}\n\`\`\`` +
+    (d ? `\n\n## Diff (git, 3 lines of context; new files are not in it: read them)\n${fence}diff\n${d}\n${fence}` : '')
 }

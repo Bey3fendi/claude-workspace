@@ -409,3 +409,36 @@ test('drift: an edited owned file or import line is reported and repaired', () =
   assert.equal(read(join(sb.project, 'CLAUDE.md')), MD_BLOCK)
   assert.match(read(join(sb.project, OWNED_MD)), /## Coding guidelines \(Karpathy\)/)
 })
+
+test('invalid JSON in settings.json or settings.local.json: refused before anything is written (QA 2026-11-11)', () => {
+  for (const f of ['settings.json', 'settings.local.json']) {
+    const sb = sandbox()
+    write(join(sb.project, '.claude', f), '{ "model": "sonnet", }\n')
+    git(sb.project, 'init', '-q'); git(sb.project, 'add', '-A'); git(sb.project, 'commit', '-qm', 'c')
+    const before = tree(sb.project, ['.git'])
+    const r = cli(sb, ['install', '--yes'])
+    assert.notEqual(r.code, 0, f)
+    assert.match(r.stdout + r.stderr, /not valid JSON/)
+    assert.deepEqual(tree(sb.project, ['.git']), before, `${f}: no backup or other file left behind`)
+  }
+})
+
+test('--version prints the workspace version without a command (QA 2026-11-11)', () => {
+  const sb = sandbox()
+  for (const flag of ['--version', '-v']) {
+    const r = cli(sb, [flag])
+    assert.equal(r.code, 0)
+    assert.equal(r.stdout.trim(), LOCK.workspaceVersion)
+  }
+})
+
+test('uninstall keeps .explain/ and says so (QA 2026-11-11)', () => {
+  const sb = sandbox()
+  git(sb.project, 'init', '-q'); git(sb.project, 'commit', '-q', '--allow-empty', '-m', 'c')
+  assert.equal(cli(sb, ['install', '--yes']).code, 0)
+  write(join(sb.project, '.explain', 'units', 'u-0001.md'), '# note\n')
+  const r = cli(sb, ['uninstall'])
+  assert.equal(r.code, 0, r.stdout + r.stderr)
+  assert.ok(existsSync(join(sb.project, '.explain', 'units', 'u-0001.md')), 'the notes are kept')
+  assert.match(r.stdout, /kept \.explain\//)
+})

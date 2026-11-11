@@ -10,7 +10,7 @@ import { removeBlock } from '../lib/gitignore.mjs'
 import { TARGETS, removeImport } from '../lib/claude-md.mjs'
 import { WORKSPACE_DIR } from '../lib/context.mjs'
 import { hashFile, readMaybe, readJsonFile, writeAtomic, writeJsonIfChanged, rmrf, removeEmptyDirs, UserError } from '../lib/util.mjs'
-import { rmSync } from 'node:fs'
+import { rmSync, existsSync } from 'node:fs'
 
 export async function uninstall(ctx, rep) {
   const m = loadManifest(ctx)
@@ -57,6 +57,8 @@ export async function uninstall(ctx, rep) {
     else rep.info(`kept ${rel}: it holds your project memory (delete it yourself if you no longer want it)`)
   }
   removeEmptyDirs(ctx.p('.memory'), ctx.projectRoot)
+  // Explain's files are the developer's own notes: kept, and named, since without the gitignore block they show as untracked.
+  if (existsSync(ctx.p('.explain'))) rep.warn('kept .explain/: your local /explain notes; no longer gitignored, so delete it or ignore it yourself')
 
   rmrf(ctx.p(WORKSPACE_DIR))
   if (!m.claudeDirExisted) removeEmptyDirs(ctx.p('.claude'), ctx.projectRoot)

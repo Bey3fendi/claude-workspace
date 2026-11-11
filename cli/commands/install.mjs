@@ -37,6 +37,8 @@ export async function install(ctx, rep, { repair = false } = {}) {
     const st = importState(readMaybe(ctx.p(mdTarget))?.toString('utf8') ?? '')
     if (st.state === 'malformed') throw new UserError(`${mdTarget} line ${st.problem.line}: ${st.problem.problem}. Fix or remove the claude-workspace markers there, then re-run (nothing was changed)`)
   }
+  // Settings files must parse before anything is written (a refusal leaves no backup behind).
+  for (const f of ['.claude/settings.json', '.claude/settings.local.json']) readJsonFile(ctx.p(f))
   const dirty = dirtyTouchedFiles(ctx, mdTarget ? [mdTarget] : []).filter((f) => !(m?.files?.[f] && hashFile(ctx.p(f)) === m.files[f].postHash))
   if (dirty.length && !o.allowDirty) {
     throw new UserError(`uncommitted changes in files the workspace would modify: ${dirty.join(', ')}\n    commit or stash them, or re-run with --allow-dirty (a byte-exact backup is still taken)`)

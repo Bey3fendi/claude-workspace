@@ -153,3 +153,14 @@ test('footer: a slash-command skill that loads before its turn starts is still c
   const f = t.finish('').footer
   assert.match(f, /activated workspace-core:explain/); assert.match(f, /explain u-0003: 8\/8 checks/)
 })
+
+test('the prompt carries the diff (old and new lines), capped', () => {
+  const r = record()
+  const t = recordText(r, 'x', '--- a/src/decide.js\n+++ b/src/decide.js\n@@ -1 +1 @@\n-old line\n+new line\n')
+  assert.match(t, /## Diff \(git, 3 lines of context/); assert.match(t, /-old line\n\+new line/)
+  assert.doesNotMatch(recordText(r, 'x', ''), /## Diff/)
+  const big = recordText(r, 'x', Array.from({ length: 3000 }, (_, i) => `+line ${i}`).join('\n'))
+  assert.match(big, /diff truncated at 12000 characters/)
+  assert.ok(big.length < 16000)
+  assert.match(recordText(r, 'x', '+```js\n'), /~~~~diff/, 'a diff with a code fence gets a longer fence')
+})

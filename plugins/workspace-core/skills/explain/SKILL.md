@@ -9,13 +9,13 @@ disable-model-invocation: true
 
 Target: $ARGUMENTS
 
-workspace-core appends a **change record** below: the files and changed line ranges, the commands that ran with their exit codes, the skills used, and new decisions. Write the explanation from that record and from reading the changed code. Do not add facts the record or the code does not show.
+workspace-core appends a **change record** below: the files and changed line ranges, the commands that ran with their exit codes, the skills used, new decisions, and the diff itself. Write the explanation from that record, the diff and the changed code. You don't need to run git. Do not add facts the record, the diff or the code does not show.
 
 If the record says there are no changes, say so in one line and write no file.
 
 ## Steps
 1. Read the changed ranges that matter. You don't need every line.
-2. Write the explanation to the path the record names (`.explain/units/<unit>.md`) with the template below.
+2. Write the explanation to the path the record names (`.explain/units/<unit>.md`) with the template below. The Write tool creates the folder, so don't run `mkdir`.
 3. A mechanical check runs when you save. If it reports failures, fix them in one pass.
 4. In the chat, show **only** the "In short" text and the file path. Never paste the whole explanation.
 

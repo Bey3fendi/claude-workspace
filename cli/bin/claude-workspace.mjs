@@ -72,8 +72,8 @@ export function parseArgs(argv) {
 export async function main(argv = process.argv.slice(2), env = process.env) {
   let o
   try { o = parseArgs(argv) } catch (e) { process.stderr.write(`error: ${e.message}\n`); return 2 }
+  if (o.version && !o.help) { const { loadLock } = await import('../lib/context.mjs'); process.stdout.write(loadLock().workspaceVersion + '\n'); return 0 }
   if (o.help || !o._[0]) { process.stdout.write(HELP); return o.help ? 0 : 2 }
-  if (o.version) { const { loadLock } = await import('../lib/context.mjs'); process.stdout.write(loadLock().workspaceVersion + '\n'); return 0 }
   const cmd = o._[0]
   const rep = new Reporter({ json: o.json })
   let result

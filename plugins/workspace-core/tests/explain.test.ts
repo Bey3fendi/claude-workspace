@@ -18,7 +18,7 @@ function engine(on: any, env: Record<string, string> = {}) {
   on('fs.list', (_: any, e: any) => ({ value: Object.keys(files).filter((p) => p.startsWith(e.path + '/')).map((p) => ({ name: p.slice(e.path.length + 1), kind: 'file', size: 1, mtimeMs: 0, isLink: false })) }))
   on('process.run', (_: any, e: any) => {
     const a = e.argv.join(' ')
-    const out = a.includes('rev-parse') ? 'abc' : a.includes('ls-files') ? 'docs/new.md\n' : a.includes('decisions.md') ? '+## Clamp at zero\n' : a.includes('--numstat') ? NUMSTAT : a.includes('-U0') ? DIFF : ''
+    const out = a.includes('rev-parse') ? 'abc' : a.includes('ls-files') ? 'docs/new.md\n' : a.includes('decisions.md') ? '+## Clamp at zero\n' : a.includes('--numstat') ? NUMSTAT : /-U[03]/.test(a) ? DIFF : ''
     return { value: { exitCode: 0, stdout: out, stderr: '' } }
   })
   on('prompt.submit', (_: any, e: any) => ({ text: e.text }))
@@ -68,6 +68,7 @@ test('/explain captures the record by code and hands it to the skill', async ($,
   await bash($, 'npm test')
   const r: any = await explain($)
   expect(r.text).toContain('write the explanation to `.explain/units/u-0001.md`')
+  expect(r.text).toContain('## Diff (git, 3 lines of context')
   const rec = JSON.parse(files[`${ROOT}/.explain/records/u-0001.json`])
   expect(rec.files.map((f: any) => f.path)).toEqual(['src/cart.js', 'docs/new.md'])
   expect(rec.files[0].hunks).toEqual([[5, 7]])

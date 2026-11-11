@@ -53,6 +53,7 @@ async function explainPrompt($, e, r) {
   const numstat = await git([...base, '--numstat', ...EXPLAIN_EXCLUDES])
   if (numstat === null) return { ...r, text: `${r.text}\n\ngit could not read ${target ?? 'the changes'}. Tell the developer; write no file.` }
   const hunks = parseHunks(await git([...base, '-U0', ...EXPLAIN_EXCLUDES]))
+  const diff = (await git([...base, '-U3', ...EXPLAIN_EXCLUDES])) ?? ''
   const decisions = newDecisions(await git([...base, '-U0', '--', '.memory/decisions.md']))
   const untracked = []
   if (!target) {
@@ -70,7 +71,7 @@ async function explainPrompt($, e, r) {
     tracker.explain({ unit, files: rec.files.length })
   }
   await flush(sink, sink.record('explain', { action: 'record', unit: rec.files.length ? unit : null, target: rec.target, files: rec.files.length, commands: rec.commands.length, verified: rec.verifiedAfterLastEdit !== false }), (p, b) => $.fs.write(p, b))
-  return { ...r, text: r.text + recordText(rec, rel) }
+  return { ...r, text: r.text + recordText(rec, rel, diff) }
 }
 
 // Explain: check a written explanation against its record (mechanical). Feedback rides on the tool result,

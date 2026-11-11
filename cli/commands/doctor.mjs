@@ -57,7 +57,7 @@ export async function doctor(ctx, rep) {
 
   const giText = readMaybe(ctx.p('.gitignore'))?.toString('utf8')
   add('gitignore', !hasBlock(giText) ? 'warn' : upsertBlock(giText) === giText ? 'ok' : 'warn', !hasBlock(giText) ? 'managed block missing (run repair)'
-    : upsertBlock(giText) === giText ? 'managed block: .claude/workspace/* (CLAUDE.workspace.md committed), .claude/settings.local.json' : 'managed block is from an older version (run repair)')
+    : upsertBlock(giText) === giText ? 'managed block: .claude/workspace/* (CLAUDE.workspace.md committed), .claude/settings.local.json, .explain/' : 'managed block is from an older version (run repair)')
 
   // memory: md-memory (built into workspace-core); its files live in the project
   const memMissing = Object.values(MEMORY_FILES).filter((rel) => readMaybe(ctx.p(rel)) == null)

@@ -422,6 +422,17 @@ Phase 3M adds:
   - **Fixed on the way:** a skill typed as a slash command loads before its turn starts, and the footer dropped it ("no skill activations observed"). The tracker now keeps what arrived since the last answer.
 - **Judge it by:** whether you read the "In short" and the file, and whether a teammate who didn't watch can say what changed, why, and where to start in 2 minutes (the spec's acceptance test).
 
+**14. Workspace QA round and fixes (2026-11-11, v0.12.1).** Full validation on WSL2 with Claude Code 2.1.317: `WORKSPACE_TEST_REPORT.md` (85 passed, 1 failed (low, open), 2 blocked by the usage budget, 5 not tested), and a developer playbook, `WORKSPACE_DEVELOPER_GUIDE.md`, with every flag and switch.
+- Fixed, with regression tests:
+  - `/explain` now gets the diff (old and new lines, capped at 12,000 chars), so the model never needs git;
+  - invalid settings JSON is refused before any backup is written;
+  - `--version` works without a command;
+  - doctor's gitignore line names `.explain/`;
+  - uninstall warns that `.explain/` is kept;
+  - the skill says the Write tool creates the folder (no `mkdir`).
+- Open (low): Node < 14 gets a SyntaxError instead of the version message; a re-point reorders keys in `settings.json`.
+- Remaining live runs (next window, at most 40%): `clear-handoff` and `plan-execution` (see the report's checkpoint).
+
 **Open:**
 - **macOS run.**
 

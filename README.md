@@ -14,6 +14,8 @@ It also includes an optional, disabled-by-default model router.
 
 **Status: Phase 6 (hardening) done; released on GitHub.** Phases 0–4 and 6 are done; Phase 5 (router) and the macOS run are deferred. See `docs/PLAN.md`.
 
+**Start here:** [`WORKSPACE_DEVELOPER_GUIDE.md`](WORKSPACE_DEVELOPER_GUIDE.md) is the step-by-step playbook for new and existing projects, with every flag and switch. [`WORKSPACE_TEST_REPORT.md`](WORKSPACE_TEST_REPORT.md) is the latest validation round (2026-11-11: ready with limitations).
+
 ## What workspace-core adds to every session
 - **Workflow contracts:** a local keyword classifier attaches a short contract to each request (debug → systematic-debugging, feature → brainstorming, tests → TDD or verification, …). Measured: activation 20/20 vs 0/51 without.
 - **Root-cause gate:** in a debug request, the first source edit is held until Claude states a root cause (max 2 holds per request; tests and docs are never held).
@@ -70,10 +72,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.12.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.12.0
+npx -y github:Bey3fendi/claude-workspace#v0.12.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.12.1
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.12.0 repair --marketplace Bey3fendi/claude-workspace#v0.12.0
+npx -y github:Bey3fendi/claude-workspace#v0.12.1 repair --marketplace Bey3fendi/claude-workspace#v0.12.1
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project
