@@ -51,10 +51,13 @@ export function classify(text) {
  * The Karpathy guidelines are not a step any more: since 0.10.0 they are always loaded through CLAUDE.md.
  * `pick`: when the right skill depends on the request, the rule the model applies instead.
  */
+// Option 1 of the automatic memory: the decisions of a design step are written down when they are made.
+const RECORD = 'once agreed, record decisions in .memory/decisions.md, module facts in context.md, each with a <!-- paths: --> line'
+
 export const CONTRACTS = {
   debug: { skills: ['superpowers:systematic-debugging'], then: [], outcome: 'before your first edit, write the root cause (file:line and why) in your reply; then make the minimal fix' },
-  feature: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans'], outcome: 'agree the design before editing code; minimal diff' },
-  architecture: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans'], outcome: 'explore options and trade-offs before proposing code' },
+  feature: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans'], outcome: `agree the design before editing code; minimal diff; ${RECORD}` },
+  architecture: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans'], outcome: `explore options and trade-offs before proposing code; ${RECORD}` },
   // No Superpowers skill reviews code the user points at (requesting-code-review is for one's own work).
   review: { skills: [], then: [], outcome: 'read the code and its tests, then report findings by severity with file:line evidence; say what you did not check' },
   tests: {

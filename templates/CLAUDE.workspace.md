@@ -5,8 +5,8 @@ These are defaults from claude-workspace. Where the project's own instructions s
 {{#if mdMemory}}
 ## Memory
 - `.memory/session.md` is loaded at session start and after /clear and /compact; do not re-read it unless asked.
-- After each verified unit of work, append a block to the bottom of session.md: goal, done (verified), decisions, ruled out, next step, files. Keep it short; the file is capped at 150 lines.
-- A durable fact about a module goes in `.memory/context.md`; a decision and its reason in `.memory/decisions.md`. Every section needs `<!-- paths: glob, glob -->` or it is never loaded. Do not read these files in full; hooks inject the relevant sections.
+- After each verified unit of work, append a block to the bottom of session.md: goal, done (verified), decisions, ruled out, next step, files. Keep it short; the file is capped at 150 lines. If a request changes files and you write no block, the workspace appends a facts-only one; yours is better (only you know the goal and next step).
+- A durable fact about a module goes in `.memory/context.md`; a decision and its reason in `.memory/decisions.md`. Every section needs `<!-- paths: glob, glob -->` or it is never loaded. Do not read these files in full: the relevant sections arrive when you read a matching file, or in place of your first edit to it.
 - When the context-pressure note asks for a handoff, write it to session.md, not to the chat.
 {{/if}}
 {{#if contracts}}

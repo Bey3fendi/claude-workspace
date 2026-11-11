@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { TEMPLATES, globToRegex, splitGlobs, parseSections, relPath, matchSections, trimSession, snapshotBlock, appendBlock, maxLinesFrom, sessionStartText } from '../../plugins/workspace-core/lib/md-memory.mjs'
+import { TEMPLATES, globToRegex, splitGlobs, parseSections, relPath, matchSections, trimSession, snapshotBlock, appendBlock, maxLinesFrom, sessionStartText, requestTitle, headingsOf, autoBlock, shouldNudge, preEditText, changedFiles, checkLine } from '../../plugins/workspace-core/lib/md-memory.mjs'
 
 test('globs: **, *, ?, {a,b}', () => {
   const m = (g, p) => globToRegex(g).test(p)
@@ -65,4 +65,31 @@ test('max lines and session-start text', () => {
   assert.equal(maxLinesFrom('80'), 80); assert.equal(maxLinesFrom('0'), 150); assert.equal(maxLinesFrom('x'), 150); assert.equal(maxLinesFrom(undefined), 150)
   assert.doesNotMatch(sessionStartText('  '), /Project session log/)
   assert.match(sessionStartText('## a'), /Project session log[\s\S]*## a$/)
+})
+
+test('automatic memory: request title, headings, the auto block and the nudge rule', () => {
+  const redact = (s) => s.replace(/token=\S+/, 'token=[REDACTED]')
+  assert.equal(requestTitle('\n  Fix   the cart token=abc123\nsecond line', redact), 'Fix the cart token=[REDACTED]')
+  assert.equal(requestTitle('x'.repeat(100)).length, 72)
+  assert.deepEqual(headingsOf('# D\n\n## A\n- a\n## B\n'), ['A', 'B'])
+  const b = autoBlock({ stamp: '2026-11-11 10:00', cls: 'feature', title: 'Add X', files: Array.from({ length: 10 }, (_, i) => `f${i}.js`), check: { cmd: 'npm test', exit: 1 }, added: { decisions: ['Use cents'] } })
+  assert.match(b, /^## 2026-11-11 10:00 · feature: Add X\n/)
+  assert.match(b, /- Files changed: f0\.js, .*f7\.js and 2 more/)
+  assert.match(b, /`npm test` → exit 1/)
+  assert.match(b, /- Recorded: decisions\.md "Use cents"/)
+  assert.match(autoBlock({ stamp: 's', cls: null, title: '', files: ['a'], check: null }), /## s · changes\n[\s\S]*none run[\s\S]*nothing new/)
+  assert.equal(parseSections(b, 'session.md').length, 0) // never injectable
+  assert.ok(shouldNudge({ cls: 'feature', edited: true, designed: true, recorded: false, nudged: false }))
+  assert.ok(shouldNudge({ cls: 'architecture', edited: true, designed: false, recorded: false, nudged: false }))
+  for (const o of [{ cls: 'feature', designed: false }, { cls: 'debug', designed: true }, { recorded: true }, { nudged: true }, { edited: false }])
+    assert.ok(!shouldNudge({ cls: 'feature', edited: true, designed: true, recorded: false, nudged: false, ...o }))
+  assert.match(preEditText('src/a.js', [{ id: 'decisions.md#X', body: '## X\n- y' }]), /Notes that apply to src\/a\.js[\s\S]*## X[\s\S]*not applied/)
+})
+
+test('changedFiles: tool edits plus new or changed git entries, memory files excluded; checkLine', () => {
+  const before = ' M src/a.js\n?? notes.txt\n'
+  const after = ' M src/a.js\nMM notes.txt\n?? src/new.js\nR  src/x.js -> src/y.js\n?? .memory/session.md\n'
+  assert.deepEqual(changedFiles(['src/t.js'], before, after), ['src/t.js', 'notes.txt', 'src/new.js', 'src/y.js'])
+  assert.deepEqual(changedFiles([], null, ''), [])
+  assert.equal(checkLine("cat >> .memory/session.md <<'EOF'\nnode --test\nEOF"), 'cat >> .memory/session.md <<\'EOF\'')
 })

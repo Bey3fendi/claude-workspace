@@ -23,9 +23,11 @@ It also includes an optional, disabled-by-default model router.
 - **Context pressure:** past 300K tokens of context, Claude is asked to recommend **CLEAR** or **COMPACT** at the next natural stopping point, and to append a cold-start handoff to `.memory/session.md` first. Nothing has to be pasted back: the next session loads it.
 - **md-memory:**
   - `.memory/session.md` is a rolling log, loaded at every session start (startup, resume, `/clear`, compaction) and trimmed to its newest 150 lines.
-  - `context.md` and `decisions.md` hold `## ` sections tagged `<!-- paths: src/cart/** -->`. A section is injected once per session, the first time Claude reads or edits a matching file.
+  - `context.md` and `decisions.md` hold `## ` sections tagged `<!-- paths: src/cart/** -->`. A section reaches Claude before it changes a matching file: with the read, or in place of its first edit there (that edit is not applied; the retry is). Once per session and per subagent.
+  - Claude writes the notes itself, following short rules given at session start. The feature and architecture contracts also ask for the agreed decisions to be recorded. When a request with a design step (brainstorming, writing-plans, or an architecture request) changes code but records nothing, Claude is asked once, at the end, to add them.
+  - When a request changes files and Claude writes no log block, the workspace appends a facts-only one: the request's first line (secrets redacted), the files changed (git included, so Bash edits count), the last check after the last edit and its exit code, and the sections added to `decisions.md` / `context.md`.
   - Before an automatic compaction, a git snapshot (last commit and changed files) is appended to the log.
-  - Claude writes the notes itself, following short rules given at session start. The files are yours to read, edit and commit.
+  - The files are yours to read, edit and commit.
 - **Plan execution:** plans run in Superpowers' **Native** mode (`superpowers:executing-plans`): every task inline in the current session, then one fresh review of the whole branch. `superpowers:subagent-driven-development` is denied, and the method is stated at session start, so the plan handoff doesn't ask.
 - **Explain (`/explain`):** you ask for it, it writes a short explanation of a change for a reader who didn't watch the session. Nothing runs unless you type it, and nothing ever blocks.
   - `/explain` explains the uncommitted changes; `/explain HEAD` (or any commit) explains a commit. After a commit, the footer suggests it.
@@ -56,6 +58,9 @@ It also includes an optional, disabled-by-default model router.
 | `CW_LISTING_TRIM=0` | keep denied skills in the model-facing listing |
 | `CW_MEMORY=0` | no md-memory (nothing loaded, injected, snapshotted or trimmed) |
 | `CW_MEMORY_MAX_LINES=300` | session.md cap (default 150) |
+| `CW_MEMORY_PREEDIT=0` | notes arrive only with a read, never in place of a first edit |
+| `CW_MEMORY_AUTOLOG=0` | no facts-only block at the end of a request |
+| `CW_MEMORY_NUDGE=0` | no end-of-request request to record a design step's decisions |
 | `CW_EXPLAIN=0` | no Explain (no command capture, `/explain` writes nothing) |
 | `CW_EXPLAIN_WORDS=500` | Explain word budget outside `<details>` (default 300) |
 | `CW_SUBAGENT_CAP=0` | no subagent cap (subagents may run on Fable or at xhigh/max effort) |
@@ -72,10 +77,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.12.2 install --yes --marketplace Bey3fendi/claude-workspace#v0.12.2
+npx -y github:Bey3fendi/claude-workspace#v0.13.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.13.0
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.12.2 repair --marketplace Bey3fendi/claude-workspace#v0.12.2
+npx -y github:Bey3fendi/claude-workspace#v0.13.0 repair --marketplace Bey3fendi/claude-workspace#v0.13.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

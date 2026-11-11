@@ -439,6 +439,18 @@ Phase 3M adds:
 - Error behaviour a build request asks for ("error handling", "show an error message", "throws an error") no longer triggers `debug`. The stripping applies only when the prompt asks for something to be built, so "Saving shows an error message instead of the task" is still `debug`.
 - Still English only; a ticket in another language gets no contract.
 
+**16. Automatic memory (2026-11-11, v0.13.0).** Goal: md-memory fills itself, and a new session (after a context-pressure `/clear`, say) knows what is going on and checks the decisions for a file before touching it.
+- The feature and architecture contracts say: once agreed, record the decisions in `decisions.md` and the module facts in `context.md`.
+- **Nudge** (`classic.Stop` block, once per request): a request with a design step (brainstorming or writing-plans, or an architecture request) that changed files and added nothing to either file is asked to record them, then finishes. `CW_MEMORY_NUDGE=0`.
+- **Facts-only block** (once per request, at Stop): written when files changed and Claude wrote no block. It holds the request's first line (redacted), the files (tool edits plus the git status diff since the request began, so Bash edits count), the last check after the last edit (the command's first line only), and the new `decisions.md` / `context.md` headings. A Claude-written block, through any tool, suppresses it. `CW_MEMORY_AUTOLOG=0`.
+- **Pre-edit hold**: the first edit of a file whose notes this agent has not seen is not applied; the notes come back as the reason, and the retry goes through. Subagents get the notes on their own. `CW_MEMORY_PREEDIT=0`.
+- Live (Sonnet, 4 runs, about $0.65 with the first attempt):
+  - notes injected and followed (Math.floor);
+  - the nudge produced a `decisions.md` and a `context.md` section;
+  - the hold delivered the decisions before a new file was written;
+  - a fresh session with every tool disabled reported the last work and the decisions from the auto-loaded log.
+  - The first attempt found two bugs, now fixed and tested: Bash-written memory went unseen, and a heredoc that mentioned a test counted as the check.
+
 **Open:**
 - **macOS run.**
 

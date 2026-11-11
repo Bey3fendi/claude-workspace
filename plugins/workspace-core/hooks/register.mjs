@@ -6,7 +6,7 @@
 //     never sent to the model. It compares the model's claims with observed skill events.
 // Validator rules: literal event names, function-literal hooks, `$` spelled at each call site.
 import { createSink, flush } from '../lib/sink.mjs'
-import { markerCounts, short } from '../lib/events.mjs'
+import { markerCounts, redact, short } from '../lib/events.mjs'
 import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
 import { classify, contractText, restoreText } from '../lib/contracts.mjs'
 import { deniedSkills, trimListing } from '../lib/listing.mjs'
@@ -14,9 +14,9 @@ import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 import { executionNote } from '../lib/execution.mjs'
 import { capRequest } from '../lib/subagent-cap.mjs'
-import { EXPLAIN_DIR, UNIT_RE, buildRecord, citedPaths, exitFrom, feedbackText, isCommit, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
+import { EXPLAIN_DIR, UNIT_RE, buildRecord, citedPaths, exitFrom, feedbackText, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
 import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
-import { FILES, appendBlock, injectText, matchSections, maxLinesFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
+import { FILES, NUDGE_TEXT, appendBlock, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, preEditText, requestTitle, shouldNudge, maxLinesFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
@@ -25,8 +25,10 @@ const st = { model: null, effort: null, skills: 0, requests: 0 }
 // model's visible main-loop text in this request (kept in memory only, never written to disk).
 // Context pressure: the main loop's latest request size (tokens), and a note pending for the footer.
 let ctx = { tokens: 0, pending: null }
-// md-memory: context/decisions section ids already injected in this session (reset at every SessionStart).
-let mem = { injected: new Set() }
+// md-memory: context/decisions section ids each agent has seen this session ('main' or the subagent's id;
+// reset at every SessionStart). A subagent starts without the main loop's context, so it gets the notes again.
+let mem = { injected: new Map() }
+const seenBy = (agent) => { const k = agent ?? 'main'; if (!mem.injected.has(k)) mem.injected.set(k, new Set()); return mem.injected.get(k) }
 const MEMORY_TOOLS = new Set(['Read', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 const readText = async ($, p) => { try { return await $.fs.read(p) } catch { return '' } }
 // Explain (lib/explain.mjs): facts for the next change record, kept in memory only. `since` is where the
@@ -34,7 +36,10 @@ const readText = async ($, p) => { try { return await $.fs.read(p) } catch { ret
 let ex = { commands: [], since: 0, lastEditAt: 0, requests: [], skills: [], attempts: new Map() }
 const EXPLAIN_EXCLUDES = ['--', '.', `:(exclude)${EXPLAIN_DIR}`, ':(exclude).memory', ':(exclude).claude']
 const SOURCE_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
-let req = { class: null, text: '', denies: 0, released: false, gates: true, contracts: true, skills: [] }
+// Automatic memory, per request: files changed (project-relative), memory files Claude edited, where this request's
+// commands start, the memory headings at its start, and whether it was logged / nudged already.
+const freshMem = (o = {}) => ({ edited: [], wrote: { session: false, decisions: false, context: false }, cmdStart: ex.commands.length, heads: { decisions: [], context: [] }, sessionAt: null, gitAt: null, title: '', logged: false, nudged: false, ...o })
+let req = { class: null, text: '', denies: 0, released: false, gates: true, contracts: true, skills: [], mem: freshMem() }
 const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
 
@@ -100,6 +105,73 @@ async function explainCheck($, e, r) {
   return { ...r, context: [...(r?.context ?? []), feedbackText(unit, res, n === 1)] }
 }
 
+// md-memory pre-edit hold: the first edit of a file whose context/decisions notes this agent has not seen is
+// not applied; the notes come back as the reason and the retry goes through (CW_MEMORY_PREEDIT=0 turns it off).
+// Reading the file first delivers the same notes without a hold (classic.PostToolUse below).
+async function memoryHold($, e) {
+  if (!SOURCE_EDIT_TOOLS.has(e.tool)) return null
+  if ((await $.env.get('CW_MEMORY')) === '0' || (await $.env.get('CW_MEMORY_PREEDIT')) === '0') return null
+  const root = await $.session.root().catch(() => null)
+  const rel = relPath(root, e.file_path ?? e.notebook_path)
+  if (!rel) return null
+  const all = [
+    ...parseSections(await readText($, `${root}/${FILES.context}`), 'context.md'),
+    ...parseSections(await readText($, `${root}/${FILES.decisions}`), 'decisions.md'),
+  ]
+  const seen = seenBy(e.agentId)
+  const hits = matchSections(all, rel, seen)
+  if (!hits.length) return null
+  for (const h of hits) seen.add(h.id)
+  await flush(sink, sink.record('memory', { action: 'pre-edit', sections: hits.length, tool: e.tool, agentId: e.agentId ?? null }), (p, b) => $.fs.write(p, b))
+  return { deny: preEditText(rel, hits) }
+}
+
+// `git status` for the automatic memory (null when git is unavailable: then only file-tool edits count).
+async function gitStatus($, root) {
+  try { const x = await $.process.run(['git', '-c', 'core.quotePath=false', 'status', '--porcelain', '-uall'], { cwd: root }); return x.exitCode === 0 ? x.stdout : null } catch { return null }
+}
+
+// Automatic memory: note which files this request changed and which memory files Claude wrote itself.
+async function memoryTrack($, e, r) {
+  if (!SOURCE_EDIT_TOOLS.has(e.tool) || r?.deny !== undefined || r?.isError === true) return
+  const path = String(e.file_path ?? e.notebook_path ?? '').replace(/\\/g, '/')
+  for (const k of ['session', 'decisions', 'context']) if (path.endsWith(`/${FILES[k]}`) || path === FILES[k]) req.mem.wrote[k] = true
+  const root = await $.session.root().catch(() => null)
+  const rel = relPath(root, path)
+  if (rel && !/^\.(explain|claude)\//.test(rel) && !req.mem.edited.includes(rel)) req.mem.edited.push(rel)
+}
+
+// Automatic memory at the end of a request (classic.Stop): first, once, the decisions nudge for a designed change
+// (returned as the Stop hook's block, so Claude continues); then, once, the workspace's own session.md block
+// when files changed and Claude wrote none. CW_MEMORY_NUDGE=0 / CW_MEMORY_AUTOLOG=0 turn each off.
+async function memoryEnd($, e, root) {
+  const m = req.mem
+  if (m.logged) return null
+  const files = m.gitAt === null ? m.edited : changedFiles(m.edited, m.gitAt, await gitStatus($, root))
+  if (!files.length) return null
+  const wroteSession = m.wrote.session || (m.sessionAt !== null && (await readText($, `${root}/${FILES.session}`)) !== m.sessionAt)
+  const added = {
+    decisions: headingsOf(await readText($, `${root}/${FILES.decisions}`)).filter((h) => !m.heads.decisions.includes(h)),
+    context: headingsOf(await readText($, `${root}/${FILES.context}`)).filter((h) => !m.heads.context.includes(h)),
+  }
+  const designed = req.skills.some((s) => /(^|:)(brainstorming|writing-plans)$/.test(s))
+  const recorded = m.wrote.decisions || m.wrote.context || added.decisions.length > 0 || added.context.length > 0
+  if (!e?.stop_hook_active && (await $.env.get('CW_MEMORY_NUDGE')) !== '0' && shouldNudge({ cls: req.class, edited: true, designed, recorded, nudged: m.nudged })) {
+    m.nudged = true
+    await flush(sink, sink.record('memory', { action: 'nudge', class: req.class }), (p, b) => $.fs.write(p, b))
+    return NUDGE_TEXT
+  }
+  m.logged = true
+  if (wroteSession || (await $.env.get('CW_MEMORY_AUTOLOG')) === '0') return null
+  const lastEdit = ex.lastEditAt
+  const check = [...ex.commands.slice(m.cmdStart)].reverse().find((c) => isVerification(checkLine(c.cmd)) && !/\.memory\//.test(checkLine(c.cmd)) && (!lastEdit || c.at > lastEdit)) ?? null
+  const block = autoBlock({ stamp: stampOf(), cls: req.class, title: m.title, files, check: check && { cmd: redact(checkLine(check.cmd)), exit: check.exit }, added })
+  const p = `${root}/${FILES.session}`
+  await $.fs.write(p, appendBlock(await readText($, p), block))
+  await flush(sink, sink.record('memory', { action: 'autolog', files: files.length, checked: !!check, recorded: added.decisions.length + added.context.length }), (p2, b) => $.fs.write(p2, b))
+  return null
+}
+
 export const register = (on) => {
   on('session.start', async ($, e, next) => {
     const r = await next(e)
@@ -136,7 +208,16 @@ export const register = (on) => {
     const contracts = (await $.env.get('CW_CONTRACTS')) !== '0'
     const gates = (await $.env.get('CW_GATES')) !== '0'
     const c = classify(e.text)
-    req = { class: c.class, text: '', denies: 0, released: false, gates, contracts, skills: [] }
+    req = { class: c.class, text: '', denies: 0, released: false, gates, contracts, skills: [], mem: freshMem({ title: requestTitle(e.text, redact) }) }
+    if ((await $.env.get('CW_MEMORY')) !== '0') {
+      const root = await $.session.root().catch(() => null)
+      if (root) {
+        req.mem.heads = { decisions: headingsOf(await readText($, `${root}/${FILES.decisions}`)), context: headingsOf(await readText($, `${root}/${FILES.context}`)) }
+        // Snapshots, so changes made through Bash count too (Claude often appends to .memory/ with `cat >>`).
+        req.mem.sessionAt = await readText($, `${root}/${FILES.session}`)
+        req.mem.gitAt = await gitStatus($, root)
+      }
+    }
     const add = []
     if (contracts) {
       const text = c.class ? contractText(c.class) : null
@@ -228,7 +309,10 @@ export const register = (on) => {
   // Phase 4 root-cause gate: hold the first source edit of a debug request until a root cause is stated.
   // Also runs Explain's check on edits (explainCheck below), after the call; a failed check never fails the call.
   on('tool.call', async ($, e, next) => {
-    const after = async (r) => { try { return await explainCheck($, e, r) } catch { return r } }
+    const after = async (r) => { try { await memoryTrack($, e, r) } catch {} try { return await explainCheck($, e, r) } catch { return r } }
+    let held = null
+    try { held = await memoryHold($, e) } catch { held = null }
+    if (held) return held
     if (!req.gates || req.class !== 'debug') return after(await next(e))
     const d = decide(req, e)
     if (d.action === 'deny') {
@@ -292,12 +376,12 @@ export const register = (on) => {
   // `git commit` gets a footer hint. Kept in memory only (never written unless /explain runs).
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const r = await next(e)
-    if (typeof e.command !== 'string' || (await $.env.get('CW_EXPLAIN')) === '0') return r
+    if (typeof e.command !== 'string') return r
     const exit = exitFrom(r)
     if (exit === null) return r
     ex.commands = [...ex.commands, { cmd: e.command, exit, at: Date.now(), agent: e.agentId !== undefined }]
     if (ex.commands.length > 200) { const drop = ex.commands.length - 200; ex.commands = ex.commands.slice(drop); ex.since = Math.max(0, ex.since - drop) }
-    if (exit === 0 && e.agentId === undefined && isCommit(e.command)) tracker.explain({ commit: true })
+    if (exit === 0 && e.agentId === undefined && isCommit(e.command) && (await $.env.get('CW_EXPLAIN')) !== '0') tracker.explain({ commit: true })
     return r
   }).catch(($, e, next) => next(e))
 
@@ -349,7 +433,7 @@ export const register = (on) => {
     }
     // md-memory: the rules (unless CLAUDE.md has them) plus session.md, on every main-conversation start (so /clear and /compact reload it).
     if (!e.agent_id && (await $.env.get('CW_MEMORY')) !== '0') {
-      mem.injected = new Set()
+      mem.injected = new Map()
       const text = root ? sessionStartText(await readText($, `${root}/${FILES.session}`), { rules: !viaClaudeMd }) : null
       if (text) {
         add.push(text)
@@ -382,9 +466,10 @@ export const register = (on) => {
           ...parseSections(await readText($, `${root}/${FILES.context}`), 'context.md'),
           ...parseSections(await readText($, `${root}/${FILES.decisions}`), 'decisions.md'),
         ]
-        const hits = matchSections(all, rel, mem.injected)
+        const seen = seenBy(e.agent_id)
+        const hits = matchSections(all, rel, seen)
         if (hits.length) {
-          for (const h of hits) mem.injected.add(h.id)
+          for (const h of hits) seen.add(h.id)
           await flush(sink, sink.record('memory', { action: 'inject', sections: hits.length, agentId: e.agent_id ?? null }), (p, b) => $.fs.write(p, b))
           return { ...r, additionalContext: [...(r?.additionalContext ?? []), injectText(rel, hits)] }
         }
@@ -414,6 +499,9 @@ export const register = (on) => {
     const root = await $.session.root().catch(() => null)
     if (!root) return r
     const p = `${root}/${FILES.session}`
+    let nudge = null
+    try { nudge = await memoryEnd($, e, root) } catch { nudge = null }
+    if (nudge) return { ...r, block: nudge }
     const text = await readText($, p)
     const max = maxLinesFrom((await $.env.get('CW_MEMORY_MAX_LINES')) ?? (await $.env.get('MD_MEMORY_MAX_LINES')))
     const out = trimSession(text, max)
