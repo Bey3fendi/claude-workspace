@@ -86,3 +86,34 @@ test('restoreText: re-attaches the contract after compaction, without re-asking 
   assert.doesNotMatch(restoreText('review'), /Skill tool/)
   for (const c of ['debug', 'feature', 'architecture', 'review', 'tests', 'continue']) assert.ok(restoreText(c).length < 500, c)
 })
+
+test('new-app tickets are features even when they mention tests or error behaviour (QA 2026-11-11)', () => {
+  const cases = [
+    ['Implement a new todo app: users can add, edit and delete tasks, with due dates and a done filter.', 'feature'],
+    ['Implement a new todo app: users can add, edit and delete tasks. Show an error message when the title is empty.', 'feature'],
+    ['Build a new todo app with unit tests for every endpoint.', 'feature'],
+    ['TICKET-42: As a user I want to manage my tasks in a new todo app (create, edit, delete, due dates).', 'feature'],
+    ['New app for tracking expenses, see attached requirements.', 'feature'],
+    ['Build a new expense app. If sync fails, show a retry button.', 'feature'],
+    ['Create a REST API from scratch for the inventory, with proper error handling.', 'feature'],
+    ['Design a new app for invoices: how should we structure the services?', 'architecture'],
+    ['Add a function that throws an error for empty titles', 'feature'],
+    ['Add error handling to the upload endpoint', 'feature'],
+  ]
+  for (const [text, want] of cases) assert.equal(classify(text).class, want, text)
+})
+
+test('real breakage stays debug, also in a new app (QA 2026-11-11)', () => {
+  const cases = [
+    ['The new app crashes on start', 'debug'],
+    ['Fix the bug in the new app login: users get logged out', 'debug'],
+    ["There's an error when I save a task", 'debug'],
+    ['Investigate why the new service returns 500 on every request', 'debug'],
+    ['Saving shows an error message instead of the task', 'debug'],
+  ]
+  for (const [text, want] of cases) assert.equal(classify(text).class, want, text)
+})
+
+test('non-English tickets get no contract (the keywords are English only)', () => {
+  assert.equal(classify('Yeni bir yapılacaklar uygulaması geliştir: görev ekleme, silme, düzenleme.').class, null)
+})

@@ -12,7 +12,17 @@ const RULES = [
   ['feature', /\b(add|implement|build|create|introduce|support for|let'?s add|we need|i want)\b.{0,60}\b(feature|support|option|command|endpoint|function|promotion|mode|button|page|screen|gift cards?|setting|level|block|power-?up|\w+)\b/i],
 ]
 
-const QUESTION = /^\s*(what|which|where|who|when|how (many|much|do i|does)|does|do|is|are|can you (tell|explain|show)|explain|show me)\b/i
+// Building something new (an app, a project, a user story) is a feature even when the ticket also mentions
+// tests or error behaviour; checked before the tests and debug rules (QA 2026-11-11: a new-app ticket that said
+// "show an error message" was sent to systematic-debugging).
+const NEW_BUILD = /\bnew (?:[\w.+-]+ ){0,2}(app|application|project|service|micro-?service|website|site|web ?app|api|backend|frontend|tool|game|library|package|platform|system|dashboard|bot|product)\b|\b(from scratch|greenfield)\b|\bas an? [\w -]{1,30}?,? i (want|need|would like)\b/i
+const CREATE = /\b(implement|build|create|develop|make|write|scaffold|set ?up|add|design|introduce)\b/i
+const BREAK = /\b(bugs?|fails?|failing|failed|broken|crash(es|ed|ing)?|regression|stack ?trace|segfault|doesn'?t work|not working|hangs?)\b/i
+const FIX_FIRST = /^\s*(please\s+)?(fix|debug|investigate|diagnose|troubleshoot)\b/i
+// Error behaviour a feature asks for ("show an error message", "error handling") is not a report of a bug.
+const ASKED_ERROR = /\b(error|exception)s? (message|messages|handling|handler|page|state|toast|banner|code|codes|response|responses|dialog)\b|\b(show|shows|display|displays|throw|throws|raise|raises|return|returns|log|logs|handle|handles|surface|surfaces)( an?| the| a clear| a friendly| proper)? (error|exception)s?\b/gi
+
+const QUESTION =/^\s*(what|which|where|who|when|how (many|much|do i|does)|does|do|is|are|can you (tell|explain|show)|explain|show me)\b/i
 const ACTION = /\b(add|implement|fix|change|refactor|write|create|update|remove|delete|rename|migrate|design|review|debug|investigate)\b/i
 
 /**
@@ -24,8 +34,15 @@ export function classify(text) {
   if (!t || t.startsWith('/')) return { class: null, reason: 'empty-or-command' }
   if (t.length < 12) return { class: null, reason: 'too-short' }
   if (RULES[0][1].test(t)) return { class: 'continue', reason: "keyword" }
-  if (QUESTION.test(t) && !ACTION.test(t) && !RULES.find(([k]) => k === 'debug')[1].test(t) && t.length < 200) return { class: 'trivial', reason: 'question' }
-  for (const [cls, re] of RULES) if (re.test(t)) return { class: cls, reason: 'keyword' }
+  // When the request asks for something to be built, error behaviour it describes is a requirement, not a bug.
+  const forDebug = CREATE.test(t) ? t.replace(ASKED_ERROR, ' ') : t
+  const debugRe = RULES.find(([k]) => k === 'debug')[1]
+  if (QUESTION.test(t) && !ACTION.test(t) && !debugRe.test(forDebug) && t.length < 200) return { class: 'trivial', reason: 'question' }
+  if (RULES[1][1].test(t)) return { class: 'review', reason: 'keyword' }
+  if (NEW_BUILD.test(t) && !FIX_FIRST.test(t) && !(BREAK.test(forDebug) && !CREATE.test(t))) {
+    return { class: RULES.find(([k]) => k === 'architecture')[1].test(t) ? 'architecture' : 'feature', reason: 'new-build' }
+  }
+  for (const [cls, re] of RULES) if ((cls === 'debug' ? re.test(forDebug) : re.test(t))) return { class: cls, reason: 'keyword' }
   return { class: null, reason: 'no-match' }
 }
 

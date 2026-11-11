@@ -1,6 +1,6 @@
 # claude-workspace: developer guide
 
-A practical playbook for using claude-workspace 0.12.1 in a new project (Section A) or in an existing one (Section B). Everything here was run on WSL2 against 0.12.0 plus the fixes released as 0.12.1, with Claude Code 2.1.317 (see `WORKSPACE_TEST_REPORT.md`). Steps that were not run are marked **(not validated)**.
+A practical playbook for using claude-workspace 0.12.2 in a new project (Section A) or in an existing one (Section B). Everything here was run on WSL2 against 0.12.0 plus the fixes released as 0.12.2, with Claude Code 2.1.317 (see `WORKSPACE_TEST_REPORT.md`). Steps that were not run are marked **(not validated)**.
 
 **What you get:** pinned Superpowers and Ponytail plugins, plus `workspace-core`. workspace-core adds:
 - workflow contracts and a root-cause gate;
@@ -29,7 +29,7 @@ It also adds a managed `CLAUDE.md` import that brings in the vendored Karpathy g
 ```bash
 mkdir my-app && cd my-app
 git init && git commit --allow-empty -m init      # install refuses to overwrite uncommitted files, so start clean
-npx -y github:Bey3fendi/claude-workspace#v0.12.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.12.1
+npx -y github:Bey3fendi/claude-workspace#v0.12.2 install --yes --marketplace Bey3fendi/claude-workspace#v0.12.2
 ```
 
 Use the same tag in both places. `--marketplace` writes a GitHub source into `.claude/settings.json`, so teammates who clone the repo get the same pinned plugins. Without it, the file stores the absolute path of the CLI's checkout, which is fine only for a solo setup.
@@ -50,7 +50,7 @@ Use the same tag in both places. `--marketplace` writes a GitHub source into `.c
 
 ```bash
 git add -A && git commit -m "Add claude-workspace"
-npx -y github:Bey3fendi/claude-workspace#v0.12.1 doctor     # exit 0 = healthy
+npx -y github:Bey3fendi/claude-workspace#v0.12.2 doctor     # exit 0 = healthy
 ```
 
 ### A4. Daily workflow
@@ -76,13 +76,13 @@ Read the **footer** under each answer ("Verified by engine: …"). It lists what
 
 - Run your project's own test command as usual. Explain counts a test run only if it happened after the last edit, and it flags piped commands (`npm test | tail`), whose exit code belongs to the last stage.
 - Before a PR: `/explain HEAD`, then read `.explain/units/…`. A failed check shows in the footer, for example `explain u-0002: 6/8 checks (failed: coverage)`.
-- `npx -y github:Bey3fendi/claude-workspace#v0.12.1 usage` replays the engine evidence of the latest session.
+- `npx -y github:Bey3fendi/claude-workspace#v0.12.2 usage` replays the engine evidence of the latest session.
 
 ### A6. Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `doctor` shows `x` or `!` | `npx -y github:Bey3fendi/claude-workspace#v0.12.1 repair` (restores memory files, allow rules, the owned file and the pins) |
+| `doctor` shows `x` or `!` | `npx -y github:Bey3fendi/claude-workspace#v0.12.2 repair` (restores memory files, allow rules, the owned file and the pins) |
 | install: "uncommitted changes in files the workspace would modify" | commit or stash them, or add `--allow-dirty` (your text is kept and backed up) |
 | install: "… is not valid JSON" | fix the JSON in `.claude/settings.json` or `settings.local.json` (nothing is written until it parses) |
 | install: "line N: …" about CLAUDE.md markers | repair or delete the half-written `claude-workspace (managed)` block |
@@ -123,7 +123,7 @@ Decide where the import goes:
 
 ```bash
 git switch -c add-claude-workspace       # optional: review the diff before merging
-npx -y github:Bey3fendi/claude-workspace#v0.12.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.12.1
+npx -y github:Bey3fendi/claude-workspace#v0.12.2 install --yes --marketplace Bey3fendi/claude-workspace#v0.12.2
 git diff                                  # review
 ```
 
@@ -141,13 +141,13 @@ Verified guarantees:
 - **A memory plugin you already use** (claude-mem): doctor warns. The project switches it off so that two memory systems never run together. `remove-claude-mem` removes it for the user **(not validated: changes user-level state)**.
 - **Devcontainer:** add the feature to `.devcontainer/devcontainer.json`. The live test used the feature from a local folder; the GHCR copy was published but not exercised **(not validated)**:
   ```json
-  "features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.12.1" } }
+  "features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.12.2" } }
   ```
 
 ### B4. Validate the integration
 
 ```bash
-npx -y github:Bey3fendi/claude-workspace#v0.12.1 doctor      # exit 0
+npx -y github:Bey3fendi/claude-workspace#v0.12.2 doctor      # exit 0
 claude -p "What is the next step in the project session log?"   # md-memory is loaded (once you have written a block)
 ```
 
@@ -188,7 +188,7 @@ Verified:
 
 ### C1. CLI options
 
-Use them with the CLI, e.g. `npx -y github:Bey3fendi/claude-workspace#v0.12.1 <command> [options]`, or `node <checkout>/cli/bin/claude-workspace.mjs <command> [options]`.
+Use them with the CLI, e.g. `npx -y github:Bey3fendi/claude-workspace#v0.12.2 <command> [options]`, or `node <checkout>/cli/bin/claude-workspace.mjs <command> [options]`.
 
 | Option | Used by | Effect | Tested |
 |---|---|---|---|
@@ -246,11 +246,11 @@ When `ANTHROPIC_BASE_URL` is set, `install` warns that a proxy may already route
 
 ### C4. Devcontainer feature options
 
-Set them in `.devcontainer/devcontainer.json` under the feature, e.g. `{ "marketplace": "Bey3fendi/claude-workspace#v0.12.1", "installOnCreate": true }`.
+Set them in `.devcontainer/devcontainer.json` under the feature, e.g. `{ "marketplace": "Bey3fendi/claude-workspace#v0.12.2", "installOnCreate": true }`.
 
 | Option | Default | Effect | Tested |
 |---|---|---|---|
-| `source` | `bundled` | where the CLI comes from: the copy packaged with the feature, or an npx spec such as `github:Bey3fendi/claude-workspace#v0.12.1` | live (default) |
+| `source` | `bundled` | where the CLI comes from: the copy packaged with the feature, or an npx spec such as `github:Bey3fendi/claude-workspace#v0.12.2` | live (default) |
 | `marketplace` | empty | the marketplace written to the project's `.claude/settings.json`; set it for a team repo (empty means a container-only path) | live (default) |
 | `installClaudeCode` | `true` | install Claude Code with the native installer when `claude` is not on PATH | live (default) |
 | `claudeCodeVersion` | `tested` | `tested` (the version in the lock), `latest`, or an exact version | live (default: 2.1.317) |

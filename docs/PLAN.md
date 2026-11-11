@@ -433,6 +433,12 @@ Phase 3M adds:
 - Open (low): Node < 14 gets a SyntaxError instead of the version message; a re-point reorders keys in `settings.json`.
 - Remaining live runs (next window, at most 40%): `clear-handoff` and `plan-execution` (see the report's checkpoint).
 
+**15. Classifier: new-app tickets (2026-11-11, v0.12.2).** A ticket to build a new app went to `debug` when it described error behaviour ("show an error message when the title is empty") and to `tests` when it asked for tests.
+- A "new-build" rule now runs before the tests and debug rules. It matches "new … app/project/service/…" (up to two words in between), "from scratch", "greenfield" and user stories ("As a user I want …"). The result is `feature`, or `architecture` when the ticket asks for design.
+- It gives way to real breakage: a prompt that starts with fix/debug/investigate, or one that reports a failure without asking for anything to be built ("The new app crashes on start"), stays `debug`.
+- Error behaviour a build request asks for ("error handling", "show an error message", "throws an error") no longer triggers `debug`. The stripping applies only when the prompt asks for something to be built, so "Saving shows an error message instead of the task" is still `debug`.
+- Still English only; a ticket in another language gets no contract.
+
 **Open:**
 - **macOS run.**
 
