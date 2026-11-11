@@ -34,7 +34,7 @@ test('gitignore block round-trips byte-exactly (LF, CRLF, no trailing newline, e
     if (t.endsWith('\n') || t === '') assert.equal(removeBlock(u), t)
     else assert.equal(removeBlock(u), t + '\n')
   }
-  assert.ok(upsertBlock('a\r\n').includes('\r\n.claude/workspace/\r\n'))
+  assert.ok(upsertBlock('a\r\n').includes('\r\n.claude/workspace/*\r\n!.claude/workspace/CLAUDE.workspace.md\r\n'))
 })
 
 test('committed marketplace.json is generated from workspace.lock.json', () => {

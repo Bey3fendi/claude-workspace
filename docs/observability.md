@@ -62,6 +62,6 @@ claude-workspace usage --session <id>  # or an id prefix; --json for the full ev
 
 ## Limits
 
-- **The parsing is heuristic.** Claims are read only from the `Applied:` line of a section headed "Workspace Usage". Full skill ids are recognised, plus a fixed list of bare Superpowers and Karpathy names.
+- **The parsing is heuristic.** Claims are read only from the `Applied:` line of a section headed "Workspace Usage". Full skill ids are recognised, plus a fixed list of bare Superpowers names. The Karpathy guidelines are not a skill since 0.10.0 (they come with CLAUDE.md), so they appear only as "loaded via CLAUDE.md".
 - **Ambient integrations are visible only as injected context.** This covers Ponytail and md-memory.
 - **Workflow compliance needs separate checks.** Whether Claude actually followed a workflow (for example, root cause before fix) is checked by the Phase 3 outcome evaluations, not by this report.

@@ -7,6 +7,7 @@ import { pinState, pushHistory, localPluginVersion } from '../lib/history.mjs'
 import { loadManifest, newManifest, snapshot, finalize, saveManifest } from '../lib/manifest.mjs'
 import { addDenies, removeDenies, addRules } from '../lib/settings.mjs'
 import { upsertBlock } from '../lib/gitignore.mjs'
+import { OWNED, TARGETS, addImport, importState, removeImport, targetOf, workspaceMd } from '../lib/claude-md.mjs'
 import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
 import { FILES as MEMORY_FILES, TEMPLATES as MEMORY_TEMPLATES, MEMORY_ALLOWS } from '../../plugins/workspace-core/lib/md-memory.mjs'
 import { readJsonFile, readMaybe, writeAtomic, writeJsonIfChanged, hashFile, UserError } from '../lib/util.mjs'
@@ -26,12 +27,21 @@ export async function install(ctx, rep, { repair = false } = {}) {
   for (const w of findRouterConflicts(ctx, installed)) rep.warn(w)
 
   let m = loadManifest(ctx)
-  const dirty = dirtyTouchedFiles(ctx).filter((f) => !(m?.files?.[f] && hashFile(ctx.p(f)) === m.files[f].postHash))
+  // CLAUDE.md target: the flag, else what the previous install chose, else CLAUDE.md. Checked before any write:
+  // broken markers in the user's file stop the install with nothing changed.
+  let prevMarker = null
+  try { prevMarker = readJsonFile(ctx.p('.claude/workspace.json'), { missing: null }) } catch {}
+  const mdTarget = o.claudeMd !== undefined ? targetOf(o) : prevMarker?.claudeMd ? prevMarker.claudeMd.target ?? null : TARGETS.project
+  if (mdTarget) {
+    const st = importState(readMaybe(ctx.p(mdTarget))?.toString('utf8') ?? '')
+    if (st.state === 'malformed') throw new UserError(`${mdTarget} line ${st.problem.line}: ${st.problem.problem}. Fix or remove the claude-workspace markers there, then re-run (nothing was changed)`)
+  }
+  const dirty = dirtyTouchedFiles(ctx, mdTarget ? [mdTarget] : []).filter((f) => !(m?.files?.[f] && hashFile(ctx.p(f)) === m.files[f].postHash))
   if (dirty.length && !o.allowDirty) {
     throw new UserError(`uncommitted changes in files the workspace would modify: ${dirty.join(', ')}\n    commit or stash them, or re-run with --allow-dirty (a byte-exact backup is still taken)`)
   }
   m ??= newManifest(ctx)
-  snapshot(ctx, m)
+  snapshot(ctx, m, mdTarget ? [mdTarget] : [])
 
   // ---- marketplace (Claude Code writes extraKnownMarketplaces itself)
   const name = ctx.marketplaceName
@@ -166,6 +176,29 @@ export async function install(ctx, rep, { repair = false } = {}) {
     delete m.files['.caveman.json']
   }
 
+  // ---- CLAUDE.md: the owned file (always rewritten from the template) and the import block in the target
+  let owned
+  try { owned = workspaceMd(ctx) } catch (e) { throw new UserError(e.message) }
+  if ((readMaybe(ctx.p(OWNED))?.toString('utf8') ?? null) !== owned) { writeAtomic(ctx.p(OWNED), owned); rep.change(`wrote ${OWNED}`) }
+  // an import left in the other target by an earlier install with a different --claude-md
+  for (const t of Object.values(TARGETS).filter((t) => t !== mdTarget && m.files[t])) {
+    const cur = readMaybe(ctx.p(t))?.toString('utf8')
+    if (cur != null && importState(cur).state !== 'missing') {
+      const t2 = removeImport(cur)
+      if (!t2.trim() && !m.files[t].existedBefore) rmSync(ctx.p(t)); else writeAtomic(ctx.p(t), t2)
+      rep.change(`removed workspace import from ${t}`)
+    }
+  }
+  if (mdTarget) {
+    const cur = readMaybe(ctx.p(mdTarget))?.toString('utf8') ?? null
+    const { text, action } = addImport(cur)
+    if (action) {
+      writeAtomic(ctx.p(mdTarget), text)
+      rep.change({ created: `created ${mdTarget} with workspace import`, appended: `added workspace import to ${mdTarget}`,
+        restored: `restored workspace import in ${mdTarget}`, deduplicated: `removed duplicate workspace import from ${mdTarget}` }[action])
+    }
+  } else rep.info('skipped CLAUDE.md (--no-claude-md)')
+
   // ---- committed workspace marker
   const marker = {
     managedBy: 'claude-workspace',
@@ -173,6 +206,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
     marketplace: name,
     plugins: ctx.pluginIds,
     memory: 'md-memory (.memory/, built into workspace-core)',
+    claudeMd: { target: mdTarget, created: mdTarget ? !m.files[mdTarget]?.existedBefore : false },
   }
   if (writeJsonIfChanged(ctx.p('.claude/workspace.json'), marker)) rep.change('wrote .claude/workspace.json')
 

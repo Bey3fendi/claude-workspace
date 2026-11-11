@@ -32,6 +32,21 @@ test('SessionStart loads the rules and session.md on startup, clear and compact'
   }
 })
 
+test('when CLAUDE.md imports the workspace file, the rules are not attached twice (the log still is)', async ($, on) => {
+  const IMPORT = '# Mine\n\n<!-- >>> claude-workspace (managed) >>> -->\n@.claude/workspace/CLAUDE.workspace.md\n<!-- <<< claude-workspace (managed) <<< -->\n'
+  engine(on, { [SESSION]: LOG, [`${ROOT}/CLAUDE.md`]: IMPORT, [`${ROOT}/.claude/workspace/CLAUDE.workspace.md`]: '# W\n## Memory\n## Coding guidelines (Karpathy)\n' })
+  const r: any = await ($ as any).classic.SessionStart({ source: 'startup' })
+  const text = (r.additionalContext ?? []).join('\n')
+  expect(text).not.toContain('[md-memory] Project memory lives in .memory/')
+  expect(text).toContain('## 2026-11-10 17:00 · cart work')
+})
+
+test('an empty session log and an imported CLAUDE.md attach no memory text at all', async ($, on) => {
+  engine(on, { [`${ROOT}/CLAUDE.local.md`]: '<!-- >>> claude-workspace (managed) >>> -->\n@.claude/workspace/CLAUDE.workspace.md\n<!-- <<< claude-workspace (managed) <<< -->\n' })
+  const r: any = await ($ as any).classic.SessionStart({ source: 'startup' })
+  expect(r.additionalContext).toBeUndefined()
+})
+
 test('without session.md only the rules are attached; CW_MEMORY=0 attaches nothing', async ($, on) => {
   engine(on, {})
   const r: any = await ($ as any).classic.SessionStart({ source: 'startup' })

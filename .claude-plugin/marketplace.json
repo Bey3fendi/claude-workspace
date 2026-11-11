@@ -29,15 +29,6 @@
       }
     },
     {
-      "name": "andrej-karpathy-skills",
-      "description": "multica-ai/andrej-karpathy-skills 1.0.0 (pinned)",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/multica-ai/andrej-karpathy-skills.git",
-        "sha": "2c606141936f1eeef17fa3043a72095b4765b9c2"
-      }
-    },
-    {
       "name": "router",
       "description": "alexei-led/claude-router 1.19.1 - OPTIONAL Jev model router, disabled by default (pinned)",
       "source": {

@@ -4,7 +4,8 @@ import { detectPlatform, findDuplicates, findRouterConflicts } from '../lib/dete
 import { claudeVersion, listPlugins, projectInstall } from '../lib/claude.mjs'
 import { loadManifest } from '../lib/manifest.mjs'
 import { missingDenies } from '../lib/settings.mjs'
-import { hasBlock } from '../lib/gitignore.mjs'
+import { hasBlock, upsertBlock } from '../lib/gitignore.mjs'
+import { OWNED, TARGETS, importState, karpathyPin, lengthLimit, readVendored, workspaceMd } from '../lib/claude-md.mjs'
 import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
 import { FILES as MEMORY_FILES, MEMORY_ALLOWS } from '../../plugins/workspace-core/lib/md-memory.mjs'
 import { cmpVersion, readJsonFile, readMaybe } from '../lib/util.mjs'
@@ -53,7 +54,9 @@ export async function doctor(ctx, rep) {
   const miss = settings ? missingDenies(settings, ctx.denies) : ctx.denies
   add('skill-deny-rules', miss.length ? 'warn' : 'ok', miss.length ? `${miss.length} rule(s) missing (run repair)` : `${ctx.denies.length} present`)
 
-  add('gitignore', hasBlock(readMaybe(ctx.p('.gitignore'))?.toString('utf8')) ? 'ok' : 'warn', 'managed block for .claude/workspace/')
+  const giText = readMaybe(ctx.p('.gitignore'))?.toString('utf8')
+  add('gitignore', !hasBlock(giText) ? 'warn' : upsertBlock(giText) === giText ? 'ok' : 'warn', !hasBlock(giText) ? 'managed block missing (run repair)'
+    : upsertBlock(giText) === giText ? 'managed block: .claude/workspace/* (CLAUDE.workspace.md committed), .claude/settings.local.json' : 'managed block is from an older version (run repair)')
 
   // memory: md-memory (built into workspace-core); its files live in the project
   const memMissing = Object.values(MEMORY_FILES).filter((rel) => readMaybe(ctx.p(rel)) == null)
@@ -66,6 +69,34 @@ export async function doctor(ctx, rep) {
   add('memory-allow-rules', allowMiss.length ? 'warn' : 'ok', allowMiss.length
     ? `${allowMiss.join(', ')} missing: Claude will ask before each memory write (run repair)`
     : `${MEMORY_ALLOWS.length} present`)
+
+  // CLAUDE.md integration: the owned file, the import block in the target, its size, the vendored pin
+  const pin = karpathyPin(ctx.lock)
+  if (pin) {
+    let v = null
+    try { v = readVendored(ctx.repoRoot, pin) } catch (e) { add('karpathy-vendored', 'fail', `${pin.file}: ${e.message}`) }
+    if (v) add('karpathy-vendored', v.ok ? 'ok' : 'fail', v.ok ? `${pin.file} matches the lock (${pin.commit.slice(0, 12)})` : `${pin.file} sha256 ${v.actual.slice(0, 12)}… differs from the lock`)
+  }
+  if (m) {
+    const ownedNow = readMaybe(ctx.p(OWNED))?.toString('utf8') ?? null
+    let want = null
+    try { want = workspaceMd(ctx) } catch {}
+    add('claude-md-file', ownedNow == null ? 'fail' : ownedNow === want ? 'ok' : 'warn', ownedNow == null ? `${OWNED} missing (run repair)`
+      : ownedNow === want ? `${OWNED} matches the template` : `drift: ${OWNED.split('/').pop()} differs from template (run repair)`)
+    if (ownedNow != null) {
+      const n = ownedNow.split('\n').length - 1, limit = lengthLimit({ karpathy: !!pin })
+      add('claude-md-length', n > limit ? 'warn' : 'ok', `${n} line(s) loaded every session${n > limit ? ` (over ${limit})` : ''}`)
+    }
+    const marker = safeJson(ctx.p('.claude/workspace.json'))
+    const target = marker?.claudeMd ? marker.claudeMd.target : TARGETS.project
+    if (!target) add('claude-md-import', 'warn', `skipped (--no-claude-md): add @${OWNED} to your CLAUDE.md yourself`)
+    else {
+      const st = importState(readMaybe(ctx.p(target))?.toString('utf8') ?? '')
+      const msg = { ok: `${target} imports ${OWNED}`, missing: `missing in ${target} (run repair)`, duplicate: `duplicate blocks in ${target} (run repair)`,
+        edited: `import line in ${target} was edited (run repair)`, malformed: `malformed markers in ${target} at line ${st.problem?.line} (fix them by hand)` }[st.state]
+      add('claude-md-import', st.state === 'ok' ? 'ok' : st.state === 'malformed' ? 'fail' : 'warn', msg)
+    }
+  }
 
   // claude-mem: no longer used. Leftovers are reported; two memory systems must not run in one project.
   const cms = claudeMemInstalls(installed)

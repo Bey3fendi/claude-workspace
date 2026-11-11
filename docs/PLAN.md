@@ -379,6 +379,23 @@ Phase 3M adds:
   - empty `extraKnownMarketplaces: {}` objects that Claude Code leaves behind are cleaned up.
   - Live: A re-point, then A uninstall → B kept 4/4 plugins, doctor ok; the last uninstall removed the marketplace and both folders were back to their original files.
 
+**11. Default CLAUDE.md; Karpathy guidelines vendored into it (2026-11-11, v0.10.0).** Implements `docs/claude-md-integration.md` (the user's spec; its "after 19 Nov" hold was lifted by the user).
+- `install` writes `.claude/workspace/CLAUDE.workspace.md` from `templates/CLAUDE.workspace.md` and adds a three-line managed block (`@.claude/workspace/CLAUDE.workspace.md` between HTML-comment markers) to `CLAUDE.md`, or `CLAUDE.local.md` with `--claude-md=local`; `--no-claude-md` skips it. Every row of the spec's install and uninstall tables is covered by tests (`tests/unit/claude-md.test.mjs`, lifecycle tests).
+- Karpathy: the `andrej-karpathy-skills` plugin is gone (repair uninstalls it). Its `CLAUDE.md` is vendored unmodified at the same pin (`vendor/karpathy/`, sha256 in the lock, MIT notice in `vendor/karpathy/LICENSE`; upstream ships no LICENSE file). Rendered with its title dropped and `##` demoted to `###`. Contracts no longer name the skill.
+- Deviations from the spec, each for a reason:
+  - paths are `.memory/` (since 0.8.0), not `.claude/memory/`;
+  - the upstream repo is `multica-ai/andrej-karpathy-skills` (what the lock pinned; it names forrestchang as author), not `forrestchang/…`;
+  - the gitignore block now ignores `.claude/workspace/*` with `!.claude/workspace/CLAUDE.workspace.md`, because the spec wants the owned file committed and the old `.claude/workspace/` rule would have hidden it from teammates;
+  - CLAUDE.md is tracked like the other touched files, so the dirty-tree check and the byte-exact restore cover it;
+  - workspace-core skips the md-memory rules at SessionStart when the import is present (no double rules), and records a `claude-md` event so the footer can say "Karpathy guidelines (loaded via CLAUDE.md)";
+  - no `--dry-run` (the CLI has none); `docs/cheatsheet.annotations.json` does not exist, so nothing to change there.
+- Size: the rendered file is 80 lines, about 1,000 tokens per session (cached after the first request). Doctor warns above 100.
+- **Live (Claude Code 2.1.317):**
+  - Upgrade: a project installed with v0.9.0 (its own CLAUDE.md committed), then `repair` from 0.10.0: the Karpathy plugin was uninstalled, the user's text kept with the block appended, doctor all ok. Only `.claude/workspace/CLAUDE.workspace.md` shows as untracked, so it can be committed.
+  - Acceptance (haiku, every file tool disallowed): asked for the md-memory rules, the model gave them word for word from the imported file; asked for the Surgical Changes test sentence, it quoted it verbatim. About $0.01 in all.
+  - **Finding:** Claude Code strips HTML comments from CLAUDE.md before the model sees them. The block markers and the attribution comment are therefore invisible to the model (the model could not quote the vendored commit hash). That suits the markers; the attribution is for people, and the full notice is in `vendor/karpathy/LICENSE`.
+  - Not checked: whether an interactive session asks to approve the import the first time (headless runs show no prompt). Claude Code documents an approval for imports outside the project; this one is inside it.
+
 **Open:**
 - **macOS run.**
 

@@ -15,7 +15,7 @@
 | Overlap | Skills | Decision and evidence |
 |---|---|---|
 | Code review | `ponytail:ponytail-review`, built-in `code-review`, `superpowers:requesting-code-review` | **Allowed.** The review contract is outcome-only (findings by severity with file:line), so any reviewer satisfies it. No run showed one displacing a workflow |
-| Minimal-change style | `ponytail:ponytail`, `andrej-karpathy-skills:karpathy-guidelines` | **Allowed.** They are complementary, and Ponytail is mostly ambient (SessionStart). The outcome checks' Karpathy diff-scope check passed in every graded run |
+| Minimal-change style | `ponytail:ponytail`, the Karpathy guidelines (always loaded via CLAUDE.md since 0.10.0) | **Allowed.** They are complementary, and Ponytail is mostly ambient (SessionStart). If they ever conflict, Ponytail's level wins for verbosity and Karpathy's sections for process (assumptions, success criteria). The outcome checks' Karpathy diff-scope check passed in every graded run |
 | Delegation and exploration | `superpowers:dispatching-parallel-agents` | **Allowed.** None was activated in any of the 45 Phase 3 runs, so there is nothing to act on |
 
 **Evidence base.** Across the 45 Phase 3 runs (A/B 28, smoke 7, outcomes 10), all 16 skill activations were skills a contract asked for: brainstorming 6, systematic-debugging 5, verification-before-completion 2, mem-search 2, test-driven-development 1. Karpathy was never activated as a skill; its effect was only checked through the diff-scope outcome. No competing skill fired instead of a contract skill. Re-run this review when the activation suite or the outcome checks show a non-contract skill being chosen for a contract class.

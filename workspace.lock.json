@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "workspaceVersion": "0.9.0",
+  "workspaceVersion": "0.10.0",
   "marketplace": {
     "name": "cw-workspace",
     "owner": "claude-workspace",
@@ -30,18 +30,23 @@
       "enabled": true
     },
     {
-      "name": "andrej-karpathy-skills",
-      "description": "multica-ai/andrej-karpathy-skills 1.0.0 (pinned)",
-      "upstreamVersion": "1.0.0",
-      "source": { "source": "url", "url": "https://github.com/multica-ai/andrej-karpathy-skills.git", "sha": "2c606141936f1eeef17fa3043a72095b4765b9c2" },
-      "enabled": true
-    },
-    {
       "name": "router",
       "description": "alexei-led/claude-router 1.19.1 - OPTIONAL Jev model router, disabled by default (pinned)",
       "upstreamVersion": "1.19.1",
       "source": { "source": "url", "url": "https://github.com/alexei-led/claude-router.git", "sha": "df56298187ec393ff04c54a4f14bf9c7c5606219" },
       "enabled": false
+    }
+  ],
+  "vendored": [
+    {
+      "name": "karpathy-guidelines",
+      "kind": "vendored",
+      "source": "github:multica-ai/andrej-karpathy-skills",
+      "commit": "2c606141936f1eeef17fa3043a72095b4765b9c2",
+      "path": "CLAUDE.md",
+      "file": "vendor/karpathy/CLAUDE.md",
+      "license": "MIT (vendor/karpathy/LICENSE)",
+      "sha256": "694a2d721e41c385f3db492838c23299826df5ba9809e3b0721aac70021e196a"
     }
   ]
 }

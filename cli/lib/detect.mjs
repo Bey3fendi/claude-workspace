@@ -60,10 +60,10 @@ export function findRouterConflicts(ctx, installed) {
 }
 
 /** Touched files with uncommitted changes (only if the project is a git work tree). */
-export function dirtyTouchedFiles(ctx) {
+export function dirtyTouchedFiles(ctx, extra = []) {
   const inside = run('git', ['rev-parse', '--is-inside-work-tree'], { cwd: ctx.projectRoot, env: ctx.env, timeoutMs: 30_000 })
   if (inside.code !== 0 || inside.stdout.trim() !== 'true') return []
-  const r = run('git', ['status', '--porcelain', '--untracked-files=all', '--', ...TOUCHED], { cwd: ctx.projectRoot, env: ctx.env, timeoutMs: 30_000 })
+  const r = run('git', ['status', '--porcelain', '--untracked-files=all', '--', ...TOUCHED, ...extra], { cwd: ctx.projectRoot, env: ctx.env, timeoutMs: 30_000 })
   if (r.code !== 0) return []
   return r.stdout.split('\n').filter(Boolean).map((l) => l.slice(3)).filter((f) => !f.startsWith('.claude/workspace/'))
 }

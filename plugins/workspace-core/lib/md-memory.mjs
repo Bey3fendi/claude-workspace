@@ -88,11 +88,11 @@ export function injectText(rel, hits) {
 }
 
 /** SessionStart context: the rules, plus session.md when it has content. */
-export function sessionStartText(sessionText) {
+export function sessionStartText(sessionText, { rules = true } = {}) {
+  // rules = false: the project's CLAUDE.md imports the workspace file, which carries the same rules
   const s = String(sessionText ?? '').trim()
-  return s
-    ? `${MEMORY_RULES}\n\n[md-memory] Project session log (.memory/session.md). Read it before continuing; the newest block is last.\n\n${s}`
-    : MEMORY_RULES
+  const log = s ? `[md-memory] Project session log (.memory/session.md). Read it before continuing; the newest block is last.\n\n${s}` : ''
+  return [rules ? MEMORY_RULES : '', log].filter(Boolean).join('\n\n') || null
 }
 
 /** Mechanical PreCompact block (not written by Claude). */

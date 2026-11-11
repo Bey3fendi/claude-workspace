@@ -32,8 +32,8 @@ export function newManifest(ctx) {
 }
 
 /** Record pre-install state of each touched file once. */
-export function snapshot(ctx, m) {
-  for (const rel of TOUCHED) {
+export function snapshot(ctx, m, extra = []) {
+  for (const rel of [...TOUCHED, ...extra]) {
     if (m.files[rel]) continue
     const abs = ctx.p(rel)
     const preHash = hashFile(abs)

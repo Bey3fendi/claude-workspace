@@ -20,7 +20,6 @@ const ID_RE = /\b([a-z0-9][a-z0-9-]*:[a-z0-9][a-z0-9-]*)\b/g
 
 /** Bare skill names the model may write without a plugin prefix. */
 export const KNOWN_BARE = {
-  'karpathy-guidelines': 'andrej-karpathy-skills:karpathy-guidelines',
   'mem-search': 'claude-mem:mem-search',
   ...Object.fromEntries(['brainstorming', 'systematic-debugging', 'test-driven-development', 'writing-plans', 'executing-plans',
     'verification-before-completion', 'requesting-code-review', 'receiving-code-review', 'subagent-driven-development',
@@ -28,7 +27,7 @@ export const KNOWN_BARE = {
     .map((n) => [n, `superpowers:${n}`])),
 }
 
-const INTEGRATIONS = { caveman: 'Caveman', ponytail: 'Ponytail', mdMemory: 'md-memory', claudeMem: 'claude-mem (legacy)', superpowers: 'Superpowers', karpathy: 'Karpathy' }
+const INTEGRATIONS = { caveman: 'Caveman', ponytail: 'Ponytail', mdMemory: 'md-memory', claudeMem: 'claude-mem (legacy)', superpowers: 'Superpowers', karpathy: 'Karpathy', claudeMd: 'Karpathy guidelines (loaded via CLAUDE.md)' }
 
 /** Parse the model's own "Workspace Usage" section. Only the Applied line yields skill claims. */
 export function parseUsageSection(answer) {
@@ -121,6 +120,7 @@ export function replay(rows) {
   for (const e of rows) {
     switch (e.ev) {
       case 'injection': t.injection(e.markers); break
+      case 'claude-md': if (e.karpathy) t.injection({ claudeMd: 1 }); break
       case 'turn.start': if (e.agentId == null) { t.turnStart(); if (pendingPressure) { t.pressure(pendingPressure); pendingPressure = null } open = true; n++; startedAt = e.t } break
       case 'skill.prompt': t.skillPrompt(e.skill); break
       case 'skill.loaded': t.skillLoaded(e.skill); break

@@ -3,7 +3,8 @@
 A portable Claude Code workspace that is pinned, reversible and project-local. It installs these tools:
 - [Superpowers](https://github.com/obra/superpowers)
 - [Ponytail](https://github.com/DietrichGebert/ponytail)
-- [Karpathy skills](https://github.com/multica-ai/andrej-karpathy-skills)
+
+It also writes a **default CLAUDE.md** for the project: one managed file, `.claude/workspace/CLAUDE.workspace.md`, imported from your `CLAUDE.md` with a three-line block. It holds the workspace's rules (memory, contracts, secrets) and the [Karpathy coding guidelines](https://github.com/multica-ai/andrej-karpathy-skills), vendored at a pinned commit (since 0.10.0 they are always loaded, no longer a skill to invoke).
 
 Session-to-session memory is **md-memory**, built into workspace-core: plain Markdown files in `.memory/`, with no database, worker process or background model calls. It replaces claude-mem (0.8.0).
 
@@ -22,6 +23,17 @@ It also includes an optional, disabled-by-default model router.
   - Before an automatic compaction, a git snapshot (last commit and changed files) is appended to the log.
   - Claude writes the notes itself, following short rules given at session start. The files are yours to read, edit and commit.
 - **Plan execution:** plans run in Superpowers' **Native** mode (`superpowers:executing-plans`): every task inline in the current session, then one fresh review of the whole branch. `superpowers:subagent-driven-development` is denied, and the method is stated at session start, so the plan handoff doesn't ask.
+- **CLAUDE.md:**
+  - `install` writes `.claude/workspace/CLAUDE.workspace.md` (owned by the workspace, rewritten on every install or repair, committed) and adds this block to `CLAUDE.md`, creating the file if needed:
+    ```md
+    <!-- >>> claude-workspace (managed) >>> -->
+    @.claude/workspace/CLAUDE.workspace.md
+    <!-- <<< claude-workspace (managed) <<< -->
+    ```
+  - Nothing outside the block is ever changed. Uninstall removes only the block (and deletes `CLAUDE.md` if install created it and nothing else is left). Broken markers stop the install with nothing written.
+  - `--claude-md=local` puts the block in `CLAUDE.local.md` instead (not committed); `--no-claude-md` leaves your CLAUDE.md alone. Repair keeps the choice; `--claude-md=project` switches back.
+  - The file is about 80 lines (roughly 1,000 tokens), loaded every session and cached after the first request. When it is imported, workspace-core does not repeat the md-memory rules at session start.
+  - The guidelines have no skill call to observe, so the footer can only say they were loaded ("Karpathy guidelines (loaded via CLAUDE.md)"). Judge them by outcomes: diff size, rewrites, questions before code.
 - **Workspace Usage footer:** an engine-verified line under each answer (skills activated, gate holds, pressure advice), shown to you, never sent to the model.
 
 | Switch (environment) | Effect |
@@ -46,7 +58,7 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.9.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.9.0
+npx -y github:Bey3fendi/claude-workspace#v0.10.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.10.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project
@@ -79,11 +91,12 @@ The devcontainer feature in [`devcontainer/`](devcontainer/README.md) installs t
 
 **Project files** are the only files it touches:
 - `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 1 `permissions.deny` skill rule from `policies/skill-denies.json`.
+- `CLAUDE.md` (or `CLAUDE.local.md`): the managed import block only. `.claude/workspace/CLAUDE.workspace.md`: the owned file it imports.
 - `.memory/session.md`, `context.md`, `decisions.md`: created as templates if missing; existing ones are never overwritten. Uninstall removes only the templates nobody wrote in. The folder is not under `.claude/`, because Claude Code asks before every edit there (and a headless run cannot write there at all).
 - `.claude/settings.local.json` (per user, gitignored): one `permissions.allow` rule, `Edit(.memory/**)` (it covers every file-editing tool), so Claude updates the memory files without asking. It is not in `settings.json`, because Claude Code ignores allow rules in the shared, committed settings.
 - `.claude/workspace.json`: a marker file meant to be committed.
 - If claude-mem is still installed at user level, `enabledPlugins["claude-mem@thedotmack"]: false` in this project, so two memory systems never run together. Uninstall removes that key.
-- `.gitignore`: one managed block for `.claude/workspace/` and `.claude/settings.local.json`.
+- `.gitignore`: one managed block that ignores `.claude/workspace/*` except `CLAUDE.workspace.md` (your committed CLAUDE.md imports it), and `.claude/settings.local.json`.
 
 Backups and the manifest live in `.claude/workspace/`, which is gitignored.
 
@@ -98,4 +111,4 @@ claude plugin validate .    # marketplace; plugins/workspace-core with --strict
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The plugins it installs (Superpowers, Ponytail, Karpathy skills, the router) are separate projects under their own licenses; this repo pins them by commit and does not copy their code.
+MIT, see [LICENSE](LICENSE). The plugins it installs (Superpowers, Ponytail, the router) are separate projects under their own licenses; this repo pins them by commit and does not copy their code. The one exception is the Karpathy guidelines, copied unmodified into `vendor/karpathy/` under their MIT license (notice in `vendor/karpathy/LICENSE`).

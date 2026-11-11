@@ -28,15 +28,23 @@ Options
   --marketplace <src>    Marketplace source: owner/repo#tag, git/https URL or path (default: this checkout)
   --yes, -y              Answer yes to confirmations (remove-claude-mem)
   --allow-dirty          Proceed although touched files have uncommitted changes (backups are still taken)
+  --claude-md=local      Put the CLAUDE.md import in CLAUDE.local.md (not committed) instead of CLAUDE.md
+  --no-claude-md         Do not touch CLAUDE.md (the workspace file is still written; import it yourself)
   --session <id>         usage: session id (or a prefix) instead of the latest
   --json                 Print one JSON result document
   --version, --help
 `
 
+function mdTarget(v) {
+  if (!['project', 'local'].includes(v)) throw new UserError(`--claude-md must be project or local (got ${v})`)
+  return v
+}
+
 export function parseArgs(argv) {
   const o = { _: [] }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
+    if (a.startsWith('--claude-md=')) { o.claudeMd = mdTarget(a.slice('--claude-md='.length)); continue }
     const val = () => { const v = argv[++i]; if (v == null || v.startsWith('--')) throw new UserError(`${a} needs a value`); return v }
     switch (a) {
       case '--project': o.project = val(); break
@@ -45,6 +53,8 @@ export function parseArgs(argv) {
       // --no-claude-mem, --remove-claude-mem, --no-fix: accepted and ignored since 0.8.0 (claude-mem is gone), so older scripts keep working
       case '--no-claude-mem': o.claudeMem = false; break
       case '--allow-dirty': o.allowDirty = true; break
+      case '--no-claude-md': o.claudeMd = false; break
+      case '--claude-md': o.claudeMd = mdTarget(val()); break
       case '--remove-claude-mem': o.removeClaudeMem = true; break
       case '--no-fix': o.noFix = true; break
       case '--session': o.session = val(); break

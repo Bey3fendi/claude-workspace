@@ -13,6 +13,7 @@ import { deniedSkills, trimListing } from '../lib/listing.mjs'
 import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 import { executionNote } from '../lib/execution.mjs'
+import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
 import { FILES, appendBlock, injectText, matchSections, maxLinesFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
 
 const sink = createSink()
@@ -233,11 +234,20 @@ export const register = (on) => {
     // Plan execution method (lib/execution.mjs): stated on every main-conversation SessionStart, so it survives /clear and compaction.
     const exec = executionNote({ disabled: (await $.env.get('CW_PLAN_EXECUTION')) === '0', agent: !!e.agent_id })
     if (exec) add.push(exec)
-    // md-memory: the rules plus session.md, on every main-conversation start (so /clear and /compact reload it).
+    // CLAUDE.md integration: is the workspace file imported here (CLAUDE.md or CLAUDE.local.md)? Then it already
+    // carries the md-memory rules and the Karpathy guidelines; record that (the guidelines have no skill event).
+    const root = !e.agent_id ? await $.session.root().catch(() => null) : null
+    let viaClaudeMd = false
+    if (root) {
+      viaClaudeMd = importsWorkspace(await readText($, `${root}/CLAUDE.md`)) || importsWorkspace(await readText($, `${root}/CLAUDE.local.md`))
+      const karpathy = viaClaudeMd && (await readText($, `${root}/${OWNED}`)).includes(KARPATHY_HEADING)
+      if (karpathy) tracker.injection({ claudeMd: 1 })
+      if (e?.source === 'startup' || e?.source === 'resume') await flush(sink, sink.record('claude-md', { imported: viaClaudeMd, karpathy }), (p, b) => $.fs.write(p, b))
+    }
+    // md-memory: the rules (unless CLAUDE.md has them) plus session.md, on every main-conversation start (so /clear and /compact reload it).
     if (!e.agent_id && (await $.env.get('CW_MEMORY')) !== '0') {
       mem.injected = new Set()
-      const root = await $.session.root().catch(() => null)
-      const text = root ? sessionStartText(await readText($, `${root}/${FILES.session}`)) : null
+      const text = root ? sessionStartText(await readText($, `${root}/${FILES.session}`), { rules: !viaClaudeMd }) : null
       if (text) {
         add.push(text)
         await flush(sink, sink.record('memory', { action: 'session-start', source: e?.source ?? null, len: text.length }), (p, b) => $.fs.write(p, b))

@@ -29,15 +29,14 @@ export function classify(text) {
   return { class: null, reason: 'no-match' }
 }
 
-const KARPATHY = 'andrej-karpathy-skills:karpathy-guidelines'
-
 /**
  * Per-class contract. `skills`: invoke one of these first (empty = no skill fits; outcome only).
+ * The Karpathy guidelines are not a step any more: since 0.10.0 they are always loaded through CLAUDE.md.
  * `pick`: when the right skill depends on the request, the rule the model applies instead.
  */
 export const CONTRACTS = {
-  debug: { skills: ['superpowers:systematic-debugging'], then: [KARPATHY], outcome: 'before your first edit, write the root cause (file:line and why) in your reply; then make the minimal fix' },
-  feature: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans', KARPATHY], outcome: 'agree the design before editing code; minimal diff' },
+  debug: { skills: ['superpowers:systematic-debugging'], then: [], outcome: 'before your first edit, write the root cause (file:line and why) in your reply; then make the minimal fix' },
+  feature: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans'], outcome: 'agree the design before editing code; minimal diff' },
   architecture: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans'], outcome: 'explore options and trade-offs before proposing code' },
   // No Superpowers skill reviews code the user points at (requesting-code-review is for one's own work).
   review: { skills: [], then: [], outcome: 'read the code and its tests, then report findings by severity with file:line evidence; say what you did not check' },

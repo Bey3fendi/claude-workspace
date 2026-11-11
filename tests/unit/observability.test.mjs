@@ -83,7 +83,7 @@ test('usage instruction stays short (token budget ≤ 120, ~4 chars/token)', () 
 
 test('parse: only the Applied line yields claims; bare names map to full ids', () => {
   const a = 'Fixed it.\n\n## Workspace Usage\n- Applied: superpowers:systematic-debugging (root cause first); karpathy-guidelines (minimal diff)\n- Active: Caveman (lite)\n- Not used: test-driven-development (no new code)\n'
-  assert.deepEqual(parseUsageSection(a), { present: true, applied: ['superpowers:systematic-debugging', 'andrej-karpathy-skills:karpathy-guidelines'] })
+  assert.deepEqual(parseUsageSection(a), { present: true, applied: ['superpowers:systematic-debugging'] }, 'karpathy-guidelines is no longer a skill (0.10.0: CLAUDE.md)')
   assert.deepEqual(parseUsageSection('**Workspace Usage**\n- **Applied:** brainstorming'), { present: true, applied: ['superpowers:brainstorming'] })
   assert.deepEqual(parseUsageSection('just an answer'), { present: false, applied: [] })
   assert.deepEqual(parseUsageSection(undefined), { present: false, applied: [] })

@@ -7,6 +7,7 @@ import { pluginUninstall, marketplaceRemove, otherProjectsUsing } from '../lib/c
 import { loadManifest } from '../lib/manifest.mjs'
 import { removeDenies, removeRules, removeMarketplaceKeys } from '../lib/settings.mjs'
 import { removeBlock } from '../lib/gitignore.mjs'
+import { TARGETS, removeImport } from '../lib/claude-md.mjs'
 import { WORKSPACE_DIR } from '../lib/context.mjs'
 import { hashFile, readMaybe, readJsonFile, writeAtomic, writeJsonIfChanged, rmrf, removeEmptyDirs, UserError } from '../lib/util.mjs'
 import { rmSync } from 'node:fs'
@@ -77,6 +78,11 @@ function keyLevel(ctx, rep, rel, f, m) {
     }
     if (!f.existedBefore && !Object.keys(s).length) { rmSync(abs); rep.change(`removed ${rel}`) }
     else if (writeJsonIfChanged(abs, s)) rep.change(`removed workspace keys from ${rel} (file was edited after install; other content kept)`)
+  } else if (rel === TARGETS.project || rel === TARGETS.local) {
+    // only the managed import block (and the blank line install put before it) goes
+    const t = removeImport(cur.toString('utf8'))
+    if (!f.existedBefore && !t.trim()) { rmSync(abs); rep.change(`removed ${rel}`) }
+    else if (t !== cur.toString('utf8')) { writeAtomic(abs, t); rep.change(`removed workspace import from ${rel} (file was edited after install; other content kept)`) }
   } else if (rel === '.claude/settings.local.json') {
     const s = removeRules(readJsonFile(abs), 'allow', m.addedAllows ?? [])
     if (!f.existedBefore && !Object.keys(s).length) { rmSync(abs); rep.change(`removed ${rel}`) }
