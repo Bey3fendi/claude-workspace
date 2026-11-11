@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "workspaceVersion": "0.8.0",
+  "workspaceVersion": "0.9.0",
   "marketplace": {
     "name": "cw-workspace",
     "owner": "claude-workspace",
@@ -20,13 +20,6 @@
       "description": "obra/superpowers 7.0.1 - process skills (pinned)",
       "upstreamVersion": "7.0.1",
       "source": { "source": "url", "url": "https://github.com/obra/superpowers.git", "sha": "2ce8aa15d05bd57213e6f746f953aafb7ded7a8b" },
-      "enabled": true
-    },
-    {
-      "name": "caveman",
-      "description": "JuliusBrussee/caveman 4.0.1 - terse output style, plugin only (pinned)",
-      "upstreamVersion": "4.0.1",
-      "source": { "source": "url", "url": "https://github.com/JuliusBrussee/caveman.git", "sha": "9b68f7ed12b05e7efaff18e65c5a3fc2849fd0a4" },
       "enabled": true
     },
     {
@@ -50,8 +43,5 @@
       "source": { "source": "url", "url": "https://github.com/alexei-led/claude-router.git", "sha": "df56298187ec393ff04c54a4f14bf9c7c5606219" },
       "enabled": false
     }
-  ],
-  "overlays": {
-    "caveman": { "file": ".caveman.json", "content": { "defaultMode": "lite" } }
-  }
+  ]
 }

@@ -1,14 +1,15 @@
 // install (and repair): idempotent. A second run with nothing to do reports zero changes and
 // leaves every project file byte-identical.
+import { rmSync } from 'node:fs'
 import { preflight, findDuplicates, findRouterConflicts, dirtyTouchedFiles } from '../lib/detect.mjs'
-import { listPlugins, marketplaceAdd, marketplaceRemove, marketplaceUpdate, pluginInstall, pluginUninstall, pluginEnable, pluginUpdate, projectInstall } from '../lib/claude.mjs'
+import { listPlugins, marketplaceAdd, marketplaceRemove, marketplaceUpdate, otherProjectsUsing, pluginInstall, pluginUninstall, pluginEnable, pluginUpdate, projectInstall } from '../lib/claude.mjs'
 import { pinState, pushHistory, localPluginVersion } from '../lib/history.mjs'
 import { loadManifest, newManifest, snapshot, finalize, saveManifest } from '../lib/manifest.mjs'
 import { addDenies, removeDenies, addRules } from '../lib/settings.mjs'
 import { upsertBlock } from '../lib/gitignore.mjs'
 import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
 import { FILES as MEMORY_FILES, TEMPLATES as MEMORY_TEMPLATES, MEMORY_ALLOWS } from '../../plugins/workspace-core/lib/md-memory.mjs'
-import { readJsonFile, readMaybe, writeAtomic, writeJsonIfChanged, hashFile, toJson, UserError } from '../lib/util.mjs'
+import { readJsonFile, readMaybe, writeAtomic, writeJsonIfChanged, hashFile, UserError } from '../lib/util.mjs'
 
 export async function install(ctx, rep, { repair = false } = {}) {
   const o = ctx.opts
@@ -48,11 +49,19 @@ export async function install(ctx, rep, { repair = false } = {}) {
   } else if (o.marketplace && m.marketplace.source && o.marketplace !== m.marketplace.source) {
     if (!repair) throw new UserError(`marketplace ${name} is already declared from ${m.marketplace.source}; use \`repair --marketplace ${o.marketplace}\` to switch (update/rollback), or uninstall first`)
     // Phase 6 update/rollback: re-point the marketplace at another ref (e.g. owner/repo#v0.8.0); pins below follow this CLI's lock.
+    // The marketplace is one per-user registry entry, and removing it uninstalls its plugins in every
+    // project. Record the other projects first and reinstall theirs after the re-add.
+    const others = otherProjectsUsing(ctx, name)
     const rm = marketplaceRemove(ctx, name)
     if (!rm.ok) throw new UserError(`could not re-point marketplace ${name}: ${rm.message}`)
     const add = marketplaceAdd(ctx, o.marketplace)
     if (!add.ok) throw new UserError(`claude plugin marketplace add ${o.marketplace} failed: ${add.message} (the previous source was ${m.marketplace.source})`)
     rep.change(`marketplace ${name} re-pointed: ${m.marketplace.source} -> ${o.marketplace}`)
+    for (const [path, ids] of others) {
+      const failed = ids.filter((id) => ctx.pluginIds.includes(id) && !pluginInstall({ ...ctx, projectRoot: path }, id).ok)
+      if (failed.length) rep.warn(`${path}: could not reinstall ${failed.join(', ')} after the re-point; run \`claude-workspace repair\` there`)
+      else rep.change(`${path}: reinstalled its workspace plugins from the new source (it shares marketplace ${name}); run \`claude-workspace repair\` there to record the new versions`)
+    }
   } else if (repair) {
     // Refresh the marketplace catalog from its source so updated entries (new pins, new workspace-core) are seen.
     const u = marketplaceUpdate(ctx, name)
@@ -103,6 +112,13 @@ export async function install(ctx, rep, { repair = false } = {}) {
       rep.change(`enabled ${id}`)
     }
   }
+  // ---- plugins an earlier version installed but this lock no longer has (e.g. caveman before 0.9.0)
+  for (const id of (m.plugins ?? []).filter((x) => !ctx.pluginIds.includes(x))) {
+    if (!projectInstall(ctx, id)) continue
+    const u = pluginUninstall(ctx, id)
+    if (u.ok) rep.change(`uninstalled ${id} (no longer part of the workspace)`)
+    else rep.warn(`could not uninstall ${id}, which is no longer part of the workspace: ${u.message}`)
+  }
   m.plugins = ctx.pluginIds
   // Phase 6: record what changed so `rollback` can say exactly what to return to.
   const after = pinState(ctx, ctx.pluginIds, projectInstall)
@@ -136,14 +152,18 @@ export async function install(ctx, rep, { repair = false } = {}) {
   }
   m.addedAllows = [...new Set([...(m.addedAllows ?? []), ...allow.added])]
 
-  // ---- Caveman lite (never overwrite a user's own choice)
-  const cavemanWant = ctx.lock.overlays.caveman.content
-  const cav = readJsonFile(ctx.p('.caveman.json'), { missing: null })
-  if (cav == null) {
-    writeAtomic(ctx.p('.caveman.json'), toJson(cavemanWant))
-    rep.change('wrote .caveman.json (defaultMode: lite)')
-  } else if (cav.defaultMode !== cavemanWant.defaultMode) {
-    rep.warn(`.caveman.json already sets defaultMode=${JSON.stringify(cav.defaultMode)}; left unchanged (workspace default is lite)`)
+  // ---- Caveman is no longer part of the workspace (0.9.0). The .caveman.json an older install wrote is
+  // returned to its pre-install state if nobody edited it since; an edited one is the user's and stays.
+  const cavRec = m.files['.caveman.json']
+  if (cavRec) {
+    const abs = ctx.p('.caveman.json')
+    if (hashFile(abs) === cavRec.postHash) {
+      if (cavRec.existedBefore) {
+        const b = readMaybe(ctx.p(cavRec.backup))
+        if (b != null && hashFile(abs) !== cavRec.preHash) { writeAtomic(abs, b); rep.change('restored .caveman.json (Caveman removed from the workspace)') }
+      } else if (readMaybe(abs) != null) { rmSync(abs); rep.change('removed .caveman.json (Caveman removed from the workspace)') }
+    } else if (readMaybe(abs) != null) rep.info('.caveman.json was edited after install; left in place (Caveman is no longer part of the workspace)')
+    delete m.files['.caveman.json']
   }
 
   // ---- committed workspace marker

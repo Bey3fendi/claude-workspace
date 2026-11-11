@@ -3,7 +3,7 @@
 // A file edited since install gets key-level removal of our entries only.
 import { join } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
-import { pluginUninstall, marketplaceRemove } from '../lib/claude.mjs'
+import { pluginUninstall, marketplaceRemove, otherProjectsUsing } from '../lib/claude.mjs'
 import { loadManifest } from '../lib/manifest.mjs'
 import { removeDenies, removeRules, removeMarketplaceKeys } from '../lib/settings.mjs'
 import { removeBlock } from '../lib/gitignore.mjs'
@@ -23,9 +23,15 @@ export async function uninstall(ctx, rep) {
     if (r.ok) rep.change(`uninstalled ${id}`)
     else if (r.result?.failureCode !== 'not_installed') rep.warn(`claude plugin uninstall ${id}: ${r.message}`)
   }
-  const mr = marketplaceRemove(ctx, m.marketplace.name)
-  if (mr.ok) rep.change(`removed marketplace ${m.marketplace.name} (project scope)`)
-  else rep.info(`marketplace ${m.marketplace.name}: ${mr.message}`)
+  // Removing the marketplace would uninstall its plugins in every other project too (one per-user registry),
+  // so it stays registered while another project uses it. This project's settings keys go either way (below).
+  const others = otherProjectsUsing(ctx, m.marketplace.name)
+  if (others.size) rep.info(`kept marketplace ${m.marketplace.name} registered for this user: ${others.size} other project(s) still use it`)
+  else {
+    const mr = marketplaceRemove(ctx, m.marketplace.name)
+    if (mr.ok) rep.change(`removed marketplace ${m.marketplace.name} (project scope)`)
+    else rep.info(`marketplace ${m.marketplace.name}: ${mr.message}`)
+  }
 
   let exact = true
   for (const [rel, f] of Object.entries(m.files)) {
@@ -79,10 +85,10 @@ function keyLevel(ctx, rep, rel, f, m) {
     const t = removeBlock(cur.toString('utf8'))
     if (!f.existedBefore && !t.trim()) { rmSync(abs); rep.change(`removed ${rel}`) }
     else if (t !== cur.toString('utf8')) { writeAtomic(abs, t); rep.change(`removed managed block from ${rel}`) }
-  } else if (rel === '.caveman.json') {
+  } else if (rel === '.caveman.json') { // only in manifests from before 0.9.0 (repair drops it)
     let v = null
     try { v = JSON.parse(cur.toString('utf8')) } catch {}
-    if (!f.existedBefore && isDeepStrictEqual(v, ctx.lock.overlays.caveman.content)) { rmSync(abs); rep.change(`removed ${rel}`) }
+    if (!f.existedBefore && isDeepStrictEqual(v, { defaultMode: 'lite' })) { rmSync(abs); rep.change(`removed ${rel}`) }
     else rep.warn(`${rel} was edited after install; left in place`)
   } else if (rel === '.claude/workspace.json') {
     if (!f.existedBefore) { rmSync(abs); rep.change(`removed ${rel}`) }

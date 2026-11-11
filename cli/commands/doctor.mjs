@@ -53,8 +53,6 @@ export async function doctor(ctx, rep) {
   const miss = settings ? missingDenies(settings, ctx.denies) : ctx.denies
   add('skill-deny-rules', miss.length ? 'warn' : 'ok', miss.length ? `${miss.length} rule(s) missing (run repair)` : `${ctx.denies.length} present`)
 
-  const cav = safeJson(ctx.p('.caveman.json'))
-  add('caveman-mode', cav?.defaultMode === 'lite' ? 'ok' : 'warn', cav ? `defaultMode=${cav.defaultMode}` : '.caveman.json missing')
   add('gitignore', hasBlock(readMaybe(ctx.p('.gitignore'))?.toString('utf8')) ? 'ok' : 'warn', 'managed block for .claude/workspace/')
 
   // memory: md-memory (built into workspace-core); its files live in the project

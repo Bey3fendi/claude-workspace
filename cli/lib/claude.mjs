@@ -1,6 +1,7 @@
 // Thin wrapper over the official `claude plugin` CLI. We let Claude Code write its own
 // settings keys (extraKnownMarketplaces, enabledPlugins) and plugin registry.
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { run, parseJsonOutput, mustJson } from './run.mjs'
 import { readJsonFile, UserError } from './util.mjs'
 
@@ -51,4 +52,22 @@ export function installedRegistry(ctx) {
 export function projectInstall(ctx, id) {
   const recs = installedRegistry(ctx)[id] || []
   return recs.find((r) => r.scope === 'project' && r.projectPath === ctx.projectRoot) || null
+}
+
+/**
+ * Other projects (still on disk) that have plugins from this marketplace, as Map(projectPath -> ids).
+ * Claude Code keeps marketplaces in one per-user registry, even when they are declared at project scope,
+ * and `marketplace remove` uninstalls the marketplace's plugins in EVERY project (seen live on 2.1.317).
+ */
+export function otherProjectsUsing(ctx, marketplaceName) {
+  const out = new Map()
+  for (const [id, rows] of Object.entries(installedRegistry(ctx))) {
+    if (!id.endsWith(`@${marketplaceName}`)) continue
+    for (const r of rows) {
+      if (r.scope !== 'project' || !r.projectPath || r.projectPath === ctx.projectRoot || !existsSync(r.projectPath)) continue
+      if (!out.has(r.projectPath)) out.set(r.projectPath, [])
+      out.get(r.projectPath).push(id)
+    }
+  }
+  return out
 }

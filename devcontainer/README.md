@@ -19,8 +19,8 @@ This step never fails container creation. If something goes wrong, it says so; f
 
 | Option | Default | Meaning |
 |---|---|---|
-| `source` | `bundled` | `bundled`: the CLI copy packaged with this feature. Anything else is an npx spec, e.g. `github:<owner>/<repo>#v0.8.0` |
-| `marketplace` | empty | The marketplace source written to `.claude/settings.json`. **Set this for a team-shared repo** (e.g. `<owner>/<repo>#v0.8.0`). If left empty, the source is a container-only path. |
+| `source` | `bundled` | `bundled`: the CLI copy packaged with this feature. Anything else is an npx spec, e.g. `github:<owner>/<repo>#v0.9.0` |
+| `marketplace` | empty | The marketplace source written to `.claude/settings.json`. **Set this for a team-shared repo** (e.g. `<owner>/<repo>#v0.9.0`). If left empty, the source is a container-only path. |
 | `installClaudeCode` | `true` | Install Claude Code when it is missing |
 | `claudeCodeVersion` | `tested` | `tested`, `latest`, or an exact version |
 | `installOnCreate` | `true` | `false` installs the CLI only |
@@ -33,7 +33,7 @@ You can use the feature without a registry by copying it into the project's `.de
 {
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
   "remoteUser": "node",
-  "features": { "./claude-workspace": { "marketplace": "Bey3fendi/claude-workspace#v0.8.0" } }
+  "features": { "./claude-workspace": { "marketplace": "Bey3fendi/claude-workspace#v0.9.0" } }
 }
 ```
 
@@ -43,7 +43,7 @@ Once the feature is published to GHCR, reference it as `ghcr.io/bey3fendi/claude
 
 **Logins:** Claude Code's login is not part of the image. Run `claude` once inside the container to sign in.
 
-**Files written to the host project:** the install writes `.claude/settings.json`, `.caveman.json` and a `.gitignore` block in the mounted project. These are the same files a host install writes, and `claude-workspace uninstall` restores them.
+**Files written to the host project:** the install writes `.claude/settings.json`, `.claude/settings.local.json`, the `.memory/` files and a `.gitignore` block in the mounted project. These are the same files a host install writes, and `claude-workspace uninstall` restores them.
 
 ## Test
 

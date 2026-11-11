@@ -136,17 +136,16 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
       <p class="eyebrow">Claude Code · ready-made setup</p>
       <h1>Claude Workspace Guide</h1>
       <p class="lede">One command gives any project a well-tested Claude Code setup. It adds good working habits, memory between sessions, and an honest note under each answer that says which tools Claude actually used.</p>
-      <div class="meta"><span>version 0.8.0</span><span>MIT licence</span><span>Linux · macOS · WSL · devcontainers</span><span>github.com/Bey3fendi/claude-workspace</span></div>
+      <div class="meta"><span>version 0.9.0</span><span>MIT licence</span><span>Linux · macOS · WSL · devcontainers</span><span>github.com/Bey3fendi/claude-workspace</span></div>
     </header>
 
     <section id="inside" style="border-top:0;margin-top:0;padding-top:0">
       <h2>What's inside</h2>
-      <p class="sub">Five well-known add-ons, each fixed to a version that has been tested together, plus one small piece of our own that ties them together.</p>
+      <p class="sub">Three well-known add-ons, each fixed to a version that has been tested together, plus one small piece of our own that ties them together and keeps the memory.</p>
       <div class="grid">
         <div class="tool core"><span class="role">our own · always on</span><h4>workspace-core</h4><p>Notices what kind of request you made (a bug, a new feature, tests) and points Claude to the right method. It also asks Claude to name a bug's cause before editing code, suggests when to clear the conversation, and writes the honest usage note.</p></div>
         <div class="tool"><span class="role">working methods</span><h4>Superpowers</h4><p>Proven step-by-step methods: debug systematically, brainstorm before building, write tests first, check before calling something done.</p></div>
-        <div class="tool"><span class="role">memory</span><h4>md-memory</h4><p>Remembers earlier sessions in plain text files in your project's <code>.memory/</code> folder: a running log, notes about parts of the code, and decisions with their reasons. No background program, no database, no extra model calls. You can read, edit and commit the files.</p></div>
-        <div class="tool"><span class="role">shorter answers</span><h4>Caveman</h4><p>Runs in “lite” mode: answers are shorter and less wordy. It doesn't change what Claude does.</p></div>
+        <div class="tool"><span class="role">memory · part of workspace-core</span><h4>md-memory</h4><p>Remembers earlier sessions in plain text files in your project's <code>.memory/</code> folder: a running log, notes about parts of the code, and decisions with their reasons. No background program, no database, no extra model calls. You can read, edit and commit the files.</p></div>
         <div class="tool"><span class="role">keep it simple</span><h4>Ponytail</h4><p>“Lazy senior dev” mode: pushes Claude toward the simplest, shortest solution that works, with no extra layers nobody asked for.</p></div>
         <div class="tool"><span class="role">coding guidelines</span><h4>Karpathy skills</h4><p>Guidelines that steer Claude away from the coding mistakes AI models commonly make, based on Andrej Karpathy's observations.</p></div>
       </div>
@@ -161,18 +160,18 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
           <span class="who">Most people</span>
           <h4>One command</h4>
           <p>Needs Node 22+, git and Claude Code already installed.</p>
-          <div class="ticket"><div class="head">In your project folder <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.8.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.8.0">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.8.0 install --yes \
-  --marketplace Bey3fendi/claude-workspace#v0.8.0</pre></div>
+          <div class="ticket"><div class="head">In your project folder <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.9.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.9.0">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.9.0 install --yes \
+  --marketplace Bey3fendi/claude-workspace#v0.9.0</pre></div>
         </div>
         <div class="path">
           <span class="who">Containers</span>
           <h4>Devcontainer</h4>
           <p>Add one line to <code>.devcontainer/devcontainer.json</code>. Each new container installs Claude Code and the workspace by itself.</p>
-          <div class="ticket"><div class="head">devcontainer.json <button class="copy" data-copy='"features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.8.0" } }'>Copy</button></div>
+          <div class="ticket"><div class="head">devcontainer.json <button class="copy" data-copy='"features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.9.0" } }'>Copy</button></div>
 <pre>"features": {
   "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": {
-    "marketplace": "Bey3fendi/claude-workspace#v0.8.0"
+    "marketplace": "Bey3fendi/claude-workspace#v0.9.0"
   }
 }</pre></div>
         </div>
@@ -185,8 +184,8 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
         </div>
       </div>
       <h3>Then check it</h3>
-      <div class="ticket"><div class="head">Health check <small>safe to run any time</small> <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.8.0 doctor">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.8.0 doctor</pre>
+      <div class="ticket"><div class="head">Health check <small>safe to run any time</small> <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.9.0 doctor">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.9.0 doctor</pre>
       <div class="note">Every line should be a ✓, or a “-” for optional parts. A “!” is a warning worth reading. The last line says whether everything required passed.</div></div>
       <div class="callout"><strong>Everything stays in the project</strong>The installer only touches files in your project folder; nothing is set up for your user account. Upgrading from a version before 0.8.0, which used claude-mem? Run <code>remove-claude-mem</code> once. It asks first and keeps claude-mem's saved data.</div>
       <p>On Windows, use WSL. Native Windows isn't supported.</p>
@@ -226,7 +225,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
 
     <section id="commands">
       <h2>Commands</h2>
-      <p class="sub">All of them run in the project folder. If you installed with npx, put <code>npx -y github:Bey3fendi/claude-workspace#v0.8.0</code> in front of the command word.</p>
+      <p class="sub">All of them run in the project folder. If you installed with npx, put <code>npx -y github:Bey3fendi/claude-workspace#v0.9.0</code> in front of the command word.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Command</th><th>What it does</th><th>When to use it</th></tr></thead>
         <tbody>
@@ -263,12 +262,12 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
     <section id="update">
       <h2>Update & roll back</h2>
       <p class="sub">Each release is a numbered version on GitHub, and a project stays on its version until you move it.</p>
-      <div class="ticket"><div class="head">Move a project to a new version <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.8.0 repair --marketplace Bey3fendi/claude-workspace#v0.8.0">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.8.0 repair \
-  --marketplace Bey3fendi/claude-workspace#v0.8.0</pre>
-      <div class="note">Change both <code>v0.8.0</code>s to the version you want. The workspace remembers your last five versions.</div></div>
-      <div class="ticket"><div class="head">Going back <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.8.0 rollback">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.8.0 rollback</pre>
+      <div class="ticket"><div class="head">Move a project to a new version <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.9.0 repair --marketplace Bey3fendi/claude-workspace#v0.9.0">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.9.0 repair \
+  --marketplace Bey3fendi/claude-workspace#v0.9.0</pre>
+      <div class="note">Change both <code>v0.9.0</code>s to the version you want. The workspace remembers your last five versions.</div></div>
+      <div class="ticket"><div class="head">Going back <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.9.0 rollback">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.9.0 rollback</pre>
       <div class="note">It prints the exact command to run, without running anything itself. Check the command, then run it.</div></div>
     </section>
 
@@ -298,7 +297,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
         <ol class="steps">
           <li>Raise the version to the same number in three places: <code>package.json</code>, <code>workspace.lock.json</code> (workspaceVersion) and <code>devcontainer/src/claude-workspace/devcontainer-feature.json</code>. If workspace-core changed, also raise <code>plugins/workspace-core/.claude-plugin/plugin.json</code>, so <code>repair</code> picks it up.</li>
           <li>Run <code>npm run gen:marketplace</code> and <code>npm test</code>.</li>
-          <li>Commit, then tag: <code>git tag -a v0.8.0 -m "…"</code> and <code>git push origin main v0.8.0</code>.</li>
+          <li>Commit, then tag: <code>git tag -a v0.9.0 -m "…"</code> and <code>git push origin main v0.9.0</code>.</li>
           <li>GitHub then runs the tests and publishes the devcontainer feature automatically. Check the Actions tab.</li>
         </ol>
         <div class="callout warn"><strong>Never move a published tag</strong>Projects are pinned to it. If a release is broken, ship the next number instead.</div>

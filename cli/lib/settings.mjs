@@ -31,8 +31,9 @@ export function removeMarketplaceKeys(settings, marketplaceName) {
     for (const k of Object.keys(s.enabledPlugins)) if (k.endsWith(`@${marketplaceName}`)) delete s.enabledPlugins[k]
     if (!Object.keys(s.enabledPlugins).length) delete s.enabledPlugins
   }
-  if (s.extraKnownMarketplaces?.[marketplaceName]) {
+  if (s.extraKnownMarketplaces) {
     delete s.extraKnownMarketplaces[marketplaceName]
+    // Claude Code's own `marketplace remove` leaves an empty object behind
     if (!Object.keys(s.extraKnownMarketplaces).length) delete s.extraKnownMarketplaces
   }
   return s

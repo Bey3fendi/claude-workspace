@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
-import { readdirSync, existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { readdirSync, existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'node:fs'
+import { hashFile } from '../../cli/lib/util.mjs'
 import { sandbox, cli, tree, git, write, read, calls, ROOT } from '../helpers.mjs'
 
 const POLICY_RULES = JSON.parse(readFileSync(join(ROOT, 'policies', 'skill-denies.json'), 'utf8')).rules.length
@@ -40,7 +41,8 @@ test('empty project: install, idempotent re-run, doctor, clean uninstall', () =>
   assert.equal(s.permissions.deny.length, POLICY_RULES)
   assert.equal(s.permissions.allow, undefined, 'the shared settings get no allow rules (Claude Code ignores them there)')
   assert.deepEqual(JSON.parse(read(join(sb.project, '.claude', 'settings.local.json'))), { permissions: { allow: ['Edit(.memory/**)'] } }, 'md-memory writes need no prompt')
-  assert.deepEqual(JSON.parse(read(join(sb.project, '.caveman.json'))), { defaultMode: 'lite' })
+  assert.ok(!existsSync(join(sb.project, '.caveman.json')), 'Caveman is not part of the workspace')
+  assert.ok(!regOf(sb)['caveman@cw-workspace'], 'no caveman plugin')
   assert.match(read(join(sb.project, '.gitignore')), /\.claude\/workspace\//)
   for (const f of ['session.md', 'context.md', 'decisions.md']) assert.ok(existsSync(join(sb.project, '.memory', f)), f)
   assert.ok(!/npx/.test(calls(sb)), 'nothing user-level is installed: no claude-mem, no npx')
@@ -144,7 +146,7 @@ test('claude-mem leftover: disabled in the project, doctor warns, uninstall undo
   const u = cli(sb, ['uninstall'])
   assert.equal(u.code, 0, u.stdout)
   const after = JSON.parse(read(join(sb.project, '.claude', 'settings.json')))
-  assert.equal(after.model, 'opus', 'the user edit is kept')
+  assert.deepEqual(after, { model: 'opus' }, 'only the user edit is left')
   assert.equal(after.enabledPlugins?.['claude-mem@thedotmack'], undefined, 'our disable is undone')
   assert.ok(!after.permissions, 'workspace deny and allow rules removed')
   assert.ok(regOf(sb)['claude-mem@thedotmack'], 'user-level claude-mem is never removed by install/uninstall')
@@ -204,27 +206,67 @@ test('pin drift: doctor fails, repair reinstalls at the locked sha', () => {
   const sb = sandbox()
   assert.equal(cli(sb, ['install', '--yes']).code, 0)
   const f = join(sb.home, '.claude', 'plugins', 'installed_plugins.json')
-  const reg = JSON.parse(read(f)); reg.plugins['caveman@cw-workspace'][0].gitCommitSha = 'f'.repeat(40); writeFileSync(f, JSON.stringify(reg))
+  const reg = JSON.parse(read(f)); reg.plugins['ponytail@cw-workspace'][0].gitCommitSha = 'f'.repeat(40); writeFileSync(f, JSON.stringify(reg))
   const d = cli(sb, ['doctor'])
   assert.equal(d.code, 1)
-  assert.match(d.json.checks.find((c) => c.id === 'plugin caveman@cw-workspace').message, /pin mismatch/)
+  assert.match(d.json.checks.find((c) => c.id === 'plugin ponytail@cw-workspace').message, /pin mismatch/)
   const r = cli(sb, ['repair', '--yes'])
   assert.equal(r.code, 0, r.stdout)
-  assert.equal(regOf(sb)['caveman@cw-workspace'][0].gitCommitSha, LOCK.plugins.find((p) => p.name === 'caveman').source.sha)
+  assert.equal(regOf(sb)['ponytail@cw-workspace'][0].gitCommitSha, LOCK.plugins.find((p) => p.name === 'ponytail').source.sha)
 })
 
 test('repair restores deleted memory files and project pieces', () => {
   const sb = sandbox()
   assert.equal(cli(sb, ['install']).code, 0)
   rmSync(join(sb.project, '.memory', 'session.md'))
-  rmSync(join(sb.project, '.caveman.json'))
+  rmSync(join(sb.project, '.claude', 'settings.local.json'))
   const d = cli(sb, ['doctor'])
   assert.equal(d.code, 1)
   assert.match(d.json.checks.find((c) => c.id === 'memory').message, /session\.md/)
   const r = cli(sb, ['repair'])
   assert.equal(r.code, 0, r.stdout)
   assert.ok(existsSync(join(sb.project, '.memory', 'session.md')))
-  assert.ok(existsSync(join(sb.project, '.caveman.json')))
+  assert.ok(existsSync(join(sb.project, '.claude', 'settings.local.json')))
+})
+
+// A project set up before 0.9.0 has the caveman plugin and a .caveman.json: repair removes both.
+function preCavemanRemoval(sb, { editCaveman = false } = {}) {
+  assert.equal(cli(sb, ['install']).code, 0)
+  const P = sb.project
+  const f = join(sb.home, '.claude', 'plugins', 'installed_plugins.json')
+  const reg = JSON.parse(read(f))
+  reg.plugins['caveman@cw-workspace'] = [{ scope: 'project', projectPath: P, version: '1.0.0', installPath: '/fake/caveman@cw-workspace', gitCommitSha: '9b68f7ed12b05e7efaff18e65c5a3fc2849fd0a4' }]
+  writeFileSync(f, JSON.stringify(reg))
+  const lite = '{\n  "defaultMode": "lite"\n}\n'
+  writeFileSync(join(P, '.caveman.json'), lite)
+  const mf = join(P, '.claude', 'workspace', 'manifest.json')
+  const m = JSON.parse(read(mf))
+  m.plugins.push('caveman@cw-workspace')
+  // postHash = the file as that install left it; the user may have edited it since
+  m.files['.caveman.json'] = { existedBefore: false, preHash: null, postHash: hashFile(join(P, '.caveman.json')), backup: null }
+  if (editCaveman) writeFileSync(join(P, '.caveman.json'), '{"defaultMode":"full"}\n')
+  writeFileSync(mf, JSON.stringify(m))
+  return { P, mf }
+}
+
+test('repair after 0.9.0 removes the caveman plugin and the untouched .caveman.json', () => {
+  const sb = sandbox()
+  const { P, mf } = preCavemanRemoval(sb)
+  const r = cli(sb, ['repair'])
+  assert.equal(r.code, 0, r.stdout)
+  assert.ok(!regOf(sb)['caveman@cw-workspace']?.length, 'caveman plugin uninstalled')
+  assert.ok(!existsSync(join(P, '.caveman.json')))
+  const after = JSON.parse(read(mf))
+  assert.ok(!after.plugins.includes('caveman@cw-workspace')); assert.equal(after.files['.caveman.json'], undefined)
+  const again = cli(sb, ['repair']).json.changes; assert.ok(!again.some((c) => /caveman/i.test(c)), 'second repair: nothing caveman left to do: ' + again.join('; '))
+})
+
+test('repair keeps a .caveman.json the user edited', () => {
+  const sb = sandbox()
+  const { P } = preCavemanRemoval(sb, { editCaveman: true })
+  const r = cli(sb, ['repair'])
+  assert.equal(r.code, 0, r.stdout)
+  assert.equal(read(join(P, '.caveman.json')), '{"defaultMode":"full"}\n')
 })
 
 test('update by re-pointing the marketplace records history, and rollback names the previous source', () => {
@@ -243,4 +285,42 @@ test('update by re-pointing the marketplace records history, and rollback names 
   const rb = cli(sb, ['rollback'])
   assert.equal(rb.code, 0, rb.stdout + rb.stderr)
   assert.ok(rb.stdout.includes(ROOT), rb.stdout)
+})
+
+// Claude Code keeps one per-user marketplace registry; removing the marketplace uninstalls its plugins in
+// every project. Two projects on one machine must not break each other.
+function twoProjects() {
+  const sb = sandbox()
+  const B = { ...sb, project: join(sb.project, '..', 'project-b') }
+  mkdirSync(B.project, { recursive: true })
+  assert.equal(cli(sb, ['install']).code, 0)
+  assert.equal(cli(B, ['install']).code, 0)
+  const rowsOf = (p) => Object.entries(regOf(sb)).filter(([id]) => id.endsWith('@cw-workspace')).flatMap(([, rs]) => rs).filter((r) => r.projectPath === p).length
+  return { sb, B, rowsOf }
+}
+
+test('uninstall in one project keeps the marketplace while another project uses it', () => {
+  const { sb, B, rowsOf } = twoProjects()
+  const before = rowsOf(B.project)
+  assert.ok(before > 0)
+  const u = cli(sb, ['uninstall'])
+  assert.equal(u.code, 0, u.stdout)
+  assert.ok(!u.json.changes.some((c) => /removed marketplace/.test(c)), 'marketplace kept while project B uses it')
+  assert.equal(rowsOf(B.project), before, 'project B keeps its plugins')
+  assert.equal(cli(B, ['doctor']).code, 0, 'project B is still healthy')
+  assert.deepEqual(readdirSync(sb.project), [], 'project A is empty again')
+  // the last project removes the marketplace
+  const u2 = cli(B, ['uninstall'])
+  assert.ok(u2.json.changes.some((c) => /removed marketplace cw-workspace/.test(c)), u2.stdout)
+})
+
+test('re-pointing the marketplace reinstalls the plugins of other projects that share it', () => {
+  const { sb, B, rowsOf } = twoProjects()
+  const before = rowsOf(B.project)
+  const REL = join(sb.base, 'release-b')
+  write(join(REL, '.claude-plugin', 'marketplace.json'), read(join(ROOT, '.claude-plugin', 'marketplace.json')))
+  const r = cli(sb, ['repair', '--marketplace', REL])
+  assert.equal(r.code, 0, r.stdout)
+  assert.ok(r.json.changes.some((c) => c.includes(B.project) && /reinstalled/.test(c)), r.stdout)
+  assert.equal(rowsOf(B.project), before, 'project B has its plugins back')
 })

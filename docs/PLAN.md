@@ -369,6 +369,16 @@ Phase 3M adds:
 - **Location `.memory/`, not the POC's `.claude/memory/` (live finding, Claude Code 2.1.317).** Claude Code treats every file under `.claude/` as sensitive. It refused the model's handoff edit there whatever the allow rules, `--allowedTools` or acceptEdits said, and an interactive session would ask on every write. Also measured: allow rules in the shared `.claude/settings.json` are ignored (even a bare `Edit`), while `.claude/settings.local.json` and `--settings` are honoured. And `Write(path)` rules are never matched (`Edit(path)` covers every file-editing tool). So install writes one rule, `Edit(.memory/**)`, to `settings.local.json`, which is tracked like the other touched files and gitignored.
 - **Live:** `tests/live/clear-handoff/run.mjs` passed. The pressure note (from the user-level hook) led the model to write the handoff into `.memory/session.md` with src/ untouched; after `/clear`, workspace-core reloaded it (memory event `session-start`, source `clear`, and the transcript carries the injected handoff), and the answer recapped the work without opening files. About $0.69. A probe also confirmed a `context.md` section is injected after a Read of a matching file (1 inject event; the model quoted the marker).
 
+**10. Caveman removed (2026-11-11, v0.9.0).** The user's choice: the workspace no longer includes anything that does what Caveman did (shorter output style).
+- Gone: the caveman pin in the lock, `overlays/caveman.json` and `.caveman.json`, the doctor `caveman-mode` check, and its 11 deny rules (1 rule remains: `subagent-driven-development`).
+- **Existing projects:** `repair` uninstalls plugins an earlier version installed but the lock no longer has (here `caveman@cw-workspace`). It returns `.caveman.json` to its pre-install state if nobody edited it since; an edited one is kept. Uninstall still handles a `.caveman.json` in an old manifest.
+- The Caveman context marker in the observability events stays, so a leftover install still shows up in the Workspace Usage report.
+- **Bug fixed (found during this change; in earlier versions too): one project's uninstall or re-point broke every other project.** Claude Code keeps marketplaces in one per-user registry, even when they are declared at project scope, and `claude plugin marketplace remove` uninstalls the marketplace's plugins in every project. Measured live on 2.1.317 with two projects: uninstall in A left B with 0 of 4 plugins and a failing doctor. Now:
+  - uninstall keeps the marketplace registered while another project (still on disk) has plugins from it;
+  - a re-point (`repair --marketplace …`) records the other projects first and reinstalls their plugins from the new source;
+  - empty `extraKnownMarketplaces: {}` objects that Claude Code leaves behind are cleaned up.
+  - Live: A re-point, then A uninstall → B kept 4/4 plugins, doctor ok; the last uninstall removed the marketplace and both folders were back to their original files.
+
 **Open:**
 - **macOS run.**
 

@@ -2,7 +2,6 @@
 
 A portable Claude Code workspace that is pinned, reversible and project-local. It installs these tools:
 - [Superpowers](https://github.com/obra/superpowers)
-- [Caveman](https://github.com/JuliusBrussee/caveman) (lite mode, plugin only)
 - [Ponytail](https://github.com/DietrichGebert/ponytail)
 - [Karpathy skills](https://github.com/multica-ai/andrej-karpathy-skills)
 
@@ -47,7 +46,7 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.8.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.8.0
+npx -y github:Bey3fendi/claude-workspace#v0.9.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.9.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project
@@ -59,9 +58,9 @@ For a team, install with `--marketplace Bey3fendi/claude-workspace#<tag>` (or yo
 | Command | What it does |
 |---|---|
 | `install` | Idempotent. A second run makes zero changes. Refuses if files it would touch have uncommitted changes (override with `--allow-dirty`), or if a same-named plugin would load twice |
-| `doctor` | Verifies pins, duplicates, deny rules, Caveman mode and the memory files, and warns if a leftover claude-mem is installed. Never writes. Exits 1 on any failure |
-| `repair` | Re-applies everything `install` does: refreshes the marketplace, updates workspace-core, reinstalls drifted pins, restores missing memory files, removes deny rules older versions added, and records the previous versions. `--marketplace <owner>/<repo>#<tag>` re-points to another release (update or rollback) |
-| `uninstall` | Removes what the workspace added. A touched file nobody edited since install is restored **byte-for-byte**. An edited file loses only the workspace's own keys |
+| `doctor` | Verifies pins, duplicates, deny rules and the memory files, and warns if a leftover claude-mem is installed. Never writes. Exits 1 on any failure |
+| `repair` | Re-applies everything `install` does: refreshes the marketplace, updates workspace-core, reinstalls drifted pins, restores missing memory files, removes what older versions added (deny rules, the Caveman plugin and an untouched `.caveman.json`), and records the previous versions. `--marketplace <owner>/<repo>#<tag>` re-points to another release (update or rollback) |
+| `uninstall` | Removes what the workspace added. A touched file nobody edited since install is restored **byte-for-byte**. An edited file loses only the workspace's own keys. Other projects on the machine are never affected: the marketplace stays registered while another project uses it |
 | `usage` | Prints the engine-verified Workspace Usage evidence for the latest session in this project (`--session <id>` for another). Reads local files only |
 | `canary` | Read-only (network): compares every pin with upstream's latest release |
 | `remove-claude-mem` | For projects set up before 0.8.0. Asks first (`--yes` to skip), then runs claude-mem's own uninstaller. That removes claude-mem at **user level** (every project). Its data in `~/.claude-mem` is kept |
@@ -79,8 +78,7 @@ The devcontainer feature in [`devcontainer/`](devcontainer/README.md) installs t
 ## What it changes
 
 **Project files** are the only files it touches:
-- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 12 `permissions.deny` skill rules from `policies/skill-denies.json`.
-- `.caveman.json`: `{"defaultMode":"lite"}`. An existing file is never overwritten.
+- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 1 `permissions.deny` skill rule from `policies/skill-denies.json`.
 - `.memory/session.md`, `context.md`, `decisions.md`: created as templates if missing; existing ones are never overwritten. Uninstall removes only the templates nobody wrote in. The folder is not under `.claude/`, because Claude Code asks before every edit there (and a headless run cannot write there at all).
 - `.claude/settings.local.json` (per user, gitignored): one `permissions.allow` rule, `Edit(.memory/**)` (it covers every file-editing tool), so Claude updates the memory files without asking. It is not in `settings.json`, because Claude Code ignores allow rules in the shared, committed settings.
 - `.claude/workspace.json`: a marker file meant to be committed.
@@ -100,4 +98,4 @@ claude plugin validate .    # marketplace; plugins/workspace-core with --strict
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The plugins it installs (Superpowers, Caveman, Ponytail, Karpathy skills, the router) are separate projects under their own licenses; this repo pins them by commit and does not copy their code.
+MIT, see [LICENSE](LICENSE). The plugins it installs (Superpowers, Ponytail, Karpathy skills, the router) are separate projects under their own licenses; this repo pins them by commit and does not copy their code.

@@ -60,7 +60,7 @@ export function projectKey(root) {
 /** Content markers that attribute injected hook context to a workspace capability. */
 export const MARKERS = {
   superpowers: [/You have superpowers/g, /using-superpowers/g],
-  caveman: [/caveman/gi],
+  caveman: [/caveman/gi], // legacy: only a leftover Caveman install (before 0.9.0) injects this
   ponytail: [/ponytail/gi],
   claudeMem: [/claude-mem/gi, /<claude-mem-context>/gi], // legacy: only a leftover claude-mem install injects this
   mdMemory: [/\[md-memory\]/g],

@@ -49,9 +49,9 @@ if (cmd[0] === 'marketplace' && cmd[1] === 'remove') {
   const name = cmd[2]
   if (!settings?.extraKnownMarketplaces?.[name]) out({ command: 'marketplace-remove', outcome: 'failed', message: `Marketplace '${name}' not found` }, 1)
   delete settings.extraKnownMarketplaces[name]
-  // Like the real CLI (seen live on 2.1.317): removing a marketplace uninstalls its plugins here.
+  // Like the real CLI (seen live on 2.1.317): removing a marketplace uninstalls its plugins in every project.
   for (const id of Object.keys(reg.plugins).filter((id) => id.endsWith(`@${name}`))) {
-    reg.plugins[id] = reg.plugins[id].filter((r) => r.projectPath !== cwd)
+    reg.plugins[id] = []
     if (!reg.plugins[id].length) delete reg.plugins[id]
     if (settings.enabledPlugins) delete settings.enabledPlugins[id]
   }

@@ -10,7 +10,7 @@ The workspace answers one question per task: **which installed capabilities did 
      ```
      Workspace Usage
      - Applied: superpowers:systematic-debugging (root cause before fix)
-     - Active: Caveman (lite)
+     - Active: Ponytail
      - Not used: test-driven-development (no new code)
      ```
    - Trivial questions get no section.
@@ -63,5 +63,5 @@ claude-workspace usage --session <id>  # or an id prefix; --json for the full ev
 ## Limits
 
 - **The parsing is heuristic.** Claims are read only from the `Applied:` line of a section headed "Workspace Usage". Full skill ids are recognised, plus a fixed list of bare Superpowers and Karpathy names.
-- **Ambient integrations are visible only as injected context.** This covers Caveman, Ponytail and memory. Caveman injects only in interactive sessions.
+- **Ambient integrations are visible only as injected context.** This covers Ponytail and md-memory.
 - **Workflow compliance needs separate checks.** Whether Claude actually followed a workflow (for example, root cause before fix) is checked by the Phase 3 outcome evaluations, not by this report.

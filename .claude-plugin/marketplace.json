@@ -20,15 +20,6 @@
       }
     },
     {
-      "name": "caveman",
-      "description": "JuliusBrussee/caveman 4.0.1 - terse output style, plugin only (pinned)",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/JuliusBrussee/caveman.git",
-        "sha": "9b68f7ed12b05e7efaff18e65c5a3fc2849fd0a4"
-      }
-    },
-    {
       "name": "ponytail",
       "description": "DietrichGebert/ponytail 5.3.3 (pinned)",
       "source": {
