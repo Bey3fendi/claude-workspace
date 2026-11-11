@@ -12,6 +12,7 @@ import { classify, contractText, restoreText } from '../lib/contracts.mjs'
 import { deniedSkills, trimListing } from '../lib/listing.mjs'
 import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
+import { executionNote } from '../lib/execution.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
@@ -223,11 +224,19 @@ export const register = (on) => {
   on('classic.SessionStart', async ($, e, next) => {
     const r = await next(e)
     if (!e.agent_id && ['clear', 'compact', 'startup'].includes(e?.source)) { ctx.tokens = 0; ctx.pending = null }
-    if (e?.source !== 'compact' || e.agent_id || !req.contracts || !req.class) return r
-    const text = restoreText(req.class, { invoked: req.skills, rootCauseStated: req.class === 'debug' && statesRootCause(req.text) })
-    if (!text) return r
-    await flush(sink, sink.record('compact.restore', { class: req.class, len: text.length, invoked: req.skills.length }), (p, b) => $.fs.write(p, b))
-    return { ...r, additionalContext: [...(r?.additionalContext ?? []), text] }
+    const add = []
+    // Plan execution method (lib/execution.mjs): stated on every main-conversation SessionStart, so it survives /clear and compaction.
+    const exec = executionNote({ disabled: (await $.env.get('CW_PLAN_EXECUTION')) === '0', agent: !!e.agent_id })
+    if (exec) add.push(exec)
+    if (e?.source === 'compact' && !e.agent_id && req.contracts && req.class) {
+      const text = restoreText(req.class, { invoked: req.skills, rootCauseStated: req.class === 'debug' && statesRootCause(req.text) })
+      if (text) {
+        add.push(text)
+        await flush(sink, sink.record('compact.restore', { class: req.class, len: text.length, invoked: req.skills.length }), (p, b) => $.fs.write(p, b))
+      }
+    }
+    if (!add.length) return r
+    return { ...r, additionalContext: [...(r?.additionalContext ?? []), ...add] }
   }).catch(($, e, next) => next(e))
 
   on('classic.PostToolUse', async ($, e, next) => {

@@ -136,7 +136,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
       <p class="eyebrow">Claude Code · ready-made setup</p>
       <h1>Claude Workspace Guide</h1>
       <p class="lede">One command gives any project a well-tested Claude Code setup. It adds good working habits, memory between sessions, and an honest note under each answer that says which tools Claude actually used.</p>
-      <div class="meta"><span>version 0.7.3</span><span>MIT licence</span><span>Linux · macOS · WSL · devcontainers</span><span>github.com/Bey3fendi/claude-workspace</span></div>
+      <div class="meta"><span>version 0.7.4</span><span>MIT licence</span><span>Linux · macOS · WSL · devcontainers</span><span>github.com/Bey3fendi/claude-workspace</span></div>
     </header>
 
     <section id="inside" style="border-top:0;margin-top:0;padding-top:0">
@@ -161,18 +161,18 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
           <span class="who">Most people</span>
           <h4>One command</h4>
           <p>Needs Node 22+, git and Claude Code already installed.</p>
-          <div class="ticket"><div class="head">In your project folder <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.3 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.3">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.3 install --yes \
-  --marketplace Bey3fendi/claude-workspace#v0.7.3</pre></div>
+          <div class="ticket"><div class="head">In your project folder <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.4 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.4">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.4 install --yes \
+  --marketplace Bey3fendi/claude-workspace#v0.7.4</pre></div>
         </div>
         <div class="path">
           <span class="who">Containers</span>
           <h4>Devcontainer</h4>
           <p>Add one line to <code>.devcontainer/devcontainer.json</code>. Each new container installs Claude Code and the workspace by itself.</p>
-          <div class="ticket"><div class="head">devcontainer.json <button class="copy" data-copy='"features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.7.3" } }'>Copy</button></div>
+          <div class="ticket"><div class="head">devcontainer.json <button class="copy" data-copy='"features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.7.4" } }'>Copy</button></div>
 <pre>"features": {
   "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": {
-    "marketplace": "Bey3fendi/claude-workspace#v0.7.3"
+    "marketplace": "Bey3fendi/claude-workspace#v0.7.4"
   }
 }</pre></div>
         </div>
@@ -185,8 +185,8 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
         </div>
       </div>
       <h3>Then check it</h3>
-      <div class="ticket"><div class="head">Health check <small>safe to run any time</small> <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.3 doctor">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.3 doctor</pre>
+      <div class="ticket"><div class="head">Health check <small>safe to run any time</small> <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.4 doctor">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.4 doctor</pre>
       <div class="note">Every line should be a ✓, or a “-” for optional parts. A “!” is a warning worth reading. The last line says whether everything required passed.</div></div>
       <div class="callout warn"><strong>About <code>--yes</code></strong>It lets the installer set up claude-mem for your user account. That's the one part that reaches outside the project. Leave <code>--yes</code> out and the installer asks first. Use <code>--no-claude-mem</code> to skip memory entirely.</div>
       <p>On Windows, use WSL. Native Windows isn't supported.</p>
@@ -194,11 +194,12 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
 
     <section id="daily">
       <h2>Day to day</h2>
-      <p class="sub">Nothing new to learn. Start <code>claude</code> in the project and talk to it as usual. You'll notice four things.</p>
+      <p class="sub">Nothing new to learn. Start <code>claude</code> in the project and talk to it as usual. You'll notice five things.</p>
       <ol class="steps">
         <li><strong>Claude picks a method that fits your request.</strong> “The total is wrong, find out why” leads to careful debugging. “Add a pause menu” leads to brainstorming first. “Write tests for…” leads to test-first work.</li>
         <li><strong>On a bug, Claude names the cause before editing.</strong> If it tries to change code before saying what's actually wrong, the first edit is held back and Claude is asked to state the cause first. It's held back at most twice; edits to tests and docs are never held.</li>
         <li><strong>A short note appears under each answer.</strong> It shows what really happened, based on what Claude Code recorded rather than on what Claude says about itself. Only you see it; Claude doesn't.</li>
+        <li><strong>Plans are carried out in this conversation.</strong> When Claude works through a written plan, it does every task itself, right here, and asks one fresh reviewer to check the whole result at the end. It doesn't hand each task to a separate helper with its own review, which costs much more. You won't be asked which way to run a plan.</li>
         <li><strong>In very long conversations, Claude suggests a fresh start.</strong> Past about 300,000 tokens it recommends <code>/clear</code> or <code>/compact</code> and writes a handoff note. More on that below.</li>
       </ol>
       <h3>What the note under an answer looks like</h3>
@@ -225,7 +226,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
 
     <section id="commands">
       <h2>Commands</h2>
-      <p class="sub">All of them run in the project folder. If you installed with npx, put <code>npx -y github:Bey3fendi/claude-workspace#v0.7.3</code> in front of the command word.</p>
+      <p class="sub">All of them run in the project folder. If you installed with npx, put <code>npx -y github:Bey3fendi/claude-workspace#v0.7.4</code> in front of the command word.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Command</th><th>What it does</th><th>When to use it</th></tr></thead>
         <tbody>
@@ -251,6 +252,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
           <tr><td><code>CW_CONTEXT_PRESSURE=0</code></td><td>The clear-or-compact suggestion</td></tr>
           <tr><td><code>CW_CONTEXT_PRESSURE_TOKENS=250000</code></td><td>How long a conversation gets before the suggestion (default 300,000)</td></tr>
           <tr><td><code>CW_LISTING_TRIM=0</code></td><td>Keeps rarely-useful skills in the list Claude sees</td></tr>
+          <tr><td><code>CW_PLAN_EXECUTION=0</code></td><td>Stops telling Claude how to run plans. Running each task through separate helpers stays blocked; to allow it, remove its line from <code>policies/skill-denies.json</code>.</td></tr>
         </tbody>
       </table></div>
       <p style="font-size:15px;color:var(--muted)">If you already have your own clear-or-compact hook (a hook named “context-pressure”), the workspace sees it and stays quiet, so you never get two notes.</p>
@@ -259,12 +261,12 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
     <section id="update">
       <h2>Update & roll back</h2>
       <p class="sub">Each release is a numbered version on GitHub, and a project stays on its version until you move it.</p>
-      <div class="ticket"><div class="head">Move a project to a new version <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.3 repair --marketplace Bey3fendi/claude-workspace#v0.7.3">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.3 repair \
-  --marketplace Bey3fendi/claude-workspace#v0.7.3</pre>
-      <div class="note">Change both <code>v0.7.3</code>s to the version you want. The workspace remembers your last five versions.</div></div>
-      <div class="ticket"><div class="head">Going back <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.3 rollback">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.3 rollback</pre>
+      <div class="ticket"><div class="head">Move a project to a new version <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.4 repair --marketplace Bey3fendi/claude-workspace#v0.7.4">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.4 repair \
+  --marketplace Bey3fendi/claude-workspace#v0.7.4</pre>
+      <div class="note">Change both <code>v0.7.4</code>s to the version you want. The workspace remembers your last five versions.</div></div>
+      <div class="ticket"><div class="head">Going back <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.4 rollback">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.4 rollback</pre>
       <div class="note">It prints the exact command to run, without running anything itself. Check the command, then run it.</div></div>
     </section>
 
@@ -294,7 +296,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
         <ol class="steps">
           <li>Raise the version to the same number in three places: <code>package.json</code>, <code>workspace.lock.json</code> (workspaceVersion) and <code>devcontainer/src/claude-workspace/devcontainer-feature.json</code>. If workspace-core changed, also raise <code>plugins/workspace-core/.claude-plugin/plugin.json</code>, so <code>repair</code> picks it up.</li>
           <li>Run <code>npm run gen:marketplace</code> and <code>npm test</code>.</li>
-          <li>Commit, then tag: <code>git tag -a v0.7.3 -m "…"</code> and <code>git push origin main v0.7.3</code>.</li>
+          <li>Commit, then tag: <code>git tag -a v0.7.4 -m "…"</code> and <code>git push origin main v0.7.4</code>.</li>
           <li>GitHub then runs the tests and publishes the devcontainer feature automatically. Check the Actions tab.</li>
         </ol>
         <div class="callout warn"><strong>Never move a published tag</strong>Projects are pinned to it. If a release is broken, ship the next number instead.</div>

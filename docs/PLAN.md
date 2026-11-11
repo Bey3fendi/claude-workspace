@@ -352,6 +352,12 @@ Phase 3M adds:
 - Live: outcomes 8/8, activation smoke, `/clear` handoff with claude-mem (new runner), compaction restore, and a GitHub-installed project. All on Claude Code 2.1.317, which is now in the tested list.
 - Two bugs fixed in v0.7.3: rollback history lost on a re-point, and a debug classifier miss.
 
+**8. Plan execution: Native only (2026-11-11, v0.7.4).** The user's choice: implement every plan task inline in the current session, with one fresh review of the whole branch at the end. This is Superpowers 7.0.1's "Native" mode, `superpowers:executing-plans`.
+- `superpowers:subagent-driven-development` is denied (37 rules).
+- workspace-core states the method on every main-conversation SessionStart (startup, resume, clear, compact), so writing-plans' handoff treats it as the supplied method. `CW_PLAN_EXECUTION=0` drops the note.
+- **Live** (`tests/live/plan-execution/run.mjs`): with a plan whose header recommends subagent-driven-development, the session loaded executing-plans and made 4 main-session edits, 0 subagent edits, and 1 subagent (the whole-branch review, whose finding was then fixed). It made one commit per task and caused no new test failures. Cost -e.73.
+- **Not measured live:** the writing-plans handoff itself (it needs a brainstorm-to-plan session). That path is covered by the engine test of the note.
+
 **Open:**
 - **macOS run.**
 

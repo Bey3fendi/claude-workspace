@@ -2,7 +2,8 @@
 import { expect, test } from 'claude-code/testing'
 
 function engine(on: any) {
-  on('env.get', () => ({ value: undefined }))
+  // CW_PLAN_EXECUTION=0: these tests are about the restore; execution.test.ts covers the plan-execution note.
+  on('env.get', (_: any, e: any) => ({ value: e.name === 'CW_PLAN_EXECUTION' ? '0' : undefined }))
   on('fs.write', () => ({ value: undefined }))
   on('prompt.submit', (_: any, e: any) => ({ text: e.text }))
   on('classic.SessionStart', () => ({}))

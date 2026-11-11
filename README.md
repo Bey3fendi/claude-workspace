@@ -16,6 +16,7 @@ It also includes an optional, disabled-by-default model router.
 - **Root-cause gate:** in a debug request, the first source edit is held until Claude states a root cause (max 2 holds per request; tests and docs are never held).
 - **Compaction restore:** after a compaction, the request's contract is re-attached (noting what is already done).
 - **Context pressure:** past 300K tokens of context, Claude is asked to recommend **CLEAR** or **COMPACT** at the next natural stopping point, with a cold-start handoff note to paste back. claude-mem re-injects recent memories after `/clear`.
+- **Plan execution:** plans run in Superpowers' **Native** mode (`superpowers:executing-plans`): every task inline in the current session, then one fresh review of the whole branch. `superpowers:subagent-driven-development` is denied, and the method is stated at session start, so the plan handoff doesn't ask.
 - **Workspace Usage footer:** an engine-verified line under each answer (skills activated, gate holds, pressure advice), shown to you, never sent to the model.
 
 | Switch (environment) | Effect |
@@ -25,6 +26,7 @@ It also includes an optional, disabled-by-default model router.
 | `CW_CONTEXT_PRESSURE=0` | no context-pressure note |
 | `CW_CONTEXT_PRESSURE_TOKENS=250000` | pressure threshold (default 300000) |
 | `CW_LISTING_TRIM=0` | keep denied skills in the model-facing listing |
+| `CW_PLAN_EXECUTION=0` | no plan-execution note (subagent mode stays denied; remove its rule in `policies/skill-denies.json` to allow it) |
 
 A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/context-pressure.sh`) takes precedence: workspace-core then adds no second note.
 
@@ -37,7 +39,7 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.7.3 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.3
+npx -y github:Bey3fendi/claude-workspace#v0.7.4 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.4
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project
@@ -68,7 +70,7 @@ The devcontainer feature in [`devcontainer/`](devcontainer/README.md) installs t
 ## What it changes
 
 **Project files** are the only files it touches:
-- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 36 `permissions.deny` skill rules from `policies/skill-denies.json`.
+- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 37 `permissions.deny` skill rules from `policies/skill-denies.json`.
 - `.caveman.json`: `{"defaultMode":"lite"}`. An existing file is never overwritten.
 - `.claude/workspace.json`: a marker file meant to be committed.
 - `.gitignore`: one managed block for `.claude/workspace/`.
