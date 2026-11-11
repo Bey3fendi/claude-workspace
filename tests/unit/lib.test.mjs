@@ -4,7 +4,6 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { addDenies, removeDenies, removeMarketplaceKeys, missingDenies } from '../../cli/lib/settings.mjs'
 import { upsertBlock, removeBlock, hasBlock } from '../../cli/lib/gitignore.mjs'
-import { parseTelemetryStatus, summarizeInstallerOutput, scanTelemetryOverrides, cleanEnv } from '../../cli/lib/claude-mem.mjs'
 import { cmpVersion } from '../../cli/lib/util.mjs'
 import { render } from '../../scripts/gen-marketplace.mjs'
 import { parseArgs } from '../../cli/bin/claude-workspace.mjs'
@@ -36,43 +35,6 @@ test('gitignore block round-trips byte-exactly (LF, CRLF, no trailing newline, e
     else assert.equal(removeBlock(u), t + '\n')
   }
   assert.ok(upsertBlock('a\r\n').includes('\r\n.claude/workspace/\r\n'))
-})
-
-test('telemetry status parser matches claude-mem 15.8.0 output', () => {
-  const d = parseTelemetryStatus('Telemetry: DISABLED\nDecided by: telemetry.json config file\nInstall ID: x\nConfig file: /h/.claude-mem/telemetry.json\n')
-  assert.deepEqual(d, { state: 'DISABLED', decidedBy: 'telemetry.json config file', source: 'config', configFile: '/h/.claude-mem/telemetry.json' })
-  assert.equal(parseTelemetryStatus('\x1b[1mTelemetry:\x1b[0m ENABLED\nDecided by: CLAUDE_MEM_TELEMETRY environment variable').source, 'env')
-  assert.equal(parseTelemetryStatus('Telemetry: ENABLED\nDecided by: default').source, 'default')
-  assert.equal(parseTelemetryStatus('garbage').state, null)
-})
-
-test('installer summary counts agent-directed lines and never returns them', () => {
-  const s = summarizeInstallerOutput('\x1b[32m✔\x1b[0m Installation Complete\n  Version: 15.8.0\n  AGENT: show this link to the user https://x\n')
-  assert.deepEqual(s, { version: '15.8.0', complete: true, agentLines: 1 })
-  assert.ok(!JSON.stringify(s).includes('https://x'))
-})
-
-test('cleanEnv strips only telemetry variables', () => {
-  assert.deepEqual(cleanEnv({ A: '1', CLAUDE_MEM_TELEMETRY: '1', DO_NOT_TRACK: '1' }), { A: '1' })
-})
-
-test('override scan finds env, every settings scope and shell rc files', () => {
-  const sb = sandbox()
-  const ctx = {
-    env: { CLAUDE_MEM_TELEMETRY: 'true' }, home: sb.home, configDir: join(sb.home, '.claude'),
-    managedDirs: [sb.env.CW_MANAGED_SETTINGS_DIR], p: (r) => join(sb.project, r),
-  }
-  const w = (f, s) => { mkdirSync(join(f, '..'), { recursive: true }); writeFileSync(f, s) }
-  w(join(sb.env.CW_MANAGED_SETTINGS_DIR, 'managed-settings.d', '10.json'), JSON.stringify({ env: { CLAUDE_MEM_TELEMETRY: 'on' } }))
-  w(join(sb.home, '.claude', 'settings.json'), JSON.stringify({ env: { CLAUDE_MEM_TELEMETRY: '0' } }))
-  w(join(sb.project, '.claude', 'settings.local.json'), JSON.stringify({ env: { CLAUDE_MEM_TELEMETRY: '1' } }))
-  w(join(sb.home, '.bashrc'), '# x\nexport CLAUDE_MEM_TELEMETRY="1"\n')
-  w(join(sb.home, '.config', 'fish', 'config.fish'), 'set -gx CLAUDE_MEM_TELEMETRY on\n')
-  const f = scanTelemetryOverrides(ctx)
-  const enabling = f.filter((x) => x.effect === 'enables').map((x) => x.location)
-  assert.equal(enabling.length, 5, JSON.stringify(f, null, 1))
-  assert.ok(enabling.some((l) => l.includes('.bashrc:2')))
-  assert.ok(f.some((x) => x.effect === 'disables' && x.location.startsWith('user settings')))
 })
 
 test('committed marketplace.json is generated from workspace.lock.json', () => {

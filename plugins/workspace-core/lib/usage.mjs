@@ -28,7 +28,7 @@ export const KNOWN_BARE = {
     .map((n) => [n, `superpowers:${n}`])),
 }
 
-const INTEGRATIONS = { caveman: 'Caveman', ponytail: 'Ponytail', claudeMem: 'claude-mem', superpowers: 'Superpowers', karpathy: 'Karpathy' }
+const INTEGRATIONS = { caveman: 'Caveman', ponytail: 'Ponytail', mdMemory: 'md-memory', claudeMem: 'claude-mem (legacy)', superpowers: 'Superpowers', karpathy: 'Karpathy' }
 
 /** Parse the model's own "Workspace Usage" section. Only the Applied line yields skill claims. */
 export function parseUsageSection(answer) {

@@ -14,7 +14,7 @@ export function loadDenies(root = REPO_ROOT) {
 }
 
 /** Files in the project that the workspace may modify. Everything else is off limits. */
-export const TOUCHED = ['.claude/settings.json', '.caveman.json', '.claude/workspace.json', '.gitignore']
+export const TOUCHED = ['.claude/settings.json', '.claude/settings.local.json', '.caveman.json', '.claude/workspace.json', '.gitignore']
 export const WORKSPACE_DIR = '.claude/workspace'
 
 export function createContext(opts = {}, env = process.env) {

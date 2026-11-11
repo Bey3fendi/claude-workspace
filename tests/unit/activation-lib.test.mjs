@@ -56,12 +56,12 @@ test('aggregate compares conditions and flags mandatory listing drops', () => {
   })
   const rep = aggregate([
     mk('before', 'debug', ['superpowers:systematic-debugging']), mk('before', 'debug', []), mk('before', 'trivial', []),
-    mk('with', 'debug', ['superpowers:systematic-debugging']), mk('with', 'debug', ['superpowers:systematic-debugging'], ['claude-mem:mem-search']),
+    mk('with', 'debug', ['superpowers:systematic-debugging']), mk('with', 'debug', ['superpowers:systematic-debugging'], ['superpowers:writing-plans']),
   ], suite)
   assert.equal(rep.conditions.before.byClass.debug.hits, 1)
   assert.equal(rep.conditions.with.overall.hits, 2)
   assert.equal(rep.comparison.activationDiff.d, 0.5)
-  assert.deepEqual(rep.listing.with.mandatoryNameOnly, ['claude-mem:mem-search'])
+  assert.deepEqual(rep.listing.with.mandatoryNameOnly, ['superpowers:writing-plans'])
   assert.equal(rep.comparison.contextPerStepDelta, 0)
 })
 

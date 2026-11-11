@@ -46,7 +46,8 @@ export const CONTRACTS = {
     pick: 'superpowers:test-driven-development for new or changed behaviour; superpowers:verification-before-completion for coverage of existing code',
     outcome: 'run the tests; show each new test fails when the behaviour it covers is broken',
   },
-  continue: { skills: ['claude-mem:mem-search'], then: [], outcome: 'retrieve prior context before answering; say so if none is found' },
+  // Memory is md-memory: session.md is already in context (loaded at session start); context/decisions arrive per file.
+  continue: { skills: [], then: [], outcome: 'start from the session log in .memory/session.md (already loaded; newest block last) and say so if it has nothing relevant' },
 }
 
 /**

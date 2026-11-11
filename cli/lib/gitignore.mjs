@@ -1,6 +1,6 @@
 export const BEGIN = '# >>> claude-workspace (managed) >>>'
 export const END = '# <<< claude-workspace (managed) <<<'
-export const ENTRIES = ['.claude/workspace/']
+export const ENTRIES = ['.claude/workspace/', '.claude/settings.local.json']
 
 const eolOf = (text) => (text.includes('\r\n') ? '\r\n' : '\n')
 

@@ -27,12 +27,14 @@ export function hasExternalPressureHook(hooks) {
 export function pressureNote(tokens) {
   const k = Math.round(tokens / 1000)
   return `[workspace: context pressure] This conversation is at about ${k}K tokens of context. Only at a natural stopping point ` +
-    '(a verified unit of work has just finished; never mid-task, and not just because of this note) end your reply with: ' +
-    '(1) **CLEAR** or **COMPACT** plus a one-line reason. Default to CLEAR (cheaper and sharper than a long summary; claude-mem ' +
-    're-injects recent memories after /clear) unless something cannot be written down (a live reasoning chain, unsaved pasted ' +
-    'material); then COMPACT. (2) Tell the user to run /clear or /compact and then paste the handoff note back as their next message. ' +
-    '(3) A handoff note in a code block, written so a Claude with zero memory of this chat can pick it up cold: goal; what is done ' +
-    '(verified); key decisions and why; what is ruled out; the next step; relevant file paths. If you are mid-task, ignore this note for now.'
+    '(a verified unit of work has just finished; never mid-task, and not just because of this note) do this: ' +
+    '(1) Append a handoff block to the BOTTOM of .memory/session.md (format is in its header), written so a Claude with ' +
+    'zero memory of this chat can pick it up cold: goal; done (verified); key decisions; ruled out; next step; file paths. ' +
+    'Put any new decision with its reason in .memory/decisions.md and any durable module fact in .memory/context.md, ' +
+    'each section with a <!-- paths: ... --> line. (2) End your reply with **CLEAR** or **COMPACT** plus a one-line reason. ' +
+    'Default to CLEAR (session.md is re-loaded automatically after /clear and /compact) unless something cannot be written down ' +
+    '(a live reasoning chain, unsaved pasted material); then COMPACT. (3) Tell the user to run the command; nothing needs to be ' +
+    'pasted back. If you are mid-task, ignore this note for now.'
 }
 
 /** Decide for one human prompt. */

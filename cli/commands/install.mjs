@@ -4,13 +4,11 @@ import { preflight, findDuplicates, findRouterConflicts, dirtyTouchedFiles } fro
 import { listPlugins, marketplaceAdd, marketplaceRemove, marketplaceUpdate, pluginInstall, pluginUninstall, pluginEnable, pluginUpdate, projectInstall } from '../lib/claude.mjs'
 import { pinState, pushHistory, localPluginVersion } from '../lib/history.mjs'
 import { loadManifest, newManifest, snapshot, finalize, saveManifest } from '../lib/manifest.mjs'
-import { addDenies } from '../lib/settings.mjs'
+import { addDenies, removeDenies, addRules } from '../lib/settings.mjs'
 import { upsertBlock } from '../lib/gitignore.mjs'
-import { installClaudeMem, enforceTelemetry, findOnPath } from '../lib/claude-mem.mjs'
-import { confirm } from '../lib/report.mjs'
+import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
+import { FILES as MEMORY_FILES, TEMPLATES as MEMORY_TEMPLATES, MEMORY_ALLOWS } from '../../plugins/workspace-core/lib/md-memory.mjs'
 import { readJsonFile, readMaybe, writeAtomic, writeJsonIfChanged, hashFile, toJson, UserError } from '../lib/util.mjs'
-import { join } from 'node:path'
-import { run } from '../lib/run.mjs'
 
 export async function install(ctx, rep, { repair = false } = {}) {
   const o = ctx.opts
@@ -114,12 +112,29 @@ export async function install(ctx, rep, { repair = false } = {}) {
 
   // ---- skill deny rules (invocation overlap policy)
   settings = readJsonFile(ctx.p('.claude/settings.json'))
+  // Rules this workspace added earlier but the current policy no longer has (e.g. the claude-mem rules before 0.8.0).
+  const stale = m.addedDenies.filter((r) => !ctx.denies.includes(r))
+  if (stale.length) {
+    writeJsonIfChanged(ctx.p('.claude/settings.json'), removeDenies(settings, stale))
+    rep.change(`removed ${stale.length} permissions.deny rule(s) the policy no longer has`)
+    m.addedDenies = m.addedDenies.filter((r) => !stale.includes(r))
+    settings = readJsonFile(ctx.p('.claude/settings.json'))
+  }
   const { settings: merged, added } = addDenies(settings, ctx.denies)
   if (added.length) {
     writeJsonIfChanged(ctx.p('.claude/settings.json'), merged)
     rep.change(`added ${added.length} permissions.deny skill rule(s)`)
   }
   m.addedDenies = [...new Set([...m.addedDenies, ...added])]
+
+  // ---- md-memory allow rules: Claude writes its notes in .memory/ without a prompt each time. They go in
+  // the per-user settings.local.json: Claude Code ignores allow rules in the shared, committed settings.json.
+  const allow = addRules(readJsonFile(ctx.p('.claude/settings.local.json')), 'allow', MEMORY_ALLOWS)
+  if (allow.added.length) {
+    writeJsonIfChanged(ctx.p('.claude/settings.local.json'), allow.settings)
+    rep.change(`added ${allow.added.length} permissions.allow rule(s) for .memory/ to .claude/settings.local.json`)
+  }
+  m.addedAllows = [...new Set([...(m.addedAllows ?? []), ...allow.added])]
 
   // ---- Caveman lite (never overwrite a user's own choice)
   const cavemanWant = ctx.lock.overlays.caveman.content
@@ -137,7 +152,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
     workspaceVersion: ctx.lock.workspaceVersion,
     marketplace: name,
     plugins: ctx.pluginIds,
-    claudeMem: `${ctx.lock.claudeMem.npmPackage}@${ctx.lock.claudeMem.version} (user scope, telemetry OFF)`,
+    memory: 'md-memory (.memory/, built into workspace-core)',
   }
   if (writeJsonIfChanged(ctx.p('.claude/workspace.json'), marker)) rep.change('wrote .claude/workspace.json')
 
@@ -146,66 +161,33 @@ export async function install(ctx, rep, { repair = false } = {}) {
   const gi2 = upsertBlock(gi)
   if (gi2 !== gi) { writeAtomic(ctx.p('.gitignore'), gi2); rep.change('added managed block to .gitignore') }
 
-  // ---- claude-mem (user scope, consented)
-  let telemetryOk = true
-  if (o.claudeMem === false) {
-    rep.warn('claude-mem skipped (--no-claude-mem); memory is a mandatory capability, doctor will report it')
-    if (!m.claudeMem.installedByWorkspace) m.claudeMem.skipped = true
-  } else {
-    const cmId = ctx.lock.claudeMem.pluginId
-    let cm = installed.find((e) => e.id === cmId)
-    if (!cm) {
-      const ok = await confirm(disclosure(ctx), { yes: o.yes, env: ctx.env })
-      if (!ok) {
-        rep.warn(`claude-mem not installed: consent required (re-run with --yes, or interactively). Disclosure:\n${indent(disclosure(ctx))}`)
-        m.claudeMem.skipped = true
-      } else {
-        rep.step(`running pinned claude-mem installer (npx ${ctx.lock.claudeMem.npmPackage}@${ctx.lock.claudeMem.version}); output is captured, not shown`)
-        const r = installClaudeMem(ctx)
-        if (!r.ok) throw new UserError(`claude-mem installer failed (exit ${r.code}); full output: ${r.logFile}`)
-        rep.change(`claude-mem ${r.version ?? ctx.lock.claudeMem.version} installed (user scope); installer log ${r.logFile}${r.agentLines ? `; ${r.agentLines} agent-directed line(s) in upstream output were suppressed` : ''}`)
-        m.claudeMem = { installedByWorkspace: true, skipped: false, version: r.version ?? ctx.lock.claudeMem.version }
-        cm = true
-      }
-    } else {
-      m.claudeMem.skipped = false
-      if (cm.version !== ctx.lock.claudeMem.version) rep.warn(`claude-mem ${cm.version} is installed; workspace pins ${ctx.lock.claudeMem.version} (left as is)`)
-      if (repair) repairClaudeMemRuntime(ctx, rep)
-    }
-    if (cm) {
-      const t = enforceTelemetry(ctx, { fix: true })
-      for (const a of t.actions) rep.change(`claude-mem telemetry: ${a}`)
-      if (t.ok) rep.ok(`claude-mem telemetry ${t.message}`)
-      else { rep.fail(`claude-mem telemetry OFF not guaranteed: ${t.message}`); telemetryOk = false }
+  // ---- md-memory files (project memory, meant to be committed). Created only when missing, never overwritten.
+  m.memoryFiles ??= {}
+  for (const [k, rel] of Object.entries(MEMORY_FILES)) {
+    if (readMaybe(ctx.p(rel)) != null) continue
+    writeAtomic(ctx.p(rel), MEMORY_TEMPLATES[k])
+    m.memoryFiles[rel] = { createdHash: hashFile(ctx.p(rel)) }
+    rep.change(`wrote ${rel} (template)`)
+  }
+
+  // ---- claude-mem is no longer used (0.8.0). While it is still installed for this user, disable it in
+  // this project so two memory systems never run together. User level stays untouched (`remove-claude-mem`).
+  m.disabledPlugins ??= []
+  if (claudeMemInstalls(installed).length) {
+    settings = readJsonFile(ctx.p('.claude/settings.json'))
+    const cur = settings.enabledPlugins?.[CLAUDE_MEM_ID]
+    if (cur === undefined) {
+      writeJsonIfChanged(ctx.p('.claude/settings.json'), { ...settings, enabledPlugins: { ...(settings.enabledPlugins ?? {}), [CLAUDE_MEM_ID]: false } })
+      if (!m.disabledPlugins.includes(CLAUDE_MEM_ID)) m.disabledPlugins.push(CLAUDE_MEM_ID)
+      rep.change(`disabled ${CLAUDE_MEM_ID} in this project (memory is md-memory now; remove it for good with \`claude-workspace remove-claude-mem\`)`)
+    } else if (cur === true) {
+      rep.warn(`${CLAUDE_MEM_ID} is explicitly enabled in .claude/settings.json: two memory systems will run (left as is)`)
     }
   }
 
   finalize(ctx, m)
   saveManifest(ctx, m)
   rep.info(rep.changes.length ? `${rep.changes.length} change(s)` : 'already up to date: 0 changes')
-  return { ok: telemetryOk, changeCount: rep.changes.length }
+  return { ok: true, changeCount: rep.changes.length }
 }
 
-function repairClaudeMemRuntime(ctx, rep) {
-  const launcher = findOnPath(ctx, 'claude-mem', [join(ctx.home, '.local', 'bin')])
-  const bun = findOnPath(ctx, 'bun', [join(ctx.home, '.bun', 'bin')])
-  if (launcher && bun) return
-  const r = run(ctx.npxBin, ['-y', `${ctx.lock.claudeMem.npmPackage}@${ctx.lock.claudeMem.version}`, 'repair'], { cwd: ctx.home, env: ctx.env, timeoutMs: 900_000 })
-  const log = join(ctx.stateDir, 'logs', `claude-mem-repair-${Date.now()}.log`)
-  writeAtomic(log, `exit=${r.code}\n${r.stdout}\n${r.stderr}`, 0o600)
-  if (r.code !== 0) rep.fail(`claude-mem repair failed (exit ${r.code}); log ${log}`)
-  else rep.change(`claude-mem runtime repaired (launcher/Bun were missing); log ${log}`)
-}
-
-export function disclosure(ctx) {
-  const v = `${ctx.lock.claudeMem.npmPackage}@${ctx.lock.claudeMem.version}`
-  return [
-    `Install claude-mem with its official pinned installer (npx ${v})? This is USER-LEVEL, not project-local:`,
-    `  - enables ${ctx.lock.claudeMem.pluginId} in ~/.claude/settings.json and registers its marketplace`,
-    '  - puts the claude-mem launcher in ~/.local/bin; installs Bun (adds a PATH line to ~/.bashrc) and uv',
-    '  - its worker listens on 127.0.0.1 only; cloud sync stays off (provider: claude)',
-    '  - telemetry is then turned OFF with `claude-mem telemetry disable` (a user-level setting: it applies to every project using claude-mem)',
-  ].join('\n')
-}
-
-const indent = (s) => s.split('\n').map((l) => `    ${l}`).join('\n')

@@ -1,6 +1,6 @@
 {
   "id": "claude-workspace",
-  "version": "0.7.4",
+  "version": "0.8.0",
   "name": "Claude Workspace",
   "description": "Installs the pinned claude-workspace CLI and, when the container is created, installs Claude Code and the workspace into the project folder.",
   "options": {
@@ -23,11 +23,6 @@
       "type": "string",
       "default": "tested",
       "description": "'tested' (the version the workspace lock was tested with), 'latest', or an exact version"
-    },
-    "claudeMem": {
-      "type": "boolean",
-      "default": true,
-      "description": "Install claude-mem (user level inside the container; telemetry is forced off). Enabling this feature option is the consent the CLI's --yes stands for."
     },
     "installOnCreate": {
       "type": "boolean",

@@ -23,9 +23,11 @@ export function newManifest(ctx) {
     claudeDirExisted: exists(ctx.p('.claude')),
     files: {},
     addedDenies: [],
+    addedAllows: [],
     marketplace: { name: ctx.marketplaceName, source: null },
     plugins: [],
-    claudeMem: { installedByWorkspace: false, skipped: false },
+    memoryFiles: {},
+    disabledPlugins: [],
   }
 }
 

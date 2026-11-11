@@ -62,7 +62,8 @@ export const MARKERS = {
   superpowers: [/You have superpowers/g, /using-superpowers/g],
   caveman: [/caveman/gi],
   ponytail: [/ponytail/gi],
-  claudeMem: [/claude-mem/gi, /<claude-mem-context>/gi],
+  claudeMem: [/claude-mem/gi, /<claude-mem-context>/gi], // legacy: only a leftover claude-mem install injects this
+  mdMemory: [/\[md-memory\]/g],
   karpathy: [/karpathy/gi],
 }
 

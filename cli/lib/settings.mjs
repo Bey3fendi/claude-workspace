@@ -1,24 +1,28 @@
 // Key-level merges for project .claude/settings.json. Only keys we own are added or removed;
 // everything else (including unknown keys and their order) is preserved.
 
-export function addDenies(settings, rules) {
+/** Append the rules missing from permissions[kind] ('deny' | 'allow'). */
+export function addRules(settings, kind, rules) {
   const s = structuredClone(settings)
   s.permissions ??= {}
-  const deny = Array.isArray(s.permissions.deny) ? s.permissions.deny : []
-  const added = rules.filter((r) => !deny.includes(r))
-  s.permissions.deny = [...deny, ...added]
+  const cur = Array.isArray(s.permissions[kind]) ? s.permissions[kind] : []
+  const added = rules.filter((r) => !cur.includes(r))
+  s.permissions[kind] = [...cur, ...added]
   return { settings: s, added }
 }
 
-export function removeDenies(settings, rules) {
+export function removeRules(settings, kind, rules) {
   const s = structuredClone(settings)
-  const deny = s.permissions?.deny
-  if (!Array.isArray(deny)) return s
-  s.permissions.deny = deny.filter((r) => !rules.includes(r))
-  if (!s.permissions.deny.length) delete s.permissions.deny
+  const cur = s.permissions?.[kind]
+  if (!Array.isArray(cur)) return s
+  s.permissions[kind] = cur.filter((r) => !rules.includes(r))
+  if (!s.permissions[kind].length) delete s.permissions[kind]
   if (s.permissions && !Object.keys(s.permissions).length) delete s.permissions
   return s
 }
+
+export const addDenies = (settings, rules) => addRules(settings, 'deny', rules)
+export const removeDenies = (settings, rules) => removeRules(settings, 'deny', rules)
 
 /** Remove what `claude plugin install/marketplace add --scope project` wrote for our marketplace. */
 export function removeMarketplaceKeys(settings, marketplaceName) {

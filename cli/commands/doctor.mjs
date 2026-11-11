@@ -1,13 +1,12 @@
-// doctor: verifies the workspace from evidence (registry files, CLI JSON, claude-mem's own
-// status command, a loopback health probe). Exit 1 on any FAIL. The one write it performs is
-// mandated by policy: if claude-mem telemetry is ENABLED or undecided it runs `telemetry disable`.
-import { join } from 'node:path'
+// doctor: verifies the workspace from evidence (registry files, CLI JSON, the project's memory files).
+// Exit 1 on any FAIL. It never writes anything.
 import { detectPlatform, findDuplicates, findRouterConflicts } from '../lib/detect.mjs'
 import { claudeVersion, listPlugins, projectInstall } from '../lib/claude.mjs'
 import { loadManifest } from '../lib/manifest.mjs'
 import { missingDenies } from '../lib/settings.mjs'
 import { hasBlock } from '../lib/gitignore.mjs'
-import { enforceTelemetry, findOnPath, projectIsolation, workerHealth } from '../lib/claude-mem.mjs'
+import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
+import { FILES as MEMORY_FILES, MEMORY_ALLOWS } from '../../plugins/workspace-core/lib/md-memory.mjs'
 import { cmpVersion, readJsonFile, readMaybe } from '../lib/util.mjs'
 
 export async function doctor(ctx, rep) {
@@ -58,34 +57,25 @@ export async function doctor(ctx, rep) {
   add('caveman-mode', cav?.defaultMode === 'lite' ? 'ok' : 'warn', cav ? `defaultMode=${cav.defaultMode}` : '.caveman.json missing')
   add('gitignore', hasBlock(readMaybe(ctx.p('.gitignore'))?.toString('utf8')) ? 'ok' : 'warn', 'managed block for .claude/workspace/')
 
-  // claude-mem
-  const cm = installed.find((e) => e.id === ctx.lock.claudeMem.pluginId)
-  if (!cm) {
-    add('claude-mem', m?.claudeMem?.skipped ? 'warn' : 'fail', 'not installed (memory is a mandatory capability; run install --yes)')
-  } else {
-    add('claude-mem', cm.version === ctx.lock.claudeMem.version ? 'ok' : 'warn',
-      cm.version === ctx.lock.claudeMem.version ? `${cm.version} (${cm.scope})` : `${cm.version} installed, lock pins ${ctx.lock.claudeMem.version}`)
-    const km = safeJson(join(ctx.configDir, 'plugins', 'known_marketplaces.json'))
-    const cmMkt = ctx.lock.claudeMem.pluginId.split('@')[1]
-    if (km?.[cmMkt]?.autoUpdate) add('claude-mem-autoupdate', 'warn', `marketplace ${cmMkt} has auto-update on (set by its installer): claude-mem can move past the pin; doctor re-verifies telemetry each run`)
-    const launcher = findOnPath(ctx, 'claude-mem', [join(ctx.home, '.local', 'bin')])
-    add('claude-mem-launcher', launcher ? 'ok' : 'fail', launcher ?? 'claude-mem launcher not found (hooks fail silently without it; run repair)')
-    const bun = findOnPath(ctx, 'bun', [join(ctx.home, '.bun', 'bin')])
-    add('claude-mem-bun', bun ? 'ok' : 'fail', bun ?? 'Bun not found (run repair)')
-    const h = await workerHealth(ctx)
-    add('claude-mem-worker', h.up ? 'ok' : 'info', h.up ? `127.0.0.1:${h.port} healthy (v${h.version})` : `not running on 127.0.0.1:${h.port} (starts with a session)`)
-    const iso = projectIsolation(ctx) // read-only; advisory (never a FAIL, never changes claude-mem settings)
-    add('claude-mem-isolation', iso.status, iso.message)
-  }
+  // memory: md-memory (built into workspace-core); its files live in the project
+  const memMissing = Object.values(MEMORY_FILES).filter((rel) => readMaybe(ctx.p(rel)) == null)
+  const sessionLines = (readMaybe(ctx.p(MEMORY_FILES.session))?.toString('utf8') ?? '').split('\n').length - 1
+  add('memory', memMissing.length ? 'fail' : 'ok', memMissing.length
+    ? `missing ${memMissing.join(', ')} (run repair)`
+    : `md-memory: .memory/ (session.md ${sessionLines} line(s))${ctx.env.CW_MEMORY === '0' ? '; CW_MEMORY=0 turns it off in this shell' : ''}`)
+  const local = safeJson(ctx.p('.claude/settings.local.json'))
+  const allowMiss = MEMORY_ALLOWS.filter((r) => !(local?.permissions?.allow ?? []).includes(r))
+  add('memory-allow-rules', allowMiss.length ? 'warn' : 'ok', allowMiss.length
+    ? `${allowMiss.join(', ')} missing: Claude will ask before each memory write (run repair)`
+    : `${MEMORY_ALLOWS.length} present`)
 
-  // telemetry gate: applies whenever claude-mem is present on this machine
-  if (cm || readMaybe(join(ctx.home, '.claude-mem', 'telemetry.json'))) {
-    const t = enforceTelemetry(ctx, { fix: !ctx.opts.noFix })
-    for (const a of t.actions) rep.change(`claude-mem telemetry: ${a}`)
-    add('claude-mem-telemetry', t.ok ? 'ok' : 'fail', t.ok ? t.message : `OFF cannot be guaranteed: ${t.message}`)
-  } else {
-    add('claude-mem-telemetry', 'info', 'claude-mem not present; nothing to enforce')
-  }
+  // claude-mem: no longer used. Leftovers are reported; two memory systems must not run in one project.
+  const cms = claudeMemInstalls(installed)
+  if (cms.length) {
+    const here = settings?.enabledPlugins?.[CLAUDE_MEM_ID]
+    if (here === false) add('claude-mem', 'warn', `still installed (${cms.map((c) => c.scope).join(', ')}), disabled in this project; remove it for all projects with \`claude-workspace remove-claude-mem\` (keeps ~/.claude-mem data)`)
+    else add('claude-mem', 'fail', `installed (${cms.map((c) => c.scope).join(', ')}) and active in this project: two memory systems would run (run repair to disable it here, or \`claude-workspace remove-claude-mem\`)`)
+  } else add('claude-mem', 'ok', 'not installed (memory is md-memory)')
 
   for (const w of findRouterConflicts(ctx, installed)) add('router-conflict', 'warn', w)
   return finish(rep, checks)

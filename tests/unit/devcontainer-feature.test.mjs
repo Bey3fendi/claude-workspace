@@ -18,10 +18,10 @@ test('every option reaches install.sh and is baked into post-create', () => {
   }
 })
 
-test('post-create never fails container creation and claude-mem needs the option', () => {
+test('post-create never fails container creation and installs no claude-mem', () => {
   assert.match(post, /exit 0\s*$/)
   assert.doesNotMatch(post, /set -e/)
-  assert.match(post, /CLAUDEMEM" = "true" \]; then args\+=\(--yes\); else args\+=\(--no-claude-mem\)/)
+  assert.doesNotMatch(post + install + JSON.stringify(feat), /claude-?mem/i)
 })
 
 test('lifecycle hook points at the baked script', () => {

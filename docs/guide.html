@@ -136,7 +136,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
       <p class="eyebrow">Claude Code · ready-made setup</p>
       <h1>Claude Workspace Guide</h1>
       <p class="lede">One command gives any project a well-tested Claude Code setup. It adds good working habits, memory between sessions, and an honest note under each answer that says which tools Claude actually used.</p>
-      <div class="meta"><span>version 0.7.4</span><span>MIT licence</span><span>Linux · macOS · WSL · devcontainers</span><span>github.com/Bey3fendi/claude-workspace</span></div>
+      <div class="meta"><span>version 0.8.0</span><span>MIT licence</span><span>Linux · macOS · WSL · devcontainers</span><span>github.com/Bey3fendi/claude-workspace</span></div>
     </header>
 
     <section id="inside" style="border-top:0;margin-top:0;padding-top:0">
@@ -145,7 +145,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
       <div class="grid">
         <div class="tool core"><span class="role">our own · always on</span><h4>workspace-core</h4><p>Notices what kind of request you made (a bug, a new feature, tests) and points Claude to the right method. It also asks Claude to name a bug's cause before editing code, suggests when to clear the conversation, and writes the honest usage note.</p></div>
         <div class="tool"><span class="role">working methods</span><h4>Superpowers</h4><p>Proven step-by-step methods: debug systematically, brainstorm before building, write tests first, check before calling something done.</p></div>
-        <div class="tool"><span class="role">memory</span><h4>claude-mem</h4><p>Remembers what happened in earlier sessions, so a new conversation can pick up where the last one stopped. Its usage reporting (telemetry) is always switched off.</p></div>
+        <div class="tool"><span class="role">memory</span><h4>md-memory</h4><p>Remembers earlier sessions in plain text files in your project's <code>.memory/</code> folder: a running log, notes about parts of the code, and decisions with their reasons. No background program, no database, no extra model calls. You can read, edit and commit the files.</p></div>
         <div class="tool"><span class="role">shorter answers</span><h4>Caveman</h4><p>Runs in “lite” mode: answers are shorter and less wordy. It doesn't change what Claude does.</p></div>
         <div class="tool"><span class="role">keep it simple</span><h4>Ponytail</h4><p>“Lazy senior dev” mode: pushes Claude toward the simplest, shortest solution that works, with no extra layers nobody asked for.</p></div>
         <div class="tool"><span class="role">coding guidelines</span><h4>Karpathy skills</h4><p>Guidelines that steer Claude away from the coding mistakes AI models commonly make, based on Andrej Karpathy's observations.</p></div>
@@ -161,18 +161,18 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
           <span class="who">Most people</span>
           <h4>One command</h4>
           <p>Needs Node 22+, git and Claude Code already installed.</p>
-          <div class="ticket"><div class="head">In your project folder <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.4 install --yes --marketplace Bey3fendi/claude-workspace#v0.7.4">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.4 install --yes \
-  --marketplace Bey3fendi/claude-workspace#v0.7.4</pre></div>
+          <div class="ticket"><div class="head">In your project folder <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.8.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.8.0">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.8.0 install --yes \
+  --marketplace Bey3fendi/claude-workspace#v0.8.0</pre></div>
         </div>
         <div class="path">
           <span class="who">Containers</span>
           <h4>Devcontainer</h4>
           <p>Add one line to <code>.devcontainer/devcontainer.json</code>. Each new container installs Claude Code and the workspace by itself.</p>
-          <div class="ticket"><div class="head">devcontainer.json <button class="copy" data-copy='"features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.7.4" } }'>Copy</button></div>
+          <div class="ticket"><div class="head">devcontainer.json <button class="copy" data-copy='"features": { "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": { "marketplace": "Bey3fendi/claude-workspace#v0.8.0" } }'>Copy</button></div>
 <pre>"features": {
   "ghcr.io/bey3fendi/claude-workspace/claude-workspace:0": {
-    "marketplace": "Bey3fendi/claude-workspace#v0.7.4"
+    "marketplace": "Bey3fendi/claude-workspace#v0.8.0"
   }
 }</pre></div>
         </div>
@@ -185,10 +185,10 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
         </div>
       </div>
       <h3>Then check it</h3>
-      <div class="ticket"><div class="head">Health check <small>safe to run any time</small> <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.4 doctor">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.4 doctor</pre>
+      <div class="ticket"><div class="head">Health check <small>safe to run any time</small> <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.8.0 doctor">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.8.0 doctor</pre>
       <div class="note">Every line should be a ✓, or a “-” for optional parts. A “!” is a warning worth reading. The last line says whether everything required passed.</div></div>
-      <div class="callout warn"><strong>About <code>--yes</code></strong>It lets the installer set up claude-mem for your user account. That's the one part that reaches outside the project. Leave <code>--yes</code> out and the installer asks first. Use <code>--no-claude-mem</code> to skip memory entirely.</div>
+      <div class="callout"><strong>Everything stays in the project</strong>The installer only touches files in your project folder; nothing is set up for your user account. Upgrading from a version before 0.8.0, which used claude-mem? Run <code>remove-claude-mem</code> once. It asks first and keeps claude-mem's saved data.</div>
       <p>On Windows, use WSL. Native Windows isn't supported.</p>
     </section>
 
@@ -200,7 +200,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
         <li><strong>On a bug, Claude names the cause before editing.</strong> If it tries to change code before saying what's actually wrong, the first edit is held back and Claude is asked to state the cause first. It's held back at most twice; edits to tests and docs are never held.</li>
         <li><strong>A short note appears under each answer.</strong> It shows what really happened, based on what Claude Code recorded rather than on what Claude says about itself. Only you see it; Claude doesn't.</li>
         <li><strong>Plans are carried out in this conversation.</strong> When Claude works through a written plan, it does every task itself, right here, and asks one fresh reviewer to check the whole result at the end. It doesn't hand each task to a separate helper with its own review, which costs much more. You won't be asked which way to run a plan.</li>
-        <li><strong>In very long conversations, Claude suggests a fresh start.</strong> Past about 300,000 tokens it recommends <code>/clear</code> or <code>/compact</code> and writes a handoff note. More on that below.</li>
+        <li><strong>In very long conversations, Claude suggests a fresh start.</strong> Past about 300,000 tokens it recommends <code>/clear</code> or <code>/compact</code> and first writes a handoff into the session log. More on that below.</li>
       </ol>
       <h3>What the note under an answer looks like</h3>
       <div class="screen"><span class="dim">… Claude's answer …</span><br><br><span class="hl">Verified by engine:</span> activated systematic-debugging · root-cause gate held 1 edit · report matches engine events <span class="dim">(activation = instructions loaded, not proof they were followed)</span></div>
@@ -212,30 +212,31 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
       <p class="sub">A long conversation gets slower, costs more and gets less sharp. When that happens, Claude will end an answer with a recommendation and a handoff note in a box.</p>
       <div class="versus">
         <div class="tool core"><h4>/clear <span class="badge" style="color:var(--ok)">usually best</span></h4>
-          <ul><li>Starts a fresh, empty conversation.</li><li>You paste the handoff note back in, and Claude carries on from it.</li><li>claude-mem also brings back recent memories by itself.</li><li>Cheaper and sharper than a long summary.</li></ul></div>
+          <ul><li>Starts a fresh, empty conversation.</li><li>Claude has already saved the handoff in <code>.memory/session.md</code>, and the new conversation loads it by itself. Nothing to paste.</li><li>Cheaper and sharper than a long summary.</li></ul></div>
         <div class="tool"><h4>/compact</h4>
-          <ul><li>Squeezes the current conversation into a summary.</li><li>Pick it when something can't be written down easily, like a long chain of reasoning in progress or a large paste you haven't saved.</li><li>workspace-core reminds Claude afterwards which method it was using.</li></ul></div>
+          <ul><li>Squeezes the current conversation into a summary.</li><li>Pick it when something can't be written down easily, like a long chain of reasoning in progress or a large paste you haven't saved.</li><li>workspace-core reminds Claude afterwards which method it was using, and the session log is loaded again.</li></ul></div>
       </div>
       <ol class="steps">
         <li>Claude says <strong>CLEAR</strong> (or <strong>COMPACT</strong>) and gives a one-line reason.</li>
-        <li>Copy the handoff note. It covers the goal, what's done, the decisions, the dead ends, the next step and the files involved.</li>
-        <li>Type <code>/clear</code>, paste the note, and carry on.</li>
+        <li>Claude adds the handoff to <code>.memory/session.md</code>. It covers the goal, what's done, the decisions, the dead ends, the next step and the files involved.</li>
+        <li>Type <code>/clear</code> and carry on. Claude picks up from the log.</li>
       </ol>
       <p style="font-size:15px;color:var(--muted)">Claude only suggests this at a natural pause, when a piece of work is finished, never in the middle of a task.</p>
     </section>
 
     <section id="commands">
       <h2>Commands</h2>
-      <p class="sub">All of them run in the project folder. If you installed with npx, put <code>npx -y github:Bey3fendi/claude-workspace#v0.7.4</code> in front of the command word.</p>
+      <p class="sub">All of them run in the project folder. If you installed with npx, put <code>npx -y github:Bey3fendi/claude-workspace#v0.8.0</code> in front of the command word.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Command</th><th>What it does</th><th>When to use it</th></tr></thead>
         <tbody>
           <tr><td><code>install</code></td><td>Sets the workspace up. Running it again changes nothing.</td><td>Once per project</td></tr>
-          <tr><td><code>doctor</code></td><td>Checks that everything is in place and that memory telemetry is off.</td><td>When unsure; after updates</td></tr>
+          <tr><td><code>doctor</code></td><td>Checks that everything is in place, including the memory files. Changes nothing.</td><td>When unsure; after updates</td></tr>
           <tr><td><code>repair</code></td><td>Puts back anything missing or changed, and updates to the version you name.</td><td>When doctor complains; to update</td></tr>
           <tr><td><code>usage</code></td><td>Shows the verified notes for your latest session.</td><td>To see what really happened</td></tr>
           <tr><td><code>canary</code></td><td>Looks up whether the add-ons have newer releases. Changes nothing.</td><td>Now and then</td></tr>
           <tr><td><code>rollback</code></td><td>Prints the exact steps back to the previous version.</td><td>If an update misbehaves</td></tr>
+          <tr><td><code>remove-claude-mem</code></td><td>Removes the old claude-mem memory add-on for your user account (all projects). Asks first; its saved data is kept.</td><td>Once, if you used a version before 0.8.0</td></tr>
           <tr><td><code>uninstall</code></td><td>Removes everything it added. Files you didn't edit come back exactly as they were.</td><td>To remove it</td></tr>
         </tbody>
       </table></div>
@@ -252,6 +253,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
           <tr><td><code>CW_CONTEXT_PRESSURE=0</code></td><td>The clear-or-compact suggestion</td></tr>
           <tr><td><code>CW_CONTEXT_PRESSURE_TOKENS=250000</code></td><td>How long a conversation gets before the suggestion (default 300,000)</td></tr>
           <tr><td><code>CW_LISTING_TRIM=0</code></td><td>Keeps rarely-useful skills in the list Claude sees</td></tr>
+          <tr><td><code>CW_MEMORY=0</code></td><td>md-memory (nothing loaded or added to the conversation)</td></tr>
           <tr><td><code>CW_PLAN_EXECUTION=0</code></td><td>Stops telling Claude how to run plans. Running each task through separate helpers stays blocked; to allow it, remove its line from <code>policies/skill-denies.json</code>.</td></tr>
         </tbody>
       </table></div>
@@ -261,12 +263,12 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
     <section id="update">
       <h2>Update & roll back</h2>
       <p class="sub">Each release is a numbered version on GitHub, and a project stays on its version until you move it.</p>
-      <div class="ticket"><div class="head">Move a project to a new version <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.4 repair --marketplace Bey3fendi/claude-workspace#v0.7.4">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.4 repair \
-  --marketplace Bey3fendi/claude-workspace#v0.7.4</pre>
-      <div class="note">Change both <code>v0.7.4</code>s to the version you want. The workspace remembers your last five versions.</div></div>
-      <div class="ticket"><div class="head">Going back <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.7.4 rollback">Copy</button></div>
-<pre>npx -y github:Bey3fendi/claude-workspace#v0.7.4 rollback</pre>
+      <div class="ticket"><div class="head">Move a project to a new version <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.8.0 repair --marketplace Bey3fendi/claude-workspace#v0.8.0">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.8.0 repair \
+  --marketplace Bey3fendi/claude-workspace#v0.8.0</pre>
+      <div class="note">Change both <code>v0.8.0</code>s to the version you want. The workspace remembers your last five versions.</div></div>
+      <div class="ticket"><div class="head">Going back <button class="copy" data-copy="npx -y github:Bey3fendi/claude-workspace#v0.8.0 rollback">Copy</button></div>
+<pre>npx -y github:Bey3fendi/claude-workspace#v0.8.0 rollback</pre>
       <div class="note">It prints the exact command to run, without running anything itself. Check the command, then run it.</div></div>
     </section>
 
@@ -275,7 +277,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
       <div class="grid">
         <div class="tool"><h4>Stays in your project</h4><p>Only a few settings files in the project change. Your code is never touched. It refuses to run over unsaved changes in those files unless you say so.</p></div>
         <div class="tool"><h4>Fully reversible</h4><p>Uninstall puts every file back exactly as it was. If you edited a file afterwards, only the workspace's own lines are removed.</p></div>
-        <div class="tool"><h4>Telemetry off</h4><p>claude-mem's usage reporting is switched off during install and checked again by every <code>doctor</code> run, which also names any setting that tries to turn it back on.</p></div>
+        <div class="tool"><h4>No extra services</h4><p>Memory is plain files in your project, read by Claude Code like any other file. There's no background service, no database and no memory telemetry.</p></div>
         <div class="tool"><h4>No secrets stored</h4><p>No keys, logins or tokens are written into the project or printed. Your Claude login stays where Claude Code keeps it.</p></div>
       </div>
     </section>
@@ -286,7 +288,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
       <details><summary>“Uncommitted changes in files the workspace would modify”</summary><p>Commit or stash your changes to <code>.claude/settings.json</code> or <code>.gitignore</code> first. If you're sure, add <code>--allow-dirty</code>. A backup is still taken.</p></details>
       <details><summary>“Claude Code 2.1.x (tested: …)”</summary><p>Claude Code updated itself to a version this release hasn't been tested on. It's a warning, not an error, and things normally keep working.</p></details>
       <details><summary>No method was used on my request</summary><p>The request didn't sound like a bug, a feature, tests or a review, so nothing was added. Using a clear word helps (“bug”, “add”, “write tests”, “review”). You can also ask for a method by name.</p></details>
-      <details><summary>Memory doesn't seem to work</summary><p>Run <code>doctor</code> and look at the claude-mem lines. Its background helper starts with your first session, so “not running” before that is normal.</p></details>
+      <details><summary>Memory doesn't seem to work</summary><p>Run <code>doctor</code> and look at the <code>memory</code> lines. If a file or the permission rule is missing, run <code>repair</code>. Claude writes notes at natural pauses, so a fresh project's log only has its header. You can open <code>.memory/session.md</code> to see what it remembers.</p></details>
     </section>
 
     <div class="maint">
@@ -296,7 +298,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
         <ol class="steps">
           <li>Raise the version to the same number in three places: <code>package.json</code>, <code>workspace.lock.json</code> (workspaceVersion) and <code>devcontainer/src/claude-workspace/devcontainer-feature.json</code>. If workspace-core changed, also raise <code>plugins/workspace-core/.claude-plugin/plugin.json</code>, so <code>repair</code> picks it up.</li>
           <li>Run <code>npm run gen:marketplace</code> and <code>npm test</code>.</li>
-          <li>Commit, then tag: <code>git tag -a v0.7.4 -m "…"</code> and <code>git push origin main v0.7.4</code>.</li>
+          <li>Commit, then tag: <code>git tag -a v0.8.0 -m "…"</code> and <code>git push origin main v0.8.0</code>.</li>
           <li>GitHub then runs the tests and publishes the devcontainer feature automatically. Check the Actions tab.</li>
         </ol>
         <div class="callout warn"><strong>Never move a published tag</strong>Projects are pinned to it. If a release is broken, ship the next number instead.</div>
@@ -312,6 +314,7 @@ footer.end { margin-top: 48px; color: var(--muted); font-size: 14px; }
             <tr><td>Method matching on real prompts</td><td><code>node tests/live/activation/run.mjs --max-usage 0.6</code></td><td>Yes, about $1.50</td></tr>
             <tr><td>Real coding tasks, graded</td><td><code>node tests/live/outcomes/run.mjs --conditions with --max-usage 0.6</code></td><td>Yes, about $0.25–0.50 per task</td></tr>
             <tr><td>Reminder after compacting</td><td><code>node tests/live/compaction/run.mjs</code></td><td>Yes, small</td></tr>
+            <tr><td>Memory handoff across <code>/clear</code></td><td><code>node tests/live/clear-handoff/run.mjs --max-usage 0.6</code></td><td>Yes, about $0.70</td></tr>
           </tbody>
         </table></div>
         <p style="font-size:15px;color:var(--muted)"><code>--max-usage</code> stops the live tests once your usage limit reaches that share (0.6 = 60%). Runs already started still finish.</p>

@@ -68,7 +68,7 @@ export function scoreRun(run, cls) {
 export const MANDATORY_SKILLS = [
   'superpowers:using-superpowers', 'superpowers:brainstorming', 'superpowers:systematic-debugging', 'superpowers:test-driven-development',
   'superpowers:writing-plans', 'superpowers:verification-before-completion', 'superpowers:requesting-code-review', 'superpowers:receiving-code-review',
-  'andrej-karpathy-skills:karpathy-guidelines', 'claude-mem:mem-search',
+  'andrej-karpathy-skills:karpathy-guidelines',
 ]
 
 /** Aggregate runs: [{condition, promptId, class, ok, run, listing}] -> report object. */

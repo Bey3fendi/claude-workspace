@@ -7,7 +7,7 @@
     "architecture": { "expectAny": ["superpowers:brainstorming", "superpowers:writing-plans"] },
     "review":       { "expectAny": [], "unscored": true, "note": "no installed skill reviews code the user points at (requesting-code-review is for one's own work); judged by outcome checks, not activation" },
     "tests":        { "expectAny": ["superpowers:test-driven-development", "superpowers:verification-before-completion"] },
-    "continue":     { "expectAny": ["claude-mem:mem-search"] },
+    "continue":     { "expectAny": [], "unscored": true, "note": "md-memory has no skill: the session log is loaded at session start; judged by outcome checks, not activation" },
     "trivial":      { "expectAny": [], "note": "no process skill expected; any activation is counted as over-activation" }
   },
   "prompts": [

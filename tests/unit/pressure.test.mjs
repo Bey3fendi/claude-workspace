@@ -31,11 +31,12 @@ test('decide: only over the threshold, never when disabled or duplicated', () =>
   assert.match(decidePressure({ tokens: 2000, threshold: 1000 }).note, /about 2K/)
 })
 
-test('note carries the spec: stopping point, CLEAR default, paste-back, cold-start handoff', () => {
+test('note carries the spec: stopping point, CLEAR default, handoff into session.md', () => {
   const n = pressureNote(310000)
-  for (const re of [/natural stopping point/, /never mid-task/, /\*\*CLEAR\*\* or \*\*COMPACT\*\*/, /Default to CLEAR/, /paste the handoff note back/, /zero memory of this chat/, /goal; what is done/, /file paths/, /claude-mem/])
+  for (const re of [/natural stopping point/, /never mid-task/, /\*\*CLEAR\*\* or \*\*COMPACT\*\*/, /Default to CLEAR/, /zero memory of this chat/, /\.memory\/session\.md/, /decisions\.md/, /paths:/, /nothing needs to be pasted back/, /file paths/])
     assert.match(n, re)
-  assert.ok(n.length < 1300)
+  assert.doesNotMatch(n, /claude-mem/)
+  assert.ok(n.length < 1300, `note is ${n.length} chars`)
 })
 
 test('footer shows the attached advice; replay reproduces it from events', () => {

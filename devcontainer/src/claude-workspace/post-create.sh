@@ -19,7 +19,6 @@ command -v claude >/dev/null 2>&1 || { log "'claude' is not on PATH; skipping th
 [ "$INSTALLONCREATE" = "true" ] || { log "CLI ready; run 'claude-workspace install' in your project"; exit 0; }
 args=(install --project "$PWD")
 [ -n "$MARKETPLACE" ] && args+=(--marketplace "$MARKETPLACE")
-if [ "$CLAUDEMEM" = "true" ]; then args+=(--yes); else args+=(--no-claude-mem); fi
 if claude-workspace "${args[@]}" </dev/null; then
   log "installed; check with 'claude-workspace doctor'"
 else

@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Build-time step of the claude-workspace devcontainer feature (runs as root while the image is built).
-# Installs the CLI only. Claude Code, plugins and claude-mem are per-user and per-project, so they are
+# Installs the CLI only. Claude Code and the plugins are per-user and per-project, so they are
 # installed by post-create.sh as the remote user once the project folder is mounted.
 set -euo pipefail
 SOURCE="${SOURCE:-bundled}"
 MARKETPLACE="${MARKETPLACE:-}"
 INSTALLCLAUDECODE="${INSTALLCLAUDECODE:-true}"
 CLAUDECODEVERSION="${CLAUDECODEVERSION:-tested}"
-CLAUDEMEM="${CLAUDEMEM:-true}"
 INSTALLONCREATE="${INSTALLONCREATE:-true}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DEST=/usr/local/share/claude-workspace
@@ -40,8 +39,8 @@ chmod 755 /usr/local/bin/claude-workspace
 # Options are baked into post-create.sh (the lifecycle command gets no feature options).
 {
   echo '#!/usr/bin/env bash'
-  printf 'MARKETPLACE=%q\nINSTALLCLAUDECODE=%q\nCLAUDECODEVERSION=%q\nCLAUDEMEM=%q\nINSTALLONCREATE=%q\n' \
-    "$MARKETPLACE" "$INSTALLCLAUDECODE" "$CLAUDECODEVERSION" "$CLAUDEMEM" "$INSTALLONCREATE"
+  printf 'MARKETPLACE=%q\nINSTALLCLAUDECODE=%q\nCLAUDECODEVERSION=%q\nINSTALLONCREATE=%q\n' \
+    "$MARKETPLACE" "$INSTALLCLAUDECODE" "$CLAUDECODEVERSION" "$INSTALLONCREATE"
   cat "$HERE/post-create.sh"
 } > "$DEST/post-create.sh"
 chmod 755 "$DEST/post-create.sh"

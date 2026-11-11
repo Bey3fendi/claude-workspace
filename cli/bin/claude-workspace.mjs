@@ -8,27 +8,26 @@ import { uninstall } from '../commands/uninstall.mjs'
 import { usage } from '../commands/usage.mjs'
 import { canary } from '../commands/canary.mjs'
 import { rollback } from '../commands/rollback.mjs'
+import { removeClaudeMem } from '../commands/remove-claude-mem.mjs'
 
 const HELP = `claude-workspace <command> [options]
 
 Commands
   install     Install the pinned workspace into a project (idempotent)
-  doctor      Verify the installation from evidence; enforces claude-mem telemetry OFF
+  doctor      Verify the installation from evidence (never writes)
   repair      Re-apply everything install does; refreshes the marketplace, updates workspace-core,
-              fixes pin mismatches and the claude-mem runtime (with --marketplace: re-point = update/rollback)
+              fixes pin mismatches and missing memory files (with --marketplace: re-point = update/rollback)
   uninstall   Remove what the workspace added; untouched files are restored byte-for-byte
   usage       Show the engine-verified Workspace Usage evidence for the last session (or --session)
   canary      Read-only: compare pinned upstream versions with the latest releases (network)
   rollback    Show the exact steps back to the previous recorded workspace version
+  remove-claude-mem  Remove the old claude-mem memory for this user (asks first; keeps ~/.claude-mem)
 
 Options
   --project <dir>        Project directory (default: current directory)
   --marketplace <src>    Marketplace source: owner/repo#tag, git/https URL or path (default: this checkout)
-  --yes, -y              Consent to user-level steps (claude-mem install) without prompting
-  --no-claude-mem        Skip installing claude-mem (doctor will report it)
+  --yes, -y              Answer yes to confirmations (remove-claude-mem)
   --allow-dirty          Proceed although touched files have uncommitted changes (backups are still taken)
-  --remove-claude-mem    uninstall: also run claude-mem's own uninstaller (user-level, asks first)
-  --no-fix               doctor: verify telemetry only, do not run \`telemetry disable\`
   --session <id>         usage: session id (or a prefix) instead of the latest
   --json                 Print one JSON result document
   --version, --help
@@ -43,6 +42,7 @@ export function parseArgs(argv) {
       case '--project': o.project = val(); break
       case '--marketplace': o.marketplace = val(); break
       case '--yes': case '-y': o.yes = true; break
+      // --no-claude-mem, --remove-claude-mem, --no-fix: accepted and ignored since 0.8.0 (claude-mem is gone), so older scripts keep working
       case '--no-claude-mem': o.claudeMem = false; break
       case '--allow-dirty': o.allowDirty = true; break
       case '--remove-claude-mem': o.removeClaudeMem = true; break
@@ -79,6 +79,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     else if (cmd === 'usage') result = await usage(ctx, rep)
     else if (cmd === 'canary') result = await canary(ctx, rep)
     else if (cmd === 'rollback') result = await rollback(ctx, rep)
+    else if (cmd === 'remove-claude-mem') result = await removeClaudeMem(ctx, rep)
     else throw new UserError(`unknown command ${cmd}`)
   } catch (e) {
     if (!(e instanceof UserError)) throw e

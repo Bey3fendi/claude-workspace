@@ -8,7 +8,7 @@ Two change requests from the user shape this revision.
   - The dashboard, the detailed history, the reconciliation engine and the analytics are dropped.
   - They are replaced by a concise **Workspace Usage** report and minimal verification of skill events.
   - **Priority:** correct Superpowers workflow outcomes and relevant Karpathy guidance matter more than counting activation events.
-- **CR-2: memory backend.** We will evaluate **Avenox Beyin V3** as the replacement for claude-mem.
+- **CR-2: memory backend.** We will evaluate **Avenox Beyin V3** as the replacement for claude-mem. **Superseded in v0.8.0 by md-memory (item 9 of the Phase 6 log).**
   - This is a gated evaluation and migration, scheduled **after Phase 3 and before Phase 4**.
   - claude-mem stays the active backend until the decision gate passes. Its data is never deleted automatically.
 - **Order agreed with the user:**
@@ -355,8 +355,19 @@ Phase 3M adds:
 **8. Plan execution: Native only (2026-11-11, v0.7.4).** The user's choice: implement every plan task inline in the current session, with one fresh review of the whole branch at the end. This is Superpowers 7.0.1's "Native" mode, `superpowers:executing-plans`.
 - `superpowers:subagent-driven-development` is denied (37 rules).
 - workspace-core states the method on every main-conversation SessionStart (startup, resume, clear, compact), so writing-plans' handoff treats it as the supplied method. `CW_PLAN_EXECUTION=0` drops the note.
-- **Live** (`tests/live/plan-execution/run.mjs`): with a plan whose header recommends subagent-driven-development, the session loaded executing-plans and made 4 main-session edits, 0 subagent edits, and 1 subagent (the whole-branch review, whose finding was then fixed). It made one commit per task and caused no new test failures. Cost -e.73.
+- **Live** (`tests/live/plan-execution/run.mjs`): with a plan whose header recommends subagent-driven-development, the session loaded executing-plans and made 4 main-session edits, 0 subagent edits, and 1 subagent (the whole-branch review, whose finding was then fixed). It made one commit per task and caused no new test failures. Cost $0.73.
 - **Not measured live:** the writing-plans handoff itself (it needs a brainstorm-to-plan session). That path is covered by the engine test of the note.
+
+**9. md-memory replaces claude-mem (2026-11-11, v0.8.0).** The user's choice, because of claude-mem's load (a worker process, a database, Bun and uv, background model calls). Supersedes CR-2 and the Avenox gate.
+- **What it is:** the user's own POC, ported into workspace-core as engine hooks (`lib/md-memory.mjs`, wired in `hooks/register.mjs`). Plain Markdown in `.memory/`:
+  - `session.md` is a rolling log, loaded at every main-conversation SessionStart and capped at 150 lines (oldest blocks dropped at Stop);
+  - `context.md` and `decisions.md` hold `## ` sections with `<!-- paths: … -->`, injected once per session on the first Read or Edit of a matching file;
+  - an automatic compaction first appends a git snapshot.
+- **Capture is the model's judgment,** guided by rules stated at session start. The context-pressure note is the deterministic trigger: it asks for a handoff block in session.md before CLEAR or COMPACT, and nothing is pasted back. The user-level `context-pressure.sh` was updated to say the same in md-memory projects.
+- **claude-mem:** no longer installed, checked or denied (12 rules remain). In a project with a leftover user-level install, install sets `enabledPlugins["claude-mem@thedotmack"]: false` and doctor warns. `remove-claude-mem` runs its own uninstaller after confirmation; `~/.claude-mem` data is kept.
+- POC fixes: brace globs like `src/{a,b}/**` were split on their commas; template examples are indented so they are not parsed as sections.
+- **Location `.memory/`, not the POC's `.claude/memory/` (live finding, Claude Code 2.1.317).** Claude Code treats every file under `.claude/` as sensitive. It refused the model's handoff edit there whatever the allow rules, `--allowedTools` or acceptEdits said, and an interactive session would ask on every write. Also measured: allow rules in the shared `.claude/settings.json` are ignored (even a bare `Edit`), while `.claude/settings.local.json` and `--settings` are honoured. And `Write(path)` rules are never matched (`Edit(path)` covers every file-editing tool). So install writes one rule, `Edit(.memory/**)`, to `settings.local.json`, which is tracked like the other touched files and gitignored.
+- **Live:** `tests/live/clear-handoff/run.mjs` passed. The pressure note (from the user-level hook) led the model to write the handoff into `.memory/session.md` with src/ untouched; after `/clear`, workspace-core reloaded it (memory event `session-start`, source `clear`, and the transcript carries the injected handoff), and the answer recapped the work without opening files. About $0.69. A probe also confirmed a `context.md` section is injected after a Read of a matching file (1 inject event; the model quoted the marker).
 
 **Open:**
 - **macOS run.**

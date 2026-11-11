@@ -13,6 +13,7 @@ import { deniedSkills, trimListing } from '../lib/listing.mjs'
 import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 import { executionNote } from '../lib/execution.mjs'
+import { FILES, appendBlock, injectText, matchSections, maxLinesFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
@@ -21,6 +22,10 @@ const st = { model: null, effort: null, skills: 0, requests: 0 }
 // model's visible main-loop text in this request (kept in memory only, never written to disk).
 // Context pressure: the main loop's latest request size (tokens), and a note pending for the footer.
 let ctx = { tokens: 0, pending: null }
+// md-memory: context/decisions section ids already injected in this session (reset at every SessionStart).
+let mem = { injected: new Set() }
+const MEMORY_TOOLS = new Set(['Read', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
+const readText = async ($, p) => { try { return await $.fs.read(p) } catch { return '' } }
 let req = { class: null, text: '', denies: 0, released: false, gates: true, contracts: true, skills: [] }
 const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
@@ -228,6 +233,16 @@ export const register = (on) => {
     // Plan execution method (lib/execution.mjs): stated on every main-conversation SessionStart, so it survives /clear and compaction.
     const exec = executionNote({ disabled: (await $.env.get('CW_PLAN_EXECUTION')) === '0', agent: !!e.agent_id })
     if (exec) add.push(exec)
+    // md-memory: the rules plus session.md, on every main-conversation start (so /clear and /compact reload it).
+    if (!e.agent_id && (await $.env.get('CW_MEMORY')) !== '0') {
+      mem.injected = new Set()
+      const root = await $.session.root().catch(() => null)
+      const text = root ? sessionStartText(await readText($, `${root}/${FILES.session}`)) : null
+      if (text) {
+        add.push(text)
+        await flush(sink, sink.record('memory', { action: 'session-start', source: e?.source ?? null, len: text.length }), (p, b) => $.fs.write(p, b))
+      }
+    }
     if (e?.source === 'compact' && !e.agent_id && req.contracts && req.class) {
       const text = restoreText(req.class, { invoked: req.skills, rootCauseStated: req.class === 'debug' && statesRootCause(req.text) })
       if (text) {
@@ -244,6 +259,54 @@ export const register = (on) => {
     if (e?.tool_name === 'Skill') {
       tracker.skillLoaded(e.tool_input?.skill ?? null)
       await flush(sink, sink.record('skill.loaded', { skill: e.tool_input?.skill ?? null, agentId: e.agent_id ?? null }), (p, b) => $.fs.write(p, b))
+    }
+    // md-memory: inject the context.md / decisions.md sections whose paths match the touched file, once per session.
+    if (MEMORY_TOOLS.has(e?.tool_name) && (await $.env.get('CW_MEMORY')) !== '0') {
+      const root = await $.session.root().catch(() => null)
+      const rel = relPath(root, e.tool_input?.file_path ?? e.tool_input?.notebook_path)
+      if (rel) {
+        const all = [
+          ...parseSections(await readText($, `${root}/${FILES.context}`), 'context.md'),
+          ...parseSections(await readText($, `${root}/${FILES.decisions}`), 'decisions.md'),
+        ]
+        const hits = matchSections(all, rel, mem.injected)
+        if (hits.length) {
+          for (const h of hits) mem.injected.add(h.id)
+          await flush(sink, sink.record('memory', { action: 'inject', sections: hits.length, agentId: e.agent_id ?? null }), (p, b) => $.fs.write(p, b))
+          return { ...r, additionalContext: [...(r?.additionalContext ?? []), injectText(rel, hits)] }
+        }
+      }
+    }
+    return r
+  }).catch(($, e, next) => next(e))
+
+  // md-memory: an automatic compaction never leaves session.md stale (mechanical snapshot, then trim).
+  on('classic.PreCompact', async ($, e, next) => {
+    const r = await next(e)
+    if (e?.trigger !== 'auto' || (await $.env.get('CW_MEMORY')) === '0') return r
+    const root = await $.session.root().catch(() => null)
+    if (!root) return r
+    const git = async (argv) => { try { const x = await $.process.run(['git', ...argv], { cwd: root }); return x.exitCode === 0 ? x.stdout.trim() : '' } catch { return '' } }
+    const block = snapshotBlock({ stamp: stampOf(), trigger: e.trigger, lastCommit: await git(['log', '-1', '--format=%h %s']), porcelain: await git(['status', '--porcelain']) })
+    const max = maxLinesFrom((await $.env.get('CW_MEMORY_MAX_LINES')) ?? (await $.env.get('MD_MEMORY_MAX_LINES')))
+    await $.fs.write(`${root}/${FILES.session}`, trimSession(appendBlock(await readText($, `${root}/${FILES.session}`), block), max))
+    await flush(sink, sink.record('memory', { action: 'snapshot' }), (p, b) => $.fs.write(p, b))
+    return r
+  }).catch(($, e, next) => next(e))
+
+  // md-memory: keep session.md within its cap after every turn (oldest blocks dropped first).
+  on('classic.Stop', async ($, e, next) => {
+    const r = await next(e)
+    if ((await $.env.get('CW_MEMORY')) === '0') return r
+    const root = await $.session.root().catch(() => null)
+    if (!root) return r
+    const p = `${root}/${FILES.session}`
+    const text = await readText($, p)
+    const max = maxLinesFrom((await $.env.get('CW_MEMORY_MAX_LINES')) ?? (await $.env.get('MD_MEMORY_MAX_LINES')))
+    const out = trimSession(text, max)
+    if (text && out !== text) {
+      await $.fs.write(p, out)
+      await flush(sink, sink.record('memory', { action: 'trim' }), (p2, b) => $.fs.write(p2, b))
     }
     return r
   }).catch(($, e, next) => next(e))

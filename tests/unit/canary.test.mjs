@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseSemver, cmpSemver, parseLsRemote, latestTag, judgePlugin, judgeClaudeMem, checkUpstream } from '../../cli/lib/canary.mjs'
+import { parseSemver, cmpSemver, parseLsRemote, latestTag, judgePlugin, checkUpstream } from '../../cli/lib/canary.mjs'
 
 const LS = [
   'aaaa000000000000000000000000000000000000\tHEAD',
@@ -39,21 +39,12 @@ test('plugin verdicts: update / current / ahead / unknown / error', () => {
   assert.equal(judgePlugin(pin('7.0.1', 'x'), null).status, 'error')
 })
 
-test('claude-mem: npm update, local drift, unreachable', () => {
-  assert.equal(judgeClaudeMem({ version: '15.8.0' }, '15.9.1', '15.8.0').status, 'update')
-  const d = judgeClaudeMem({ version: '15.8.0' }, '15.8.0', '15.9.0')
-  assert.equal(d.status, 'drift'); assert.match(d.note, /auto-updates/)
-  assert.equal(judgeClaudeMem({ version: '15.8.0' }, '15.8.0', '15.8.0').status, 'current')
-  assert.match(judgeClaudeMem({ version: '15.8.0' }, null, null).note, /npm not reachable/)
-})
-
 test('checkUpstream: only url-pinned plugins; runner failures become error rows; never throws', () => {
-  const lock = { plugins: [{ name: 'core', source: './p' }, { ...pin('7.0.1', '1'.repeat(40)) }, { name: 'r', upstreamVersion: '1.0.0', source: { url: 'bad', sha: 's' }, enabled: false }],
-    claudeMem: { npmPackage: 'claude-mem', version: '15.8.0' } }
+  const lock = { plugins: [{ name: 'core', source: './p' }, { ...pin('7.0.1', '1'.repeat(40)) }, { name: 'r', upstreamVersion: '1.0.0', source: { url: 'bad', sha: 's' }, enabled: false }] }
   const calls = []
   const runner = (cmd, args) => { calls.push([cmd, ...args].join(' ')); return cmd === 'git' && args.includes('bad') ? { code: 128, stdout: '' } : cmd === 'git' ? { code: 0, stdout: LS } : { code: 0, stdout: '15.8.0\n' } }
-  const rows = checkUpstream(lock, { runner, installedClaudeMem: '15.8.0' })
-  assert.deepEqual(rows.map((r) => [r.name, r.status]), [['superpowers', 'update'], ['r', 'error'], ['claude-mem', 'current']])
+  const rows = checkUpstream(lock, { runner })
+  assert.deepEqual(rows.map((r) => [r.name, r.status]), [["superpowers", "update"], ["r", "error"]])
   assert.equal(rows[1].enabled, false)
   assert.ok(calls.every((c) => !/install|add|update/.test(c)), 'read-only commands only')
 })

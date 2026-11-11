@@ -1,5 +1,5 @@
 // Upstream canary (Phase 6): read-only comparison of the pins in workspace.lock.json with what upstream
-// offers now. Network reads only (`git ls-remote`, `npm view`); never installs or changes anything.
+// offers now. Network reads only (`git ls-remote`); never installs or changes anything.
 // Pure parsing/judging below; `checkUpstream` does the I/O through an injectable runner.
 
 const SEMVER = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/
@@ -58,29 +58,12 @@ export function judgePlugin(p, remote) {
   return { ...base, status: 'current', note: `up to date${shaNote}` }
 }
 
-/** Judge claude-mem: pin vs npm latest vs locally installed version. */
-export function judgeClaudeMem(lockCm, npmLatest, installed) {
-  const pin = parseSemver(lockCm.version), latest = parseSemver(npmLatest), inst = parseSemver(installed)
-  const out = { name: 'claude-mem', pinned: lockCm.version, latest: npmLatest ?? null, installed: installed ?? null, status: 'unknown', note: '' }
-  const notes = []
-  if (inst && pin && cmpSemver(inst, pin) !== 0) notes.push(`installed ${installed} differs from the pin (its marketplace auto-updates)`)
-  if (latest && pin) {
-    out.status = cmpSemver(latest, pin) > 0 ? 'update' : 'current'
-    if (out.status === 'update') notes.push(`${npmLatest} available`)
-  } else notes.push('npm not reachable')
-  if (notes.some((n) => n.startsWith('installed'))) out.status = out.status === 'update' ? 'update' : 'drift'
-  out.note = notes.join('; ') || 'up to date'
-  return out
-}
-
 /** I/O: runner(cmd, args) → { code, stdout }. Returns rows for every upstream in the lock. */
-export function checkUpstream(lock, { runner, installedClaudeMem = null } = {}) {
+export function checkUpstream(lock, { runner } = {}) {
   const rows = []
   for (const p of lock.plugins.filter((p) => p.source?.url)) {
     const r = runner('git', ['ls-remote', '--', p.source.url])
     rows.push({ ...judgePlugin(p, r.code === 0 ? parseLsRemote(r.stdout) : null), enabled: p.enabled !== false })
   }
-  const n = runner('npm', ['view', lock.claudeMem.npmPackage, 'version'])
-  rows.push(judgeClaudeMem(lock.claudeMem, n.code === 0 ? n.stdout.trim() : null, installedClaudeMem))
   return rows
 }

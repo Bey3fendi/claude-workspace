@@ -5,10 +5,8 @@ import { join } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { pluginUninstall, marketplaceRemove } from '../lib/claude.mjs'
 import { loadManifest } from '../lib/manifest.mjs'
-import { removeDenies, removeMarketplaceKeys } from '../lib/settings.mjs'
+import { removeDenies, removeRules, removeMarketplaceKeys } from '../lib/settings.mjs'
 import { removeBlock } from '../lib/gitignore.mjs'
-import { uninstallClaudeMem } from '../lib/claude-mem.mjs'
-import { confirm } from '../lib/report.mjs'
 import { WORKSPACE_DIR } from '../lib/context.mjs'
 import { hashFile, readMaybe, readJsonFile, writeAtomic, writeJsonIfChanged, rmrf, removeEmptyDirs, UserError } from '../lib/util.mjs'
 import { rmSync } from 'node:fs'
@@ -44,18 +42,14 @@ export async function uninstall(ctx, rep) {
     keyLevel(ctx, rep, rel, f, m)
   }
 
-  if (ctx.opts.removeClaudeMem) {
-    const ok = await confirm('Run `claude-mem uninstall`? It is user-level and removes claude-mem for ALL projects.', { yes: ctx.opts.yes, env: ctx.env })
-    if (ok) {
-      const r = uninstallClaudeMem(ctx)
-      const log = join(ctx.stateDir, 'logs', `claude-mem-uninstall-${Date.now()}.log`)
-      writeAtomic(log, `exit=${r.code}\n${r.stdout}\n${r.stderr}`, 0o600)
-      if (r.code === 0) rep.change(`claude-mem uninstalled (user scope); log ${log}`)
-      else rep.fail(`claude-mem uninstall failed (exit ${r.code}); log ${log}`)
-    } else rep.warn('claude-mem left installed (confirmation required)')
-  } else {
-    rep.info(`claude-mem left installed: it is user-level and may serve other projects (remove with --remove-claude-mem)`)
+  // md-memory files: a template nobody wrote in is removed; a file with notes is the user's memory and stays.
+  for (const [rel, f] of Object.entries(m.memoryFiles ?? {})) {
+    const h = hashFile(ctx.p(rel))
+    if (h == null) continue
+    if (h === f.createdHash) { rmSync(ctx.p(rel)); rep.change(`removed ${rel} (unused template)`) }
+    else rep.info(`kept ${rel}: it holds your project memory (delete it yourself if you no longer want it)`)
   }
+  removeEmptyDirs(ctx.p('.memory'), ctx.projectRoot)
 
   rmrf(ctx.p(WORKSPACE_DIR))
   if (!m.claudeDirExisted) removeEmptyDirs(ctx.p('.claude'), ctx.projectRoot)
@@ -70,8 +64,17 @@ function keyLevel(ctx, rep, rel, f, m) {
   if (rel === '.claude/settings.json') {
     let s = readJsonFile(abs)
     s = removeMarketplaceKeys(removeDenies(s, m.addedDenies), m.marketplace.name)
+    for (const id of m.disabledPlugins ?? []) {
+      if (s.enabledPlugins?.[id] !== false) continue
+      const { [id]: _, ...rest } = s.enabledPlugins
+      s = Object.keys(rest).length ? { ...s, enabledPlugins: rest } : (({ enabledPlugins, ...o }) => o)(s)
+    }
     if (!f.existedBefore && !Object.keys(s).length) { rmSync(abs); rep.change(`removed ${rel}`) }
     else if (writeJsonIfChanged(abs, s)) rep.change(`removed workspace keys from ${rel} (file was edited after install; other content kept)`)
+  } else if (rel === '.claude/settings.local.json') {
+    const s = removeRules(readJsonFile(abs), 'allow', m.addedAllows ?? [])
+    if (!f.existedBefore && !Object.keys(s).length) { rmSync(abs); rep.change(`removed ${rel}`) }
+    else if (writeJsonIfChanged(abs, s)) rep.change(`removed workspace allow rules from ${rel} (file was edited after install; other content kept)`)
   } else if (rel === '.gitignore') {
     const t = removeBlock(cur.toString('utf8'))
     if (!f.existedBefore && !t.trim()) { rmSync(abs); rep.change(`removed ${rel}`) }
