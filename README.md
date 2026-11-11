@@ -23,6 +23,7 @@ It also includes an optional, disabled-by-default model router.
   - Before an automatic compaction, a git snapshot (last commit and changed files) is appended to the log.
   - Claude writes the notes itself, following short rules given at session start. The files are yours to read, edit and commit.
 - **Plan execution:** plans run in Superpowers' **Native** mode (`superpowers:executing-plans`): every task inline in the current session, then one fresh review of the whole branch. `superpowers:subagent-driven-development` is denied, and the method is stated at session start, so the plan handoff doesn't ask.
+- **Subagent cap:** every subagent request runs on at most **Opus 5.5 at high effort**. Superpowers sends its final whole-branch review to "the most capable available model" (Fable here), and a subagent may ask for `xhigh` or `max` effort; both are lowered. Cheaper choices (Sonnet, Haiku, lower effort) are kept, and the main conversation is never changed.
 - **CLAUDE.md:**
   - `install` writes `.claude/workspace/CLAUDE.workspace.md` (owned by the workspace, rewritten on every install or repair, committed) and adds this block to `CLAUDE.md`, creating the file if needed:
     ```md
@@ -45,6 +46,7 @@ It also includes an optional, disabled-by-default model router.
 | `CW_LISTING_TRIM=0` | keep denied skills in the model-facing listing |
 | `CW_MEMORY=0` | no md-memory (nothing loaded, injected, snapshotted or trimmed) |
 | `CW_MEMORY_MAX_LINES=300` | session.md cap (default 150) |
+| `CW_SUBAGENT_CAP=0` | no subagent cap (subagents may run on Fable or at xhigh/max effort) |
 | `CW_PLAN_EXECUTION=0` | no plan-execution note (subagent mode stays denied; remove its rule in `policies/skill-denies.json` to allow it) |
 
 A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/context-pressure.sh`) takes precedence: workspace-core then adds no second note.

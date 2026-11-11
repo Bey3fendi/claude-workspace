@@ -396,6 +396,16 @@ Phase 3M adds:
   - **Finding:** Claude Code strips HTML comments from CLAUDE.md before the model sees them. The block markers and the attribution comment are therefore invisible to the model (the model could not quote the vendored commit hash). That suits the markers; the attribution is for people, and the full notice is in `vendor/karpathy/LICENSE`.
   - Not checked: whether an interactive session asks to approve the import the first time (headless runs show no prompt). Claude Code documents an approval for imports outside the project; this one is inside it.
 
+**12. Subagent cap: at most Opus 5.5 at high effort (2026-11-11, v0.11.0).** The user asked to stop Superpowers' final review from using the costliest model.
+- Checked: Superpowers 7.0.1 says to dispatch the final review "on the most capable available model" (executing-plans Final Review, writing-plans Native mode, subagent-driven-development Model Selection). In this Claude Code that is Fable. No skill limits effort.
+- workspace-core `turn.step` (subagent loops only, `e.agentId` set): a Fable model becomes `claude-opus-5-5`, and `xhigh` or `max` effort becomes `high`. A numeric effort and every cheaper choice are kept. The main loop is never changed. A `subagent-cap` event is recorded on the first request it rewrites.
+- `agent.spawn`: an explicit `model: fable` becomes Opus 5.5 before the model is resolved, so the subagent's identity line matches what serves it. With no model given, the spawn is left alone, because the agent's own model may be cheaper; `turn.step` still caps each request.
+- `CW_SUBAGENT_CAP=0` turns both off. Engine tests: `plugins/workspace-core/tests/subagent-cap.test.ts` (6).
+- **Live (2.1.317, `claude -p`, about $0.70 in all), evidence from the engine's records, not the model's word:**
+  - Sonnet main loop, Agent call with `model: fable, effort: max`: `modelUsage` lists Sonnet and Opus 5.5 only; the subagent's API request carries `output_config.effort: "high"`; every assistant message in its transcript is `claude-opus-5-5`.
+  - Fable main loop, Agent call with no model: the subagent's requests went to Opus 5.5 (the Fable entry in `modelUsage` is the main loop's own).
+  - **Finding:** rewriting the model in the result after `next(e)` of `agent.spawn` did not change the subagent's identity line (it still said Fable while Opus served it). Rewriting the input before `next` does. In the inherited case the identity line still names Fable; only the requests are capped.
+
 **Open:**
 - **macOS run.**
 

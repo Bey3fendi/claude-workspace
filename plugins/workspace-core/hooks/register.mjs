@@ -13,6 +13,7 @@ import { deniedSkills, trimListing } from '../lib/listing.mjs'
 import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 import { executionNote } from '../lib/execution.mjs'
+import { capRequest } from '../lib/subagent-cap.mjs'
 import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
 import { FILES, appendBlock, injectText, matchSections, maxLinesFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
 
@@ -136,8 +137,24 @@ export const register = (on) => {
       }
       return // the last next(e)'s result stands
     }
-    return yield* next(e)
+    // Subagents: hold every request to at most Opus 5.5 at high effort (lib/subagent-cap.mjs).
+    if ((await $.env.get('CW_SUBAGENT_CAP')) === '0') return yield* next(e)
+    const cap = capRequest(e)
+    if (!cap) return yield* next(e)
+    if (e.index === 0) {
+      const w = sink.record('subagent-cap', { agentId: e.agentId, from: cap.from, model: cap.model, effort: cap.effort ?? null })
+      await flush(sink, w, (p, b) => $.fs.write(p, b))
+    }
+    return yield* next(cap.effort === undefined ? { ...e, model: cap.model } : { ...e, model: cap.model, effort: cap.effort })
   })
+
+  // Subagent cap at spawn: an explicit Fable pick becomes Opus 5.5 so the subagent's identity line matches
+  // what serves it. No model given is left alone (the agent's own model may be cheaper); turn.step caps every request.
+  on('agent.spawn', async ($, e, next) => {
+    if (e.fork || (await $.env.get('CW_SUBAGENT_CAP')) === '0') return next(e)
+    const cap = e.model === undefined ? null : capRequest({ model: e.model })
+    return cap ? next({ ...e, model: cap.model }) : next(e)
+  }).catch(($, e, next) => next(e))
 
   // Phase 4 root-cause gate: hold the first source edit of a debug request until a root cause is stated.
   on('tool.call', async ($, e, next) => {
