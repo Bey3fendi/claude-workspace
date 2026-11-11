@@ -6,7 +6,7 @@ A portable Claude Code workspace that is pinned, reversible and project-local. I
 
 It also writes a **default CLAUDE.md** for the project: one managed file, `.claude/workspace/CLAUDE.workspace.md`, imported from your `CLAUDE.md` with a three-line block. It holds the workspace's rules (memory, contracts, secrets) and the [Karpathy coding guidelines](https://github.com/multica-ai/andrej-karpathy-skills), vendored at a pinned commit (since 0.10.0 they are always loaded, no longer a skill to invoke).
 
-Session-to-session memory is **md-memory**, built into workspace-core: plain Markdown files in `.memory/`, with no database, worker process or background model calls. It replaces claude-mem (0.8.0).
+Session-to-session memory is **md-memory**, built into workspace-core: plain Markdown files in `.memory/`, with no database, worker process or background model calls. It replaces claude-mem (0.8.0). Since 0.13.0 it fills itself: a change that leaves no log entry gets a facts-only one, a designed change is asked to record its decisions, and the notes for a file reach Claude before it changes that file.
 
 On request, **`/explain`** writes a short explanation of a change, built from facts the workspace records itself and checked mechanically (0.12.0). Every subagent, including Superpowers' final reviewer, runs on at most **Opus 5.5 at high effort** (0.11.0).
 
@@ -17,7 +17,7 @@ It also includes an optional, disabled-by-default model router.
 **Start here:** [`WORKSPACE_DEVELOPER_GUIDE.md`](WORKSPACE_DEVELOPER_GUIDE.md) is the step-by-step playbook for new and existing projects, with every flag and switch. [`WORKSPACE_TEST_REPORT.md`](WORKSPACE_TEST_REPORT.md) is the latest validation round (2026-11-11: ready with limitations).
 
 ## What workspace-core adds to every session
-- **Workflow contracts:** a local keyword classifier attaches a short contract to each request (debug → systematic-debugging, feature → brainstorming, tests → TDD or verification, …). Measured: activation 20/20 vs 0/51 without.
+- **Workflow contracts:** a local keyword classifier attaches a short contract to each request (debug → systematic-debugging, feature → brainstorming, tests → TDD or verification, …). Measured: activation 20/20 vs 0/51 without. A ticket to build something new ("new app", "from scratch", a user story) is a feature even when it mentions tests or error messages; real breakage stays debug (0.12.2). English only.
 - **Root-cause gate:** in a debug request, the first source edit is held until Claude states a root cause (max 2 holds per request; tests and docs are never held).
 - **Compaction restore:** after a compaction, the request's contract is re-attached (noting what is already done).
 - **Context pressure:** past 300K tokens of context, Claude is asked to recommend **CLEAR** or **COMPACT** at the next natural stopping point, and to append a cold-start handoff to `.memory/session.md` first. Nothing has to be pasted back: the next session loads it.
