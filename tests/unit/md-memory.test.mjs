@@ -83,7 +83,7 @@ test('automatic memory: request title, headings, the auto block and the nudge ru
   assert.ok(shouldNudge({ cls: 'architecture', edited: true, designed: false, recorded: false, nudged: false }))
   for (const o of [{ cls: 'feature', designed: false }, { cls: 'debug', designed: true }, { recorded: true }, { nudged: true }, { edited: false }])
     assert.ok(!shouldNudge({ cls: 'feature', edited: true, designed: true, recorded: false, nudged: false, ...o }))
-  assert.match(preEditText('src/a.js', [{ id: 'decisions.md#X', body: '## X\n- y' }]), /Notes that apply to src\/a\.js[\s\S]*## X[\s\S]*not applied/)
+  assert.match(preEditText('src/a.js', [{ id: 'decisions.md#X', body: '## X\n- y' }]), /^\[md-memory\] Paused once, not an error: [^\n]*not applied[^\n]*\n\n\[md-memory\] Notes that apply to src\/a\.js[\s\S]*## X/)
 })
 
 test('changedFiles: tool edits plus new or changed git entries, memory files excluded; checkLine', () => {

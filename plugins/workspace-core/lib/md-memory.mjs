@@ -181,8 +181,9 @@ export const TEMPLATES = {
 
 /** Deny text for the first edit of a file whose notes the model has not seen yet. The retry goes through. */
 export function preEditText(rel, hits) {
-  return `${injectText(rel, hits)}\n\n[md-memory] These notes were not in your context yet, so this edit was not applied. ` +
-    'Check the change against them, then make the edit again (as is, or adjusted to fit them).'
+  // The first line is what the person sees under Claude Code's "Error:" label (a stopped tool call), so it says what this is.
+  return '[md-memory] Paused once, not an error: this path has project notes you have not seen yet, so this edit was not applied. ' +
+    'Check the change against them, then make the edit again (as is, or adjusted to fit them).\n\n' + injectText(rel, hits)
 }
 
 /** "## " headings of a memory file (context.md / decisions.md), for "what is new this request". */
