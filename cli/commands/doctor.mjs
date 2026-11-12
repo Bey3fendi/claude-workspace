@@ -13,7 +13,9 @@ import { cmpVersion, readJsonFile, readMaybe } from '../lib/util.mjs'
 
 export async function doctor(ctx, rep) {
   const checks = []
+  let isInstalled = true // false once the manifest is missing: every "run repair" hint becomes "run install"
   const add = (id, status, message) => {
+    if (!isInstalled) message = message.replace(/\(run repair\b/, '(run install')
     checks.push({ id, status, message })
     const line = `${id}: ${message}`
     if (status === 'fail') rep.fail(line); else if (status === 'warn') rep.warn(line); else if (status === 'ok') rep.ok(line); else rep.info(line)
@@ -22,13 +24,15 @@ export async function doctor(ctx, rep) {
   // platform / toolchain
   const plat = detectPlatform(ctx.env)
   add('platform', plat.ok ? 'ok' : 'fail', plat.ok ? plat.name : plat.message)
-  add('node', cmpVersion(process.versions.node, ctx.lock.node.min) >= 0 ? 'ok' : 'fail', process.versions.node)
+  const nodeOk = cmpVersion(process.versions.node, ctx.lock.node.min) >= 0
+  add('node', nodeOk ? 'ok' : 'fail', nodeOk ? process.versions.node : `${process.versions.node} (${ctx.lock.node.min}+ required; install and repair refuse to run)`)
   const cv = claudeVersion(ctx)
   if (!cv) { add('claude-code', 'fail', `not runnable (${ctx.claudeBin})`); return finish(rep, checks) }
   add('claude-code', cmpVersion(cv, ctx.lock.claudeCode.min) < 0 ? 'fail' : ctx.lock.claudeCode.tested.includes(cv) ? 'ok' : 'warn',
     `${cv}${ctx.lock.claudeCode.tested.includes(cv) ? '' : ` (tested: ${ctx.lock.claudeCode.tested.join(', ')})`}`)
 
   const m = loadManifest(ctx)
+  isInstalled = !!m
   add('manifest', m ? 'ok' : 'fail', m ? `installed ${m.installedAt} (v${m.workspaceVersion})` : 'workspace is not installed in this project (run `claude-workspace install`)')
 
   // marketplace + pinned plugins
@@ -112,12 +116,13 @@ export async function doctor(ctx, rep) {
   } else add('claude-mem', 'ok', 'not installed (memory is md-memory)')
 
   for (const w of findRouterConflicts(ctx, installed)) add('router-conflict', 'warn', w)
-  return finish(rep, checks)
+  return finish(rep, checks, !m)
 }
 
-function finish(rep, checks) {
+function finish(rep, checks, notInstalled = false) {
   const failed = checks.filter((c) => c.status === 'fail').length
-  rep.info(failed ? `doctor: ${failed} check(s) failed` : 'doctor: all required checks passed')
+  rep.info(notInstalled ? `doctor: ${failed} check(s) failed: the workspace is not installed here; run \`claude-workspace install\` (most of these follow from that)`
+    : failed ? `doctor: ${failed} check(s) failed` : 'doctor: all required checks passed')
   return { ok: failed === 0, checks }
 }
 

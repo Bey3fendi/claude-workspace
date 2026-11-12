@@ -442,3 +442,13 @@ test('uninstall keeps .explain/ and says so (QA 2026-11-11)', () => {
   assert.ok(existsSync(join(sb.project, '.explain', 'units', 'u-0001.md')), 'the notes are kept')
   assert.match(r.stdout, /kept \.explain\//)
 })
+
+test('doctor before install points to install, never to repair (user report 2026-11-12)', () => {
+  const sb = sandbox()
+  const d = cli(sb, ['doctor'])
+  assert.equal(d.code, 1)
+  const out = d.stdout + d.stderr
+  assert.doesNotMatch(out, /run repair/)
+  assert.match(out, /memory: missing .*\(run install\)/)
+  // (the closing "not installed here; run install" line is info, which --json leaves out)
+})
