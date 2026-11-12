@@ -4,7 +4,7 @@ A portable Claude Code workspace that is pinned, reversible and project-local. I
 - [Superpowers](https://github.com/obra/superpowers)
 - [Ponytail](https://github.com/DietrichGebert/ponytail)
 
-It also writes a **default CLAUDE.md** for the project: one managed file, `.claude/workspace/CLAUDE.workspace.md`, imported from your `CLAUDE.md` with a three-line block. It holds the workspace's rules (memory, contracts, secrets) and the [Karpathy coding guidelines](https://github.com/multica-ai/andrej-karpathy-skills), vendored at a pinned commit (since 0.10.0 they are always loaded, no longer a skill to invoke).
+It also writes a **default CLAUDE.md** for the project: one managed file, `.claude/workspace/CLAUDE.workspace.md`, imported from your `CLAUDE.md` with a three-line block. It holds the workspace's rules (memory, contracts, secrets, an ADHD-friendly response style) and the [Karpathy coding guidelines](https://github.com/multica-ai/andrej-karpathy-skills), vendored at a pinned commit (since 0.10.0 they are always loaded, no longer a skill to invoke).
 
 Session-to-session memory is **md-memory**, built into workspace-core: plain Markdown files in `.memory/`, with no database, worker process or background model calls. It replaces claude-mem (0.8.0). Since 0.13.0 it fills itself: a change that leaves no log entry gets a facts-only one, a designed change is asked to record its decisions, and the notes for a file reach Claude before it changes that file.
 
@@ -45,7 +45,8 @@ It also includes an optional, disabled-by-default model router.
     ```
   - Nothing outside the block is ever changed. Uninstall removes only the block (and deletes `CLAUDE.md` if install created it and nothing else is left). Broken markers stop the install with nothing written.
   - `--claude-md=local` puts the block in `CLAUDE.local.md` instead (not committed); `--no-claude-md` leaves your CLAUDE.md alone. Repair keeps the choice; `--claude-md=project` switches back.
-  - The file is about 80 lines (roughly 1,000 tokens), loaded every session and cached after the first request. When it is imported, workspace-core does not repeat the md-memory rules at session start.
+  - **Response style (ADHD-friendly)**, on by default: answer first, short sentences, steps for anything with more than two parts, commands in one block, and a closing line with what you do next. It is an instruction to Claude, not something the workspace can check. `--no-response-style` leaves it out; repair keeps the choice; `--response-style` puts it back.
+  - The file is about 90 lines (roughly 1,100 tokens), loaded every session and cached after the first request. When it is imported, workspace-core does not repeat the md-memory rules at session start.
   - The guidelines have no skill call to observe, so the footer can only say they were loaded ("Karpathy guidelines (loaded via CLAUDE.md)"). Judge them by outcomes: diff size, rewrites, questions before code.
 - **Workspace Usage footer:** an engine-verified line under each answer (skills activated, gate holds, pressure advice, Explain checks), shown to you, never sent to the model.
 
@@ -77,10 +78,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.13.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.13.1
+npx -y github:Bey3fendi/claude-workspace#v0.14.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.14.0
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.13.1 repair --marketplace Bey3fendi/claude-workspace#v0.13.1
+npx -y github:Bey3fendi/claude-workspace#v0.14.0 repair --marketplace Bey3fendi/claude-workspace#v0.14.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

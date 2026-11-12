@@ -16,6 +16,17 @@ These are defaults from claude-workspace. Where the project's own instructions s
 {{/if}}
 ## Secrets
 - Never print, log or commit secrets. Keys live in `.env`, which must stay gitignored.
+{{#if responseStyle}}
+## Response style (ADHD-friendly)
+- First line: the answer or result. Details after.
+- Short sentences, one idea each. Paragraphs of at most 3 sentences.
+- Anything with more than two parts: bullets or numbered steps, one action per step.
+- Bold only the key word or decision of a section.
+- Commands the user must run go in one copy-paste block.
+- End with what the user does next (or "nothing to do"). Ask at most one question.
+- No preamble, no restating the question, no filler.
+- Applies to chat replies only, not to code, commits or files.
+{{/if}}
 {{#if karpathy}}
 
 ## Coding guidelines (Karpathy)

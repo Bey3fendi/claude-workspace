@@ -51,8 +51,9 @@ export function render(template, vars) {
   return out.join('\n').replace(/\n{3,}/g, '\n\n').replace(/\s+$/, '') + '\n'
 }
 
-/** The owned file for the features this install has. */
-export function workspaceMd(ctx, features = { mdMemory: true, contracts: true, karpathy: true }) {
+/** The owned file for the features this install has. `responseStyle: false` is `--no-response-style`. */
+export function workspaceMd(ctx, opts = {}) {
+  const features = { mdMemory: true, contracts: true, karpathy: true, responseStyle: true, ...opts }
   const template = readFileSync(join(ctx.repoRoot, 'templates', 'CLAUDE.workspace.md'), 'utf8')
   const pin = karpathyPin(ctx.lock)
   const k = features.karpathy && pin ? readVendored(ctx.repoRoot, pin) : null

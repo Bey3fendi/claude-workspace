@@ -56,11 +56,12 @@ test('engine-side detection agrees with the CLI', () => {
 
 test('template renders every feature combination without leftover markers, within the limits', () => {
   const tpl = readFileSync(join(ROOT, 'templates', 'CLAUDE.workspace.md'), 'utf8')
-  for (const mdMemory of [true, false]) for (const contracts of [true, false]) for (const karpathy of [true, false]) {
-    const out = render(tpl, { mdMemory, contracts, karpathy, version: '9.9.9', karpathyCommit: 'abc', karpathyGuidelines: '### G\nbody' })
+  for (const mdMemory of [true, false]) for (const contracts of [true, false]) for (const karpathy of [true, false]) for (const responseStyle of [true, false]) {
+    const out = render(tpl, { mdMemory, contracts, karpathy, responseStyle, version: '9.9.9', karpathyCommit: 'abc', karpathyGuidelines: '### G\nbody' })
     assert.doesNotMatch(out, /\{\{|\}\}/, 'no template markers')
     assert.equal(out.includes('## Memory'), mdMemory); assert.equal(out.includes('## Workflow contracts'), contracts)
     assert.equal(out.includes('## Coding guidelines (Karpathy)'), karpathy)
+    assert.equal(out.includes('## Response style (ADHD-friendly)'), responseStyle)
     assert.match(out, /## Secrets/); assert.ok(out.endsWith('\n') && !out.endsWith('\n\n'))
     assert.doesNotMatch(out, /\n\n\n/)
   }
@@ -70,6 +71,8 @@ test('template renders every feature combination without leftover markers, withi
   assert.ok(own.split('\n').length - 1 <= lengthLimit({ karpathy: false }), `${own.split('\n').length - 1} lines`)
   assert.match(full, /^# Workspace defaults \(claude-workspace \d+\.\d+\.\d+, managed file: do not edit\)/)
   assert.match(full, /`\.memory\/session\.md`/)
+  assert.match(full, /## Response style \(ADHD-friendly\)\n- First line: the answer or result/, 'on by default')
+  assert.doesNotMatch(workspaceMd(ctx, { responseStyle: false }), /Response style/)
 })
 
 test('vendored Karpathy text: pinned sha, title dropped, headings demoted, attribution kept', () => {

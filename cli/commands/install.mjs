@@ -33,6 +33,8 @@ export async function install(ctx, rep, { repair = false } = {}) {
   let prevMarker = null
   try { prevMarker = readJsonFile(ctx.p('.claude/workspace.json'), { missing: null }) } catch {}
   const mdTarget = o.claudeMd !== undefined ? targetOf(o) : prevMarker?.claudeMd ? prevMarker.claudeMd.target ?? null : TARGETS.project
+  // Response style: the flag, else what the previous install chose, else on.
+  const responseStyle = o.responseStyle ?? prevMarker?.claudeMd?.responseStyle ?? true
   if (mdTarget) {
     const st = importState(readMaybe(ctx.p(mdTarget))?.toString('utf8') ?? '')
     if (st.state === 'malformed') throw new UserError(`${mdTarget} line ${st.problem.line}: ${st.problem.problem}. Fix or remove the claude-workspace markers there, then re-run (nothing was changed)`)
@@ -181,7 +183,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
 
   // ---- CLAUDE.md: the owned file (always rewritten from the template) and the import block in the target
   let owned
-  try { owned = workspaceMd(ctx) } catch (e) { throw new UserError(e.message) }
+  try { owned = workspaceMd(ctx, { responseStyle }) } catch (e) { throw new UserError(e.message) }
   if ((readMaybe(ctx.p(OWNED))?.toString('utf8') ?? null) !== owned) { writeAtomic(ctx.p(OWNED), owned); rep.change(`wrote ${OWNED}`) }
   // an import left in the other target by an earlier install with a different --claude-md
   for (const t of Object.values(TARGETS).filter((t) => t !== mdTarget && m.files[t])) {
@@ -209,7 +211,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
     marketplace: name,
     plugins: ctx.pluginIds,
     memory: 'md-memory (.memory/, built into workspace-core)',
-    claudeMd: { target: mdTarget, created: mdTarget ? !m.files[mdTarget]?.existedBefore : false },
+    claudeMd: { target: mdTarget, created: mdTarget ? !m.files[mdTarget]?.existedBefore : false, responseStyle },
   }
   if (writeJsonIfChanged(ctx.p('.claude/workspace.json'), marker)) rep.change('wrote .claude/workspace.json')
 

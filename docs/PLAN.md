@@ -451,6 +451,12 @@ Phase 3M adds:
   - a fresh session with every tool disabled reported the last work and the decisions from the auto-loaded log.
   - The first attempt found two bugs, now fixed and tested: Bash-written memory went unseen, and a heredoc that mentioned a test counted as the check.
 
+**17. ADHD-friendly response style (2026-11-12, v0.14.0).** A "Response style" section in the workspace file (8 rules: answer first, short sentences, steps, commands in one block, a closing next step, at most one question, no filler, chat replies only).
+- On by default. `--no-response-style` leaves it out; the choice is kept in `.claude/workspace.json` (`claudeMd.responseStyle`), and doctor compares against the chosen variant. `--response-style` puts it back.
+- Advisory: an instruction, not checked by the engine.
+- Live (Sonnet, same question with and without it, $0.08): with it, the answer opened with the result and ended with a "Next:" line; without it, it opened with a preamble and had no next step.
+- The file grows from 80 to 89 lines (limit 100).
+
 **Open:**
 - **macOS run.**
 

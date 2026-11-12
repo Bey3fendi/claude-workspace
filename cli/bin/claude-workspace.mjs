@@ -30,6 +30,7 @@ Options
   --allow-dirty          Proceed although touched files have uncommitted changes (backups are still taken)
   --claude-md=local      Put the CLAUDE.md import in CLAUDE.local.md (not committed) instead of CLAUDE.md
   --no-claude-md         Do not touch CLAUDE.md (the workspace file is still written; import it yourself)
+  --no-response-style    Leave the ADHD-friendly response style out of the workspace file (--response-style: back in)
   --session <id>         usage: session id (or a prefix) instead of the latest
   --json                 Print one JSON result document
   --version, --help
@@ -54,6 +55,8 @@ export function parseArgs(argv) {
       case '--no-claude-mem': o.claudeMem = false; break
       case '--allow-dirty': o.allowDirty = true; break
       case '--no-claude-md': o.claudeMd = false; break
+      case '--no-response-style': o.responseStyle = false; break
+      case '--response-style': o.responseStyle = true; break
       case '--claude-md': o.claudeMd = mdTarget(val()); break
       case '--remove-claude-mem': o.removeClaudeMem = true; break
       case '--no-fix': o.noFix = true; break

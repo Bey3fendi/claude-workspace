@@ -1,6 +1,6 @@
 {
   "id": "claude-workspace",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "name": "Claude Workspace",
   "description": "Installs the pinned claude-workspace CLI and, when the container is created, installs Claude Code and the workspace into the project folder.",
   "options": {

@@ -88,15 +88,15 @@ export async function doctor(ctx, rep) {
   }
   if (m) {
     const ownedNow = readMaybe(ctx.p(OWNED))?.toString('utf8') ?? null
+    const marker = safeJson(ctx.p('.claude/workspace.json'))
     let want = null
-    try { want = workspaceMd(ctx) } catch {}
+    try { want = workspaceMd(ctx, { responseStyle: marker?.claudeMd?.responseStyle !== false }) } catch {}
     add('claude-md-file', ownedNow == null ? 'fail' : ownedNow === want ? 'ok' : 'warn', ownedNow == null ? `${OWNED} missing (run repair)`
       : ownedNow === want ? `${OWNED} matches the template` : `drift: ${OWNED.split('/').pop()} differs from template (run repair)`)
     if (ownedNow != null) {
       const n = ownedNow.split('\n').length - 1, limit = lengthLimit({ karpathy: !!pin })
       add('claude-md-length', n > limit ? 'warn' : 'ok', `${n} line(s) loaded every session${n > limit ? ` (over ${limit})` : ''}`)
     }
-    const marker = safeJson(ctx.p('.claude/workspace.json'))
     const target = marker?.claudeMd ? marker.claudeMd.target : TARGETS.project
     if (!target) add('claude-md-import', 'warn', `skipped (--no-claude-md): add @${OWNED} to your CLAUDE.md yourself`)
     else {
