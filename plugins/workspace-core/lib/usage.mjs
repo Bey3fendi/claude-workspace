@@ -5,6 +5,8 @@
 //   - Anything the model claims without a matching engine event is labeled self-reported.
 //   - Integrations are "active" only if their injected context was observed this session; being
 //     installed or enabled is not evidence of anything.
+//   - A claimed skill loaded in an earlier request of this conversation (still in context; reset by /clear
+//     and compaction) is "loaded earlier", with that request's number, not "self-reported only".
 
 /** System-prompt section (cached, steady). Keep it short: it is the only token cost of reporting. */
 export const USAGE_INSTRUCTION = [
@@ -44,7 +46,8 @@ export function parseUsageSection(answer) {
 
 /** Per-request tracker; session-level integration activity survives requests. */
 export function createTracker() {
-  const session = { active: new Set() }
+  // loaded: skill → number of the request that loaded it (this conversation; reset by /clear and compaction)
+  const session = { active: new Set(), loaded: new Map(), n: 0 }
   let req = null
   const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null, pressure: null, explain: null })
   return {
@@ -75,20 +78,26 @@ export function createTracker() {
     finish(answer, claimedOverride) {
       const r = req ?? fresh()
       req = null
+      session.n++
       const section = claimedOverride ? { present: true, applied: claimedOverride } : parseUsageSection(answer)
-      return summarize(r, section, [...session.active])
+      const s = summarize(r, section, [...session.active], session.loaded)
+      for (const k of s.activated) session.loaded.set(k, session.n)
+      return s
     },
+    /** /clear or compaction: skills loaded before it are no longer known to be in context. */
+    contextReset() { session.loaded.clear() },
     get activeIntegrations() { return [...session.active] },
   }
 }
 
-export function summarize(r, section, active) {
+export function summarize(r, section, active, earlier = new Map()) {
   const failed = [...r.failed].filter((s) => !r.denied.has(s)), denied = [...r.denied].filter((s) => !r.activated.has(s))
   const activated = [...r.activated].filter((s) => !failed.includes(s))
   const matches = (claim) => activated.includes(claim)
-  const claimedNotObserved = section.applied.filter((c) => !matches(c))
+  const claimedEarlier = section.applied.filter((c) => !matches(c) && earlier.has(c)).map((c) => ({ skill: c, n: earlier.get(c) }))
+  const claimedNotObserved = section.applied.filter((c) => !matches(c) && !earlier.has(c))
   const observedNotClaimed = section.present ? activated.filter((s) => !section.applied.includes(s)) : []
-  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, active, reportPresent: section.present, claimed: section.applied, claimedNotObserved, observedNotClaimed }
+  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, active, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
   return { ...evidence, footer: renderFooter(evidence) }
 }
 
@@ -97,7 +106,7 @@ const short = (id) => id.replace(/^andrej-karpathy-skills:/, 'karpathy:')
 export function renderFooter(e) {
   if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain) return null
   const parts = []
-  parts.push(e.activated.length ? `activated ${e.activated.map(short).join(', ')}` : 'no skill activations observed')
+  parts.push(e.activated.length ? `activated ${e.activated.map(short).join(', ')}` : 'no skill loaded in this request')
   if (e.denied.length) parts.push(`denied ${e.denied.map(short).join(', ')}`)
   if (e.failed.length) parts.push(`failed ${e.failed.map(short).join(', ')}`)
   if (e.gate?.held) {
@@ -114,6 +123,7 @@ export function renderFooter(e) {
   if (e.explain?.commit) parts.push('commit made: /explain HEAD explains it')
   if (e.reportPresent) {
     if (e.active.length) parts.push(`context injected this session: ${e.active.map((k) => INTEGRATIONS[k]).join(', ')}`)
+    if (e.claimedEarlier?.length) parts.push(`loaded earlier this session: ${e.claimedEarlier.map((x) => `${short(x.skill)} (#${x.n})`).join(', ')}`)
     if (e.claimedNotObserved.length) parts.push(`self-reported only (no engine event): ${e.claimedNotObserved.map(short).join(', ')}`)
     if (e.observedNotClaimed.length) parts.push(`activated but not reported: ${e.observedNotClaimed.map(short).join(', ')}`)
     if (!e.claimedNotObserved.length && !e.observedNotClaimed.length) parts.push('report matches engine events')
@@ -132,6 +142,7 @@ export function replay(rows) {
       case 'claude-md': if (e.karpathy) t.injection({ claudeMd: 1 }); break
       case 'turn.start': if (e.agentId == null) { t.turnStart(); if (pendingPressure) { t.pressure(pendingPressure); pendingPressure = null } open = true; n++; startedAt = e.t } break
       case 'skill.prompt': t.skillPrompt(e.skill); break
+      case 'context.reset': t.contextReset(); break
       case 'skill.loaded': t.skillLoaded(e.skill); break
       case 'skill.failed': t.skillFailed(e.skill); break
       case 'gate': t.gate(e.action, e.reason); break

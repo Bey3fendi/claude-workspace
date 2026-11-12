@@ -417,6 +417,11 @@ export const register = (on) => {
   on('classic.SessionStart', async ($, e, next) => {
     const r = await next(e)
     if (!e.agent_id && ['clear', 'compact', 'startup'].includes(e?.source)) { ctx.tokens = 0; ctx.pending = null }
+    // Skills loaded before a /clear or compaction are no longer known to be in context (footer: "loaded earlier").
+    if (!e.agent_id && ['clear', 'compact'].includes(e?.source)) {
+      tracker.contextReset()
+      await flush(sink, sink.record('context.reset', { source: e.source }), (p, b) => $.fs.write(p, b))
+    }
     const add = []
     // Plan execution method (lib/execution.mjs): stated on every main-conversation SessionStart, so it survives /clear and compaction.
     const exec = executionNote({ disabled: (await $.env.get('CW_PLAN_EXECUTION')) === '0', agent: !!e.agent_id })

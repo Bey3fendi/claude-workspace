@@ -108,7 +108,7 @@ test('footer: claims are cross-checked; denied/failed are never "activated"', ()
   assert.equal(t.finish('2 + 2 = 4').footer, null)
   // section present, nothing invoked, nothing claimed: honest "none observed"
   t.turnStart()
-  assert.match(t.finish('done\nWorkspace Usage\n- Not used: brainstorming').footer, /no skill activations observed · context injected this session: Caveman · report matches engine events/)
+  assert.match(t.finish('done\nWorkspace Usage\n- Not used: brainstorming').footer, /no skill loaded in this request · context injected this session: Caveman · report matches engine events/)
   // activation not mentioned in the report is flagged too
   t.turnStart(); t.skillPrompt('superpowers:brainstorming')
   assert.match(t.finish('x\nWorkspace Usage\n- Applied: none').footer, /activated but not reported: superpowers:brainstorming/)
@@ -156,4 +156,19 @@ test('golden: synthetic session across a reload, with a partly false self-report
   assert.deepEqual(v.usage, { in: 1111, out: 226, cacheRead: 5000, cacheWrite: 300 })
   assert.equal(v.endReason, 'prompt_input_exit')
   golden('synthetic-mixed', v)
+})
+
+test('footer: a skill loaded in an earlier request is "loaded earlier (#n)", until /clear or compaction (user report 2026-11-12)', () => {
+  const t = createTracker()
+  t.turnStart(); t.skillPrompt('superpowers:executing-plans')
+  t.finish('started\nWorkspace Usage\n- Applied: superpowers:executing-plans')
+  t.turnStart()
+  const r = t.finish('task 2 done\nWorkspace Usage\n- Applied: superpowers:executing-plans, superpowers:brainstorming')
+  assert.deepEqual(r.claimedEarlier, [{ skill: 'superpowers:executing-plans', n: 1 }])
+  assert.deepEqual(r.claimedNotObserved, ['superpowers:brainstorming'])
+  assert.match(r.footer, /no skill loaded in this request · loaded earlier this session: superpowers:executing-plans \(#1\) · self-reported only \(no engine event\): superpowers:brainstorming/)
+  t.contextReset()
+  t.turnStart()
+  const after = t.finish('x\nWorkspace Usage\n- Applied: superpowers:executing-plans')
+  assert.deepEqual(after.claimedNotObserved, ['superpowers:executing-plans'], 'after /clear or compaction it is not known to be in context')
 })

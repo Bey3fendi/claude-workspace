@@ -34,6 +34,7 @@
           "superpowers:systematic-debugging",
           "andrej-karpathy-skills:karpathy-guidelines"
         ],
+        "claimedEarlier": [],
         "claimedNotObserved": [
           "andrej-karpathy-skills:karpathy-guidelines"
         ],
@@ -56,6 +57,7 @@
         ],
         "reportPresent": false,
         "claimed": [],
+        "claimedEarlier": [],
         "claimedNotObserved": [],
         "observedNotClaimed": [],
         "footer": null
@@ -76,6 +78,7 @@
         ],
         "reportPresent": false,
         "claimed": [],
+        "claimedEarlier": [],
         "claimedNotObserved": [],
         "observedNotClaimed": [],
         "footer": null
@@ -96,6 +99,7 @@
         ],
         "reportPresent": false,
         "claimed": [],
+        "claimedEarlier": [],
         "claimedNotObserved": [],
         "observedNotClaimed": [],
         "footer": null

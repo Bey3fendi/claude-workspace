@@ -456,6 +456,7 @@ Phase 3M adds:
 - Advisory: an instruction, not checked by the engine.
 - Live (Sonnet, same question with and without it, $0.08): with it, the answer opened with the result and ended with a "Next:" line; without it, it opened with a preamble and had no next step.
 - The file grows from 80 to 89 lines (limit 100).
+- 0.14.2: the footer marks a claimed skill loaded in an earlier request of the conversation as "loaded earlier this session (#n)" instead of "self-reported only" (user report: a plan continued in a later request); reset by /clear and compaction (`context.reset` event).
 - 0.14.1: the pre-edit hold now opens with "Paused once, not an error" (Claude Code labels any stopped tool call "Error:"; the explanation used to be the last line).
 
 **Open:**
