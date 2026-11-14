@@ -51,7 +51,7 @@ export function createTracker() {
   // shown: what the footer already said this session (the injected-context list, the /explain HEAD hint).
   const session = { active: new Set(), loaded: new Map(), n: 0, shown: { active: null, explainHint: false } }
   let req = null
-  const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null, pressure: null, explain: null })
+  const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null, pressure: null, explain: null, ponytail: null })
   return {
     // Keep what arrived since the last finish (a slash-command skill loads before its turn starts).
     turnStart() { req ??= fresh() },
@@ -63,6 +63,8 @@ export function createTracker() {
     pressure(tokens) { (req ??= fresh()).pressure = tokens },
     /** Explain in this request: { commit } (a commit was made), { unit, files } (record), { unit, passed, total, failedRules } (check). */
     explain(info) { req ??= fresh(); req.explain = { ...(req.explain ?? {}), ...info } },
+    /** Ponytail driven by the workspace: { reminded: 'contract'|'edit', level } | { level, closing: bool } | { asked: true }. */
+    ponytail(info) { req ??= fresh(); req.ponytail = { ...(req.ponytail ?? {}), ...info } },
     /** Phase 4 gate outcome for this request: action 'deny' | 'release'. */
     gate(action, reason) {
       req ??= fresh()
@@ -105,7 +107,7 @@ export function summarize(r, section, active, earlier = new Map(), shown = { act
   // The injected-context list once per session (and when it changes); the /explain HEAD hint once per session.
   const showActive = active.length > 0 && shown.active !== active.join(',')
   const explainHint = !!r.explain?.commit && !shown.explainHint
-  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, active, showActive, explainHint, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
+  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, ponytail: r.ponytail ?? null, active, showActive, explainHint, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
   return { ...evidence, footer: renderFooter(evidence) }
 }
 
@@ -113,7 +115,7 @@ const short = (id) => id.replace(/^andrej-karpathy-skills:/, 'karpathy:')
 
 export function renderFooter(e) {
   const hint = e.explainHint ?? true // pure calls without session state keep the hint
-  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain?.unit && !(e.explain?.commit && hint)) return null
+  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain?.unit && !(e.explain?.commit && hint) && e.ponytail?.closing === undefined) return null
   const parts = []
   parts.push(e.activated.length ? `activated ${e.activated.map(short).join(', ')}` : 'no skill loaded in this request')
   if (e.denied.length) parts.push(`denied ${e.denied.map(short).join(', ')}`)
@@ -123,6 +125,7 @@ export function renderFooter(e) {
       : e.gate.released === 'gate limit reached' ? ', then let it through (limit reached)' : ''
     parts.push(`root-cause gate held edits ${e.gate.held === 1 ? 'once' : `${e.gate.held} times`}${how}`)
   }
+  if (e.ponytail?.closing !== undefined) parts.push(`ponytail ${e.ponytail.level}: ${e.ponytail.reminded ? 'rule repeated, ' : ''}closing line ${e.ponytail.closing ? 'present' : 'missing'}${e.ponytail.asked ? ' (asked for it)' : ''}`)
   if (e.pressure) parts.push(`context ~${Math.round(e.pressure / 1000)}K: /clear-or-/compact advice attached`)
   if (e.explain?.unit) {
     const x = e.explain
@@ -155,6 +158,11 @@ export function replay(rows) {
       case 'skill.loaded': t.skillLoaded(e.skill); break
       case 'skill.failed': t.skillFailed(e.skill); break
       case 'gate': if (!e.sameStep) t.gate(e.action, e.reason); break
+      case 'ponytail':
+        if (e.action === 'remind') t.ponytail({ reminded: e.via, level: e.level })
+        else if (e.action === 'closing') t.ponytail({ level: e.level, closing: e.present })
+        else if (e.action === 'close-asked') t.ponytail({ asked: true })
+        break
       case 'pressure': pendingPressure = e.tokens; break
       case 'explain':
         if (e.action === 'record' && e.unit) t.explain({ unit: e.unit, files: e.files })

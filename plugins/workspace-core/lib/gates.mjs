@@ -38,8 +38,9 @@ export function statesRootCause(text) {
 
 export const denyText = (file) =>
   `[workspace gate: root cause first] Held once, not an error: this edit to ${String(file).split(/[\\/]/).pop()} was not applied ` +
-  '(nor the other source edits sent with it). This is a debugging request: first write in your reply "Root cause: <file:line> — ' +
-  '<why it produces the failure>", then make the minimal fix and send the edits again. ' +
+  '(nor the other source edits sent with it). This is a debugging request. Resending the edits without text is held again: ' +
+  'your next message must start with visible text, one line per bug, "Root cause: <file:line> — <why it produces the failure>"; ' +
+  'after that line the same edits go through. ' +
   'Editing or adding tests is not held. (If this is not a bug fix, say so in one line and edit again.)'
 
 /**

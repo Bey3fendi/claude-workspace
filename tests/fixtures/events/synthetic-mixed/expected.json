@@ -25,6 +25,7 @@
         "gate": null,
         "pressure": null,
         "explain": null,
+        "ponytail": null,
         "active": [
           "superpowers",
           "caveman"
@@ -53,6 +54,7 @@
         "gate": null,
         "pressure": null,
         "explain": null,
+        "ponytail": null,
         "active": [
           "superpowers",
           "caveman"
@@ -76,6 +78,7 @@
         "gate": null,
         "pressure": null,
         "explain": null,
+        "ponytail": null,
         "active": [
           "superpowers",
           "caveman"
@@ -99,6 +102,7 @@
         "gate": null,
         "pressure": null,
         "explain": null,
+        "ponytail": null,
         "active": [
           "superpowers",
           "caveman"
@@ -118,7 +122,8 @@
       "out": 226,
       "cacheRead": 5000,
       "cacheWrite": 300
-    }
+    },
+    "ponytail": null
   },
   "text": [
     "session sess-synth-1 · /work/demo · interactive",

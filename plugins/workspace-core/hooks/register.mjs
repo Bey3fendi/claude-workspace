@@ -10,7 +10,8 @@ import { markerCounts, redact, short } from '../lib/events.mjs'
 import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
 import { classify, contractText, restoreText } from '../lib/contracts.mjs'
 import { deniedSkills, trimListing } from '../lib/listing.mjs'
-import { decide, denyText, statesRootCause } from '../lib/gates.mjs'
+import { decide, denyText, editTarget, gatedFile, statesRootCause } from '../lib/gates.mjs'
+import { CLOSE_TEXT, CODE_CLASSES, activeLevel, hasClosingLine, injectedLevel, promptLevel, reminderText } from '../lib/ponytail.mjs'
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 import { executionNote } from '../lib/execution.mjs'
 import { capRequest } from '../lib/subagent-cap.mjs'
@@ -38,8 +39,34 @@ const EXPLAIN_EXCLUDES = ['--', '.', `:(exclude)${EXPLAIN_DIR}`, ':(exclude).mem
 const SOURCE_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 // Automatic memory, per request: files changed (project-relative), memory files Claude edited, where this request's
 // commands start, the memory headings at its start, and whether it was logged / nudged already.
+// Ponytail per request: reminded (the core rule was attached), edited (a source-code file was changed), closeAsked.
+const freshPt = () => ({ reminded: false, edited: false, closeAsked: false })
 const freshMem = (o = {}) => ({ edited: [], wrote: { session: false, decisions: false, context: false }, cmdStart: ex.commands.length, heads: { decisions: [], context: [] }, sessionAt: null, gitAt: null, title: '', logged: false, nudged: false, ...o })
-let req = { class: null, text: '', denies: 0, released: false, gates: true, contracts: true, skills: [], mem: freshMem() }
+let req = { class: null, reason: null, text: '', last: '', denies: 0, released: false, gates: true, contracts: true, skills: [], mem: freshMem(), pt: freshPt() }
+// Ponytail (lib/ponytail.mjs): its level as last announced in its own injected text, or set by the user's
+// /ponytail <level> or "stop ponytail". null = not seen this session (not installed, or not injected yet).
+let pt = { level: null }
+// CW_OFF=1: workspace-core is inert for this session (demos, product runs): nothing is added to the conversation,
+// nothing is held, the skill listing is not trimmed, no footer. The local event log still records (session.start
+// carries off: true); the subagent cap stays. Read once per process.
+let OFF = null
+async function isOff($) {
+  if (OFF === null) { try { OFF = (await $.env.get('CW_OFF')) === '1' } catch { OFF = false } }
+  return OFF
+}
+
+// Ponytail's closing line, asked for once per request (classic.Stop), when the request changed source code and the
+// answer has none. CW_PONYTAIL=0 turns the workspace's Ponytail driving off; CW_PONYTAIL_CLOSE=0 only this ask.
+async function ponytailClose($, e) {
+  const level = activeLevel(pt.level)
+  if (!level || e?.stop_hook_active || !req.pt.edited || req.pt.closeAsked || hasClosingLine(req.last)) return null
+  if ((await $.env.get('CW_PONYTAIL')) === '0' || (await $.env.get('CW_PONYTAIL_CLOSE')) === '0') return null
+  req.pt.closeAsked = true
+  tracker.ponytail({ asked: true })
+  await flush(sink, sink.record('ponytail', { action: 'close-asked', level }), (p, b) => $.fs.write(p, b))
+  return CLOSE_TEXT
+}
+
 // session.md caps: lines (CW_MEMORY_MAX_LINES, legacy MD_MEMORY_MAX_LINES) and characters (CW_MEMORY_MAX_CHARS).
 async function sessionCaps($) {
   return [maxLinesFrom((await $.env.get('CW_MEMORY_MAX_LINES')) ?? (await $.env.get('MD_MEMORY_MAX_LINES'))), maxCharsFrom(await $.env.get('CW_MEMORY_MAX_CHARS'))]
@@ -185,7 +212,7 @@ export const register = (on) => {
         root: await $.session.root(), sid: await $.session.id(),
       })
       const model = await $.session.model().catch(() => null)
-      const w = sink.record('session.start', { cwd: e.cwd, root: sink.state.root, surface: e.surface ?? null, interactive: !!e.isInteractive, model })
+      const w = sink.record('session.start', { cwd: e.cwd, root: sink.state.root, surface: e.surface ?? null, interactive: !!e.isInteractive, model, ...((await isOff($)) ? { off: true } : {}) })
       await flush(sink, w, (p, b) => $.fs.write(p, b))
       $.ui.status(statusText())
     } catch { sink.fail() }
@@ -200,6 +227,7 @@ export const register = (on) => {
   // One cached, session-scoped section (after the shared prefix, so the shared cache is untouched).
   on('prompt.compose', async ($, e, next) => {
     const r = await next(e)
+    if (await isOff($)) return r
     return { ...r, sections: [...r.sections, { id: 'workspace-core:usage-report', text: USAGE_INSTRUCTION, scope: 'session' }] }
   }).catch(($, e, next) => next(e))
 
@@ -207,12 +235,15 @@ export const register = (on) => {
   // model-only context. Only the class is recorded, never the prompt text.
   on('prompt.submit', async ($, e, next) => {
     const human = !e.command && !e.isMeta && ['composer', 'bridge', 'sdk'].includes(e.origin?.kind)
-    if (!human) return next(e)
+    if (!human || (await isOff($))) return next(e)
+    const switched = promptLevel(e.text)
+    if (switched) pt.level = switched
     ex.requests = [...ex.requests, short(e.text ?? '', 300)].slice(-10)
     const contracts = (await $.env.get('CW_CONTRACTS')) !== '0'
     const gates = (await $.env.get('CW_GATES')) !== '0'
     const c = classify(e.text)
-    req = { class: c.class, text: '', denies: 0, released: false, gates, contracts, skills: [], mem: freshMem({ title: requestTitle(e.text, redact) }) }
+    req = { class: c.class, reason: c.reason, text: '', last: '', denies: 0, released: false, gates, contracts, skills: [], mem: freshMem({ title: requestTitle(e.text, redact) }), pt: freshPt() }
+    const level = (await $.env.get('CW_PONYTAIL')) === '0' ? null : activeLevel(pt.level)
     if ((await $.env.get('CW_MEMORY')) !== '0') {
       const root = await $.session.root().catch(() => null)
       if (root) {
@@ -224,9 +255,16 @@ export const register = (on) => {
     }
     const add = []
     if (contracts) {
-      const text = c.class ? contractText(c.class) : null
+      const text = c.class ? contractText(c.class, { ponytail: !!level, reason: c.reason }) : null
       await flush(sink, sink.record('classify', { class: c.class, reason: c.reason, contract: !!text }), (p, b) => $.fs.write(p, b))
       if (text) add.push(text)
+    }
+    // Ponytail's core rule rides with the contract of a request that changes code (other requests: at the first source edit).
+    if (level && CODE_CLASSES.has(c.class)) {
+      add.push(reminderText(level))
+      req.pt.reminded = true
+      tracker.ponytail({ reminded: 'contract', level })
+      await flush(sink, sink.record('ponytail', { action: 'remind', via: 'contract', level }), (p, b) => $.fs.write(p, b))
     }
     // Phase 6 context pressure (built in; CW_CONTEXT_PRESSURE=0 disables; skipped when a user-level
     // context-pressure hook already adds the same note).
@@ -257,7 +295,7 @@ export const register = (on) => {
   // The transcript keeps the engine's full record; only what the model reads changes.
   on('prompt.attachment', { type: 'skill_listing' }, async ($, e, next) => {
     const r = await next(e)
-    if (typeof r?.text !== 'string' || (await $.env.get('CW_LISTING_TRIM')) === '0') return r
+    if (typeof r?.text !== 'string' || (await isOff($)) || (await $.env.get('CW_LISTING_TRIM')) === '0') return r
     const t = trimListing(r.text, deniedSkills(await $.settings.read({ key: 'permissions' })))
     await flush(sink, sink.record('listing', { before: t.before, after: t.after, removed: t.removed.length, agentId: e.agentId ?? null }), (p, b) => $.fs.write(p, b))
     return t.removed.length ? { ...r, text: t.text } : r
@@ -285,7 +323,9 @@ export const register = (on) => {
       // Collect visible text as it streams (debug: a tool call later in the same response sees it), and the
       // request's usage from its stop chunk (context pressure).
       const debug = req.class === 'debug'
+      req.last = '' // the latest step's visible text: at Stop, the final answer (Ponytail's closing line)
       for await (const c of next(e)) {
+        if (c?.kind === 'text') req.last += c.text
         if (debug && c?.kind === 'text') req.text += c.text
         else if (c?.kind === 'stop' && c.usage) { const t = contextTokens(c.usage); if (t > 0) ctx.tokens = t }
         yield c
@@ -314,7 +354,12 @@ export const register = (on) => {
   // Phase 4 root-cause gate: hold the first source edit of a debug request until a root cause is stated.
   // Also runs Explain's check on edits (explainCheck below), after the call; a failed check never fails the call.
   on('tool.call', async ($, e, next) => {
-    const after = async (r) => { try { await memoryTrack($, e, r) } catch {} try { return await explainCheck($, e, r) } catch { return r } }
+    if (await isOff($)) return next(e)
+    const after = async (r) => {
+      if (e.agentId === undefined && r?.deny === undefined && r?.isError !== true && gatedFile(editTarget(e))) req.pt.edited = true
+      try { await memoryTrack($, e, r) } catch {}
+      try { return await explainCheck($, e, r) } catch { return r }
+    }
     let held = null
     try { held = await memoryHold($, e) } catch { held = null }
     if (held) return held
@@ -339,6 +384,11 @@ export const register = (on) => {
     const u = r?.usage ?? e.usage
     const main = e.agentId === undefined
     const report = main ? parseUsageSection(e.answer) : null
+    if (main && req.pt.edited && activeLevel(pt.level) && e.reason === 'answer') {
+      const present = hasClosingLine(e.answer)
+      tracker.ponytail({ level: pt.level, closing: present })
+      await flush(sink, sink.record('ponytail', { action: 'closing', present, level: pt.level }), (p, b) => $.fs.write(p, b))
+    }
     const ev = main ? tracker.finish(e.answer) : null
     const w = sink.record('turn.complete', {
       turnId: e.turnId, agentId: e.agentId ?? null, reason: e.reason ?? null,
@@ -347,7 +397,7 @@ export const register = (on) => {
       footer: ev?.footer ?? undefined,
     })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
-    if (main && ev?.footer && e.reason === 'answer') return { ...r, text: ev.footer }
+    if (main && ev?.footer && e.reason === 'answer' && !(await isOff($))) return { ...r, text: ev.footer }
     return r
   }).catch(($, e, next) => next(e))
 
@@ -396,6 +446,11 @@ export const register = (on) => {
       const content = e.message?.content
       const len = typeof content === 'string' ? content.length : JSON.stringify(content ?? '').length
       const markers = markerCounts(content)
+      const level = markers.ponytail ? injectedLevel(content) : null
+      if (level && pt.level !== level) {
+        pt.level = level
+        await flush(sink, sink.record('ponytail', { action: 'level', level }), (p, b) => $.fs.write(p, b))
+      }
       tracker.injection(markers)
       const w = sink.record('injection', { hookEvent: e.origin.event ?? null, len, markers })
       await flush(sink, w, (p, b) => $.fs.write(p, b))
@@ -421,6 +476,7 @@ export const register = (on) => {
   // context, the engine's own channel for post-compaction context. Gate state is in memory and survives as is.
   on('classic.SessionStart', async ($, e, next) => {
     const r = await next(e)
+    if (await isOff($)) return r
     if (!e.agent_id && ['clear', 'compact', 'startup'].includes(e?.source)) { ctx.tokens = 0; ctx.pending = null }
     // Skills loaded before a /clear or compaction are no longer known to be in context (footer: "loaded earlier").
     if (!e.agent_id && ['clear', 'compact'].includes(e?.source)) {
@@ -451,7 +507,7 @@ export const register = (on) => {
       }
     }
     if (e?.source === 'compact' && !e.agent_id && req.contracts && req.class) {
-      const text = restoreText(req.class, { invoked: req.skills, rootCauseStated: req.class === 'debug' && statesRootCause(req.text) })
+      const text = restoreText(req.class, { invoked: req.skills, rootCauseStated: req.class === 'debug' && statesRootCause(req.text), ponytail: !!activeLevel(pt.level) && (await $.env.get('CW_PONYTAIL')) !== '0', reason: req.reason })
       if (text) {
         add.push(text)
         await flush(sink, sink.record('compact.restore', { class: req.class, len: text.length, invoked: req.skills.length }), (p, b) => $.fs.write(p, b))
@@ -462,7 +518,17 @@ export const register = (on) => {
   }).catch(($, e, next) => next(e))
 
   on('classic.PostToolUse', async ($, e, next) => {
-    const r = await next(e)
+    let r = await next(e)
+    if (await isOff($)) return r
+    // Ponytail's core rule for a request with no code contract: once, after its first source edit in the main loop.
+    const level = activeLevel(pt.level)
+    if (level && !e?.agent_id && !req.pt.reminded && ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(e?.tool_name) &&
+      gatedFile(e.tool_input?.file_path ?? e.tool_input?.notebook_path) && (await $.env.get('CW_PONYTAIL')) !== '0') {
+      req.pt.reminded = true
+      tracker.ponytail({ reminded: 'edit', level })
+      await flush(sink, sink.record('ponytail', { action: 'remind', via: 'edit', level }), (p, b) => $.fs.write(p, b))
+      r = { ...r, additionalContext: [...(r?.additionalContext ?? []), reminderText(level)] }
+    }
     if (e?.tool_name === 'Skill') {
       tracker.skillLoaded(e.tool_input?.skill ?? null)
       await flush(sink, sink.record('skill.loaded', { skill: e.tool_input?.skill ?? null, agentId: e.agent_id ?? null }), (p, b) => $.fs.write(p, b))
@@ -491,7 +557,7 @@ export const register = (on) => {
   // md-memory: an automatic compaction never leaves session.md stale (mechanical snapshot, then trim).
   on('classic.PreCompact', async ($, e, next) => {
     const r = await next(e)
-    if (e?.trigger !== 'auto' || (await $.env.get('CW_MEMORY')) === '0') return r
+    if (e?.trigger !== 'auto' || (await isOff($)) || (await $.env.get('CW_MEMORY')) === '0') return r
     const root = await $.session.root().catch(() => null)
     if (!root) return r
     const git = async (argv) => { try { const x = await $.process.run(['git', ...argv], { cwd: root }); return x.exitCode === 0 ? x.stdout.trim() : '' } catch { return '' } }
@@ -505,13 +571,16 @@ export const register = (on) => {
   // md-memory: keep session.md within its cap after every turn (oldest blocks dropped first).
   on('classic.Stop', async ($, e, next) => {
     const r = await next(e)
-    if ((await $.env.get('CW_MEMORY')) === '0') return r
+    if (await isOff($)) return r
+    if ((await $.env.get('CW_MEMORY')) === '0') { const ask = await ponytailClose($, e).catch(() => null); return ask ? { ...r, block: ask } : r }
     const root = await $.session.root().catch(() => null)
     if (!root) return r
     const p = `${root}/${FILES.session}`
     let nudge = null
     try { nudge = await memoryEnd($, e, root) } catch { nudge = null }
     if (nudge) return { ...r, block: nudge }
+    let ask = null
+    try { ask = await ponytailClose($, e) } catch { ask = null }
     const text = await readText($, p)
     const [max, chars] = await sessionCaps($)
     const out = trimSession(text, max, chars)
@@ -519,7 +588,7 @@ export const register = (on) => {
       await $.fs.write(p, out)
       await flush(sink, sink.record('memory', { action: 'trim' }), (p2, b) => $.fs.write(p2, b))
     }
-    return r
+    return ask ? { ...r, block: ask } : r
   }).catch(($, e, next) => next(e))
 
   on('classic.PostToolUseFailure', async ($, e, next) => {

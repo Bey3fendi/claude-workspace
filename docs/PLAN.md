@@ -468,6 +468,18 @@ Phase 3M adds:
   - The footer shows the "context injected this session" list once per session (again only if it changes), and the `/explain HEAD` hint once per session (/explain was run 0 times).
   - The response style fixes the closing order: answer, next step, then one skipped/risk line. "Next: nothing to do, keep typing" stays, because it was right in manual-coding tasks.
   - `session.md` is capped at 12,000 characters as well as 150 lines (`CW_MEMORY_MAX_CHARS`). AgentBridge's 146 lines were 18 KB, loaded at every session start. Bullets: one line, at most 200 characters.
+- 0.16.0, Ponytail active with no `/ponytail-*` command, and a demo mode.
+  - Ponytail's own hooks inject its rules once per session start, and its band writes a ledger row per task. Its closing line was in 16 of 97 answers, and the user never ran one of its commands.
+  - The workspace now repeats the rule per code request (with the contract, or after the first source edit), routes reviews and audits to `ponytail:ponytail-review` and `ponytail:ponytail-audit`, and asks once (classic.Stop `{block}`) for the closing line when code changed without one.
+  - "Active" is taken only from Ponytail's own injected text (`PONYTAIL MODE ACTIVE — level: x`) and the user's `/ponytail <level>` or "stop ponytail".
+  - Evidence: `ponytail` events, a footer line, and `claude-workspace usage` with a ponytail summary and the session's ledger row.
+  - Demo mode: 7 AgentBridge sessions were product runs of Claude. They got the workspace's memory notes and contracts, and the victim agent's answer named a contract skill.
+    - `CW_OFF=1` turns workspace-core off.
+  - Live (Sonnet, scratch project with two bugs; $0.41 in total, Haiku check included):
+    - (a) the gate: 2 edits in one response were held as one. With the first 0.15.0 wording, Claude resent them with no text, so they were held again and released by the limit. The wording now says "your next message must start with visible text, Root cause: …"; on the re-run, 1 hold, then `released: root cause stated`.
+    - (b) a request with no class: the rule arrived after the first source edit. The answer lacked the closing line, it was asked for once, and the next reply carried it.
+    - (c) `CW_OFF=1`: no workspace text in the transcript. Under `CW_OFF` the skill-listing trim was found still running and is now off as well.
+    - Verified live (Haiku, $0.009): `claude --settings '{"enabledPlugins":{…:false}}'` turns all three plugins off for one session (no injections, no event file) while MCP servers still load. `--safe-mode` would turn MCP off too.
 - 0.14.2: the footer marks a claimed skill loaded in an earlier request of the conversation as "loaded earlier this session (#n)" instead of "self-reported only" (user report: a plan continued in a later request); reset by /clear and compaction (`context.reset` event).
 - 0.14.1: the pre-edit hold now opens with "Paused once, not an error" (Claude Code labels any stopped tool call "Error:"; the explanation used to be the last line).
 

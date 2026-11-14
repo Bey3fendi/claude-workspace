@@ -49,9 +49,31 @@ It also includes an optional, disabled-by-default model router.
   - The file is about 90 lines (roughly 1,100 tokens), loaded every session and cached after the first request. When it is imported, workspace-core does not repeat the md-memory rules at session start.
   - The guidelines have no skill call to observe, so the footer can only say they were loaded ("Karpathy guidelines (loaded via CLAUDE.md)"). Judge them by outcomes: diff size, rewrites, questions before code.
 - **Workspace Usage footer:** an engine-verified line under each answer (skills activated, gate holds, pressure advice, Explain checks), shown to you, never sent to the model. Since 0.15.1 the injected-context list and the `/explain HEAD` hint appear once per session, and Claude adds its own one-line "Workspace Usage —" note only when it invoked or skipped a skill.
+- **Ponytail, with no `/ponytail-*` command** (0.16.0). Ponytail's own hooks inject its rules once, at session start; in long sessions they fade. In AgentBridge its closing line was in 16 of 97 answers. Once Ponytail has announced its level ("PONYTAIL MODE ACTIVE — level: full"), workspace-core:
+  - repeats its core rule with the contract of each request that changes code (feature, debug, tests, architecture, review feedback), and for any other request after its first source edit;
+  - sends "review this / review my PR / is this over-engineered" to `ponytail:ponytail-review`, and "audit the repo / what can I delete" to `ponytail:ponytail-audit`;
+  - when a request changed source code and the answer has no closing line (what was skipped or not checked, and any risk), asks for that line once.
+  - `/ponytail lite|full|ultra` and "stop ponytail" are followed.
+
+### Is Ponytail working?
+Check from evidence, not from Claude's word:
+- **Footer:** after a request that changed code it shows `ponytail full: rule repeated, closing line present` (or `missing`).
+- **`claude-workspace usage`:** shows how often its rules were injected, the level, how many answers that changed code carried the closing line, and the session's row from Ponytail's own task ledger (`~/.config/ponytail/band/<project>.csv`: turns, reuse %, new code, tests).
+- `/ponytail-gain` shows Ponytail's benchmark numbers. `/ponytail-debt` lists the `shortcut:` comments it left.
+
+### Demos and product runs: the workspace off for one session
+To run Claude in the project as a plain user would (a demo of your product, for example), turn the three plugins off for that session only. Your MCP servers still load:
+```
+claude --settings '{"enabledPlugins":{"workspace-core@cw-workspace":false,"superpowers@cw-workspace":false,"ponytail@cw-workspace":false}}'
+```
+- `CW_OFF=1 claude` turns off only workspace-core: no memory, contracts, holds, Ponytail driving or footer. Claude sees nothing from it (the skill listing is not trimmed either). The local event log still records the session, marked `off: true`, and the subagent cap stays on.
+- The `CLAUDE.md` import still loads the workspace file (general rules). Use `--no-claude-md` at install if a demo must not see it.
 
 | Switch (environment) | Effect |
 |---|---|
+| `CW_OFF=1` | workspace-core inert for the session (demos, product runs) |
+| `CW_PONYTAIL=0` | the workspace does not drive Ponytail (no repeated rule, no Ponytail skills in review contracts, no closing-line ask); Ponytail's own hooks still run |
+| `CW_PONYTAIL_CLOSE=0` | no closing-line ask only |
 | `CW_CONTRACTS=0` | no contracts (and no compaction restore) |
 | `CW_GATES=0` | no root-cause gate |
 | `CW_CONTEXT_PRESSURE=0` | no context-pressure note |
@@ -79,10 +101,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.15.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.15.1
+npx -y github:Bey3fendi/claude-workspace#v0.16.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.16.0
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.15.1 repair --marketplace Bey3fendi/claude-workspace#v0.15.1
+npx -y github:Bey3fendi/claude-workspace#v0.16.0 repair --marketplace Bey3fendi/claude-workspace#v0.16.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

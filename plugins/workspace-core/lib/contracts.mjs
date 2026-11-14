@@ -5,7 +5,7 @@
 /** Ordered: the first class whose rule matches wins (more specific first). */
 const RULES = [
   ['continue', /\b(continue|pick up|resume|carry on)\b.{0,40}\b(where|from|last|previous|yesterday)\b|\b(last|previous) (session|time)\b|\bwhat did we (decide|do|agree)\b|\bwe (decided|agreed) (earlier|before|previously)\b/i],
-  ['review', /\b(code[- ]?review|review (this|the|my|our|src\/|[\w./-]+\.\w+)|audit (this|the) code|look over (this|the|my) (code|diff|pr|changes)|review (pr|pull request|diff|changes))\b/i],
+  ['review', /\b(code[- ]?review|over-?engineered|what can (i|we) delete|find (the )?bloat|audit (this|the|our) (repo|repository|codebase|project)|review (this|the|my|our|src\/|[\w./-]+\.\w+)|audit (this|the) code|look over (this|the|my) (code|diff|pr|changes)|review (pr|pull request|diff|changes))\b/i],
   ['tests', /\b(write|add|create|improve|increase|missing)\b.{0,40}\b(tests?|test cases?|test coverage|unit tests?|specs?)\b|\btest coverage\b|\b(with|and|plus|including) (unit )?tests\b|\btest[- ]first\b|\bTDD\b/i],
   // "exception" alone is a domain word too ("add a web filter exception"): only a thrown or raised one is a bug.
   ['debug', /\b(bug|fails?|failing|failed|broken|crash(es|ed|ing)?|error|(?:uncaught|unhandled|thrown|throws?|raised?|raises) (?:an? )?exceptions?|exceptions? (?:was |is |gets? )?(?:thrown|raised)|an exception when|traceback|stack ?trace|regression|wrong (result|output|amount|value)|(is|are|was|were|looks?|comes? out|gets?) (wrong|incorrect)|incorrect(ly)?|investigate (why|what|how|the (bug|issue|problem|failure))|doesn'?t work|not working|why (does|is|did)|what'?s going on|negative amount|flaky|intermittent|segfault|hangs?)\b/i],
@@ -33,6 +33,8 @@ const INSTRUCTION = /(?:^|[.!;,\n]\s*|\b(?:please|can you|could you|would you|wi
 const PASTED = /<pasted_content\b[^>]*>[\s\S]*?<\/pasted_content>/gi
 // Feedback from a reviewer to act on: check each finding, fix or justify (receiving-code-review), not a bug hunt.
 const REVIEW_FEEDBACK = /\b(reviewers?|reviews|review (?:comments?|findings?|threads?|feedback)|(?:the|his|her|their|external|pr|code) review (?:is|was) done|findings?|pr comments?)\b/i
+// A whole-repo review (Ponytail's audit) rather than a review of one change.
+const AUDIT = /\b(audit (this|the|our) (repo|repository|codebase|project)|what can (i|we) delete|find (the )?bloat|review the whole (repo|repository|codebase|project))\b/i
 const FEEDBACK_ACT = /\b(check|fix|justif\w*|address|respond|reply|apply|look at|resolve)\b/i
 
 /**
@@ -51,8 +53,8 @@ export function classify(text) {
   const debugRe = RULES.find(([k]) => k === 'debug')[1]
   if (QUESTION.test(t) && !ACTION.test(t) && !debugRe.test(forDebug) && t.length < 200) return { class: 'trivial', reason: 'question' }
   const archRe = RULES.find(([k]) => k === 'architecture')[1]
-  if (t.includes('?') && !INSTRUCTION.test(t) && !debugRe.test(forDebug) && !archRe.test(t) && t.length < 400) return { class: 'trivial', reason: 'question' }
-  if (RULES[1][1].test(t)) return { class: 'review', reason: 'keyword' }
+  if (t.includes('?') && !INSTRUCTION.test(t) && !debugRe.test(forDebug) && !archRe.test(t) && !RULES[1][1].test(t) && t.length < 400) return { class: 'trivial', reason: 'question' }
+  if (RULES[1][1].test(t)) return { class: 'review', reason: AUDIT.test(t) ? 'audit' : 'keyword' }
   if (NEW_BUILD.test(t) && !FIX_FIRST.test(t) && !(BREAK.test(forDebug) && !CREATE.test(t))) {
     return { class: RULES.find(([k]) => k === 'architecture')[1].test(t) ? 'architecture' : 'feature', reason: 'new-build' }
   }
@@ -89,8 +91,8 @@ export const CONTRACTS = {
  * (the contract rode on the prompt, which the summary may drop). `invoked` = skills already loaded this request.
  * `rootCauseStated` keeps the debug step from being asked for twice.
  */
-export function restoreText(cls, { invoked = [], rootCauseStated = false } = {}) {
-  const c = CONTRACTS[cls]
+export function restoreText(cls, { invoked = [], rootCauseStated = false, ponytail = false, reason = null } = {}) {
+  const c = withPonytail(cls, CONTRACTS[cls], ponytail, reason)
   if (!c) return null
   const done = invoked.filter((s) => c.skills.includes(s) || c.then.includes(s))
   const skillLine = done.length ? `You already invoked ${done.join(', ')} for this request; keep following it.`
@@ -100,9 +102,18 @@ export function restoreText(cls, { invoked = [], rootCauseStated = false } = {})
   return `[workspace contract: ${cls}, restored after compaction] Applies to the latest user request until a new one arrives; the user's own instructions take precedence. ${skillLine}${skillLine ? ' ' : ''}Expected: ${outcome}.`
 }
 
+/**
+ * With Ponytail active (0.16.0), a review uses its review skill (an audit, its audit skill): no Superpowers skill
+ * reviews code the user points at, and the developer never has to type /ponytail-review.
+ */
+function withPonytail(cls, c, ponytail, reason) {
+  if (!c || cls !== 'review' || !ponytail) return c
+  return { ...c, skills: [reason === 'audit' ? 'ponytail:ponytail-audit' : 'ponytail:ponytail-review'] }
+}
+
 /** The context block attached to the prompt (never shown to the user). Kept short. */
-export function contractText(cls) {
-  const c = CONTRACTS[cls]
+export function contractText(cls, { ponytail = false, reason = null } = {}) {
+  const c = withPonytail(cls, CONTRACTS[cls], ponytail, reason)
   if (!c) return null
   const first = c.pick ? `invoke the Skill tool with ${c.pick}, and follow it.`
     : c.skills.length ? `invoke the Skill tool with ${c.skills.join(' or ')} and follow it.` : null

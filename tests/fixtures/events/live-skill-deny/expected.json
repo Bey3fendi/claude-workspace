@@ -24,6 +24,7 @@
         "gate": null,
         "pressure": null,
         "explain": null,
+        "ponytail": null,
         "active": [
           "ponytail",
           "superpowers",
@@ -44,12 +45,24 @@
       "out": 163,
       "cacheRead": 38110,
       "cacheWrite": 21220
+    },
+    "ponytail": {
+      "injected": 1,
+      "level": null,
+      "reminded": 0,
+      "closing": {
+        "present": 0,
+        "total": 0
+      },
+      "asked": 0,
+      "tracked": false
     }
   },
   "text": [
     "session 20610b62-74a0-41c9-91aa-3c1fd4e944ea · /home/user/spikes/p1 · headless",
     "models: claude-opus-5-5",
     "#1 Verified by engine: activated karpathy:karpathy-guidelines · denied caveman:lean-build (activation = instructions loaded, not proof they were followed)",
+    "ponytail: rules injected 1× by its hooks · closing line not tracked (recorded before 0.16.0)",
     "tokens: in 6, out 163, cache read 38110, cache write 21220"
   ]
 }
