@@ -108,7 +108,12 @@ test('footer: claims are cross-checked; denied/failed are never "activated"', ()
   assert.equal(t.finish('2 + 2 = 4').footer, null)
   // section present, nothing invoked, nothing claimed: honest "none observed"
   t.turnStart()
-  assert.match(t.finish('done\nWorkspace Usage\n- Not used: brainstorming').footer, /no skill loaded in this request · context injected this session: Caveman · report matches engine events/)
+  // the injected-context list was already shown this session: not repeated
+  assert.match(t.finish('done\nWorkspace Usage\n- Not used: brainstorming').footer, /^Verified by engine: no skill loaded in this request · report matches engine events/)
+  // the one-line form (0.15.1) is parsed too
+  assert.deepEqual(parseUsageSection('ok\n\nWorkspace Usage — Applied: superpowers:writing-plans (M5 plan)').applied, ['superpowers:writing-plans'])
+  assert.deepEqual(parseUsageSection('ok\n**Workspace Usage**: Applied: brainstorming').applied, ['superpowers:brainstorming'])
+  assert.deepEqual(parseUsageSection('ok\nWorkspace Usage — Skipped: superpowers:systematic-debugging (not a bug)').applied, [])
   // activation not mentioned in the report is flagged too
   t.turnStart(); t.skillPrompt('superpowers:brainstorming')
   assert.match(t.finish('x\nWorkspace Usage\n- Applied: none').footer, /activated but not reported: superpowers:brainstorming/)

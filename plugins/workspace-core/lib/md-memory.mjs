@@ -9,6 +9,8 @@
 export const MEMORY_DIR = '.memory'
 export const FILES = { session: `${MEMORY_DIR}/session.md`, context: `${MEMORY_DIR}/context.md`, decisions: `${MEMORY_DIR}/decisions.md` }
 export const DEFAULT_MAX_LINES = 150
+// Characters too: long lines made a 146-line log 18 KB, about 5k tokens at every session start (AgentBridge 2026-11).
+export const DEFAULT_MAX_CHARS = 12000
 // Not under .claude/: Claude Code treats every file there as sensitive and asks before each edit (and a
 // headless run can never write it), whatever the allow rules say. Outside it, this one rule suffices.
 export const MEMORY_ALLOWS = [`Edit(${MEMORY_DIR}/**)`] // Edit(path) covers every file-editing tool; Write(path) rules are never matched
@@ -17,7 +19,7 @@ export const MEMORY_ALLOWS = [`Edit(${MEMORY_DIR}/**)`] // Edit(path) covers eve
 export const MEMORY_RULES = [
   '[md-memory] Project memory lives in .memory/ (plain markdown, committed with the project).',
   '- session.md is loaded automatically at start, after /clear and after /compact.',
-  '- After each verified unit of work, append a block to the BOTTOM of session.md (format is in its header). Keep it short: the file is capped and the oldest blocks are dropped. If a request changes files and you write no block, the workspace appends a facts-only one (files, last check); yours is better, since only you know the goal and the next step.',
+  '- After each verified unit of work, append a block to the BOTTOM of session.md (format is in its header). Keep it short: one line per bullet, at most 200 characters; the file is capped (lines and characters) and the oldest blocks are dropped. If a request changes files and you write no block, the workspace appends a facts-only one (files, last check); yours is better, since only you know the goal and the next step.',
   '- When you recommend /clear or /compact, first write the handoff into session.md (not into the chat), then tell the user to run the command. Nothing needs to be pasted back.',
   '- A durable fact about a module goes in context.md; a choice and its reason goes in decisions.md. Every section there needs `<!-- paths: glob, glob -->` or it is never loaded.',
   '- Do not read context.md or decisions.md in full; the relevant sections are injected when you read a matching file, or returned instead of applying your first edit to it, before anything changes.',
@@ -108,20 +110,22 @@ export function appendBlock(text, block) {
   return t + (t.endsWith('\n') || !t ? '' : '\n') + '\n' + block + '\n'
 }
 
-/** Keep at most maxLines lines, dropping the oldest "## " blocks (the header stays). */
-export function trimSession(text, maxLines = DEFAULT_MAX_LINES) {
+/** Keep at most maxLines lines and maxChars characters, dropping the oldest "## " blocks (the header stays). */
+export function trimSession(text, maxLines = DEFAULT_MAX_LINES, maxChars = DEFAULT_MAX_CHARS) {
   const t = String(text ?? '')
   if (!t) return t
   const parts = t.split(/^(?=## )/m)
   const header = parts[0].startsWith('## ') ? '' : parts.shift()
   const count = (s) => s.split('\n').length - 1
-  while (parts.length > 1 && count(header + parts.join('')) > maxLines) parts.shift()
+  const over = () => count(header + parts.join('')) > maxLines || (header + parts.join('')).length > maxChars
+  while (parts.length > 1 && over()) parts.shift()
   let out = header + parts.join('')
   if (count(out) > maxLines) out = out.split('\n').slice(0, maxLines).join('\n') + '\n'
   return out
 }
 
 export const maxLinesFrom = (v) => (/^\d+$/.test(String(v ?? '')) && Number(v) > 0 ? Number(v) : DEFAULT_MAX_LINES)
+export const maxCharsFrom = (v) => (/^\d+$/.test(String(v ?? '')) && Number(v) >= 1000 ? Number(v) : DEFAULT_MAX_CHARS)
 
 /** Local time as YYYY-MM-DD HH:MM. */
 export const stampOf = (d = new Date()) => d.toLocaleString('sv-SE').slice(0, 16)
@@ -131,7 +135,7 @@ export const TEMPLATES = {
   session: [
     '# Session log',
     '',
-    `Rolling log, max ${DEFAULT_MAX_LINES} lines; the oldest blocks are dropped automatically. Newest block goes at the BOTTOM.`,
+    `Rolling log, max ${DEFAULT_MAX_LINES} lines and ${DEFAULT_MAX_CHARS} characters; the oldest blocks are dropped automatically. Newest block goes at the BOTTOM.`,
     'One block per session or per verified unit of work. Format:',
     '',
     '  ## YYYY-MM-DD HH:MM · short title',

@@ -29,6 +29,8 @@
           "superpowers",
           "caveman"
         ],
+        "showActive": true,
+        "explainHint": false,
         "reportPresent": true,
         "claimed": [
           "superpowers:systematic-debugging",
@@ -55,6 +57,8 @@
           "superpowers",
           "caveman"
         ],
+        "showActive": false,
+        "explainHint": false,
         "reportPresent": false,
         "claimed": [],
         "claimedEarlier": [],
@@ -76,6 +80,8 @@
           "superpowers",
           "caveman"
         ],
+        "showActive": false,
+        "explainHint": false,
         "reportPresent": false,
         "claimed": [],
         "claimedEarlier": [],
@@ -97,6 +103,8 @@
           "superpowers",
           "caveman"
         ],
+        "showActive": false,
+        "explainHint": false,
         "reportPresent": false,
         "claimed": [],
         "claimedEarlier": [],

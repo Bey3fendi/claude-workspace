@@ -29,6 +29,8 @@
           "superpowers",
           "claudeMem"
         ],
+        "showActive": true,
+        "explainHint": false,
         "reportPresent": false,
         "claimed": [],
         "claimedEarlier": [],

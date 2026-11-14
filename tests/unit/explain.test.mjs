@@ -129,6 +129,9 @@ test('footer: explain lines are engine evidence', () => {
   assert.match(t.finish('').footer, /explain u-0002: 6\/8 checks \(failed: coverage, length\)/)
   t.turnStart(); t.explain({ commit: true })
   assert.match(t.finish('').footer, /commit made: \/explain HEAD explains it/)
+  // once per session (AgentBridge: shown after every commit, /explain used 0 times)
+  t.turnStart(); t.explain({ commit: true })
+  assert.equal(t.finish('').footer, null)
 })
 
 test('install wiring: .explain/ ignored, writes allowed, skill run by the developer only', () => {

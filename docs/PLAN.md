@@ -463,6 +463,11 @@ Phase 3M adds:
   - after: feature 12, debug 5, trivial 21, review-feedback 6, none 54.
   - The fixes: `<pasted_content>` is stripped first; a `?` question with no instruction is trivial (design questions stay architecture); "exception" counts only when thrown or raised ("add a web filter exception" was debug, in a demo session); a new `review-feedback` class covers "reviewer… check, fix or justify".
   - Found on the way: `ACTION` has held a stray backspace byte since Phase 3 step 1 and never matched, so action verbs never kept a "what/how…" prompt out of `trivial`.
+- 0.15.1, the answer endings. Answers closed with up to 4 trailing blocks:
+  - Claude's own "Workspace Usage" section (43 of 97 answers, 3 bullets) is now one line ("Workspace Usage — Applied: … (why)"), written only when a skill was invoked or a contract's skill skipped. The parser reads both forms.
+  - The footer shows the "context injected this session" list once per session (again only if it changes), and the `/explain HEAD` hint once per session (/explain was run 0 times).
+  - The response style fixes the closing order: answer, next step, then one skipped/risk line. "Next: nothing to do, keep typing" stays, because it was right in manual-coding tasks.
+  - `session.md` is capped at 12,000 characters as well as 150 lines (`CW_MEMORY_MAX_CHARS`). AgentBridge's 146 lines were 18 KB, loaded at every session start. Bullets: one line, at most 200 characters.
 - 0.14.2: the footer marks a claimed skill loaded in an earlier request of the conversation as "loaded earlier this session (#n)" instead of "self-reported only" (user report: a plan continued in a later request); reset by /clear and compaction (`context.reset` event).
 - 0.14.1: the pre-edit hold now opens with "Paused once, not an error" (Claude Code labels any stopped tool call "Error:"; the explanation used to be the last line).
 

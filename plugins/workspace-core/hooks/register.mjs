@@ -16,7 +16,7 @@ import { executionNote } from '../lib/execution.mjs'
 import { capRequest } from '../lib/subagent-cap.mjs'
 import { EXPLAIN_DIR, UNIT_RE, buildRecord, citedPaths, exitFrom, feedbackText, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
 import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
-import { FILES, NUDGE_TEXT, appendBlock, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, preEditText, requestTitle, shouldNudge, maxLinesFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
+import { FILES, NUDGE_TEXT, appendBlock, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, preEditText, requestTitle, shouldNudge, maxLinesFrom, maxCharsFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
@@ -40,6 +40,10 @@ const SOURCE_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
 // commands start, the memory headings at its start, and whether it was logged / nudged already.
 const freshMem = (o = {}) => ({ edited: [], wrote: { session: false, decisions: false, context: false }, cmdStart: ex.commands.length, heads: { decisions: [], context: [] }, sessionAt: null, gitAt: null, title: '', logged: false, nudged: false, ...o })
 let req = { class: null, text: '', denies: 0, released: false, gates: true, contracts: true, skills: [], mem: freshMem() }
+// session.md caps: lines (CW_MEMORY_MAX_LINES, legacy MD_MEMORY_MAX_LINES) and characters (CW_MEMORY_MAX_CHARS).
+async function sessionCaps($) {
+  return [maxLinesFrom((await $.env.get('CW_MEMORY_MAX_LINES')) ?? (await $.env.get('MD_MEMORY_MAX_LINES'))), maxCharsFrom(await $.env.get('CW_MEMORY_MAX_CHARS'))]
+}
 const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
 
@@ -492,8 +496,8 @@ export const register = (on) => {
     if (!root) return r
     const git = async (argv) => { try { const x = await $.process.run(['git', ...argv], { cwd: root }); return x.exitCode === 0 ? x.stdout.trim() : '' } catch { return '' } }
     const block = snapshotBlock({ stamp: stampOf(), trigger: e.trigger, lastCommit: await git(['log', '-1', '--format=%h %s']), porcelain: await git(['status', '--porcelain']) })
-    const max = maxLinesFrom((await $.env.get('CW_MEMORY_MAX_LINES')) ?? (await $.env.get('MD_MEMORY_MAX_LINES')))
-    await $.fs.write(`${root}/${FILES.session}`, trimSession(appendBlock(await readText($, `${root}/${FILES.session}`), block), max))
+    const [max, chars] = await sessionCaps($)
+    await $.fs.write(`${root}/${FILES.session}`, trimSession(appendBlock(await readText($, `${root}/${FILES.session}`), block), max, chars))
     await flush(sink, sink.record('memory', { action: 'snapshot' }), (p, b) => $.fs.write(p, b))
     return r
   }).catch(($, e, next) => next(e))
@@ -509,8 +513,8 @@ export const register = (on) => {
     try { nudge = await memoryEnd($, e, root) } catch { nudge = null }
     if (nudge) return { ...r, block: nudge }
     const text = await readText($, p)
-    const max = maxLinesFrom((await $.env.get('CW_MEMORY_MAX_LINES')) ?? (await $.env.get('MD_MEMORY_MAX_LINES')))
-    const out = trimSession(text, max)
+    const [max, chars] = await sessionCaps($)
+    const out = trimSession(text, max, chars)
     if (text && out !== text) {
       await $.fs.write(p, out)
       await flush(sink, sink.record('memory', { action: 'trim' }), (p2, b) => $.fs.write(p2, b))

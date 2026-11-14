@@ -48,7 +48,7 @@ It also includes an optional, disabled-by-default model router.
   - **Response style (ADHD-friendly)**, on by default: answer first, short sentences, steps for anything with more than two parts, commands in one block, and a closing line with what you do next. It is an instruction to Claude, not something the workspace can check. `--no-response-style` leaves it out; repair keeps the choice; `--response-style` puts it back.
   - The file is about 90 lines (roughly 1,100 tokens), loaded every session and cached after the first request. When it is imported, workspace-core does not repeat the md-memory rules at session start.
   - The guidelines have no skill call to observe, so the footer can only say they were loaded ("Karpathy guidelines (loaded via CLAUDE.md)"). Judge them by outcomes: diff size, rewrites, questions before code.
-- **Workspace Usage footer:** an engine-verified line under each answer (skills activated, gate holds, pressure advice, Explain checks), shown to you, never sent to the model.
+- **Workspace Usage footer:** an engine-verified line under each answer (skills activated, gate holds, pressure advice, Explain checks), shown to you, never sent to the model. Since 0.15.1 the injected-context list and the `/explain HEAD` hint appear once per session, and Claude adds its own one-line "Workspace Usage —" note only when it invoked or skipped a skill.
 
 | Switch (environment) | Effect |
 |---|---|
@@ -59,6 +59,7 @@ It also includes an optional, disabled-by-default model router.
 | `CW_LISTING_TRIM=0` | keep denied skills in the model-facing listing |
 | `CW_MEMORY=0` | no md-memory (nothing loaded, injected, snapshotted or trimmed) |
 | `CW_MEMORY_MAX_LINES=300` | session.md cap (default 150) |
+| `CW_MEMORY_MAX_CHARS=20000` | session.md character cap (default 12000) |
 | `CW_MEMORY_PREEDIT=0` | notes arrive only with a read, never in place of a first edit |
 | `CW_MEMORY_AUTOLOG=0` | no facts-only block at the end of a request |
 | `CW_MEMORY_NUDGE=0` | no end-of-request request to record a design step's decisions |
@@ -78,10 +79,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.15.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.15.0
+npx -y github:Bey3fendi/claude-workspace#v0.15.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.15.1
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.15.0 repair --marketplace Bey3fendi/claude-workspace#v0.15.0
+npx -y github:Bey3fendi/claude-workspace#v0.15.1 repair --marketplace Bey3fendi/claude-workspace#v0.15.1
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

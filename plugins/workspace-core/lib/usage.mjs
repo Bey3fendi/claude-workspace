@@ -9,15 +9,16 @@
 //     and compaction) is "loaded earlier", with that request's number, not "self-reported only".
 
 /** System-prompt section (cached, steady). Keep it short: it is the only token cost of reporting. */
+// Since 0.15.1 one line, and only when there is something to say (AgentBridge: a 3-bullet section closed 43 of
+// 97 answers, next to the engine footer).
 export const USAGE_INSTRUCTION = [
-  'After substantive dev work (code, debugging, design, review, tests), end with "Workspace Usage" (main conversation only, ≤3 bullets):',
-  '- Applied: skills invoked via the Skill tool, full id + why',
-  '- Active: integrations that actually shaped this task',
-  '- Not used: relevant skills skipped (optional)',
-  'List only skills you invoked; installed ≠ applied. Skip for trivial questions. The engine adds a verified line.',
+  'Only when this request invoked a skill via the Skill tool, or skipped one a workspace contract named, end with one line (main conversation only):',
+  '"Workspace Usage — Applied: <full skill id> (why)" or "Workspace Usage — Skipped: <skill id> (why)".',
+  'List only skills you invoked; installed ≠ applied. Otherwise no such line. The engine adds a verified line.',
 ].join('\n')
 
-const SECTION_RE = /(?:^|\n)\s*(?:#{1,6}\s*|\*\*)?Workspace Usage\b[^\n]*\n([\s\S]*)$/i
+// The one-line form ("Workspace Usage — Applied: …") and the older heading-plus-bullets form.
+const SECTION_RE = /(?:^|\n)[ \t]*(?:#{1,6}[ \t]*|\*\*)?Workspace Usage\b\**[ \t]*[—:–-]?[ \t]*([\s\S]*)$/i
 const ID_RE = /\b([a-z0-9][a-z0-9-]*:[a-z0-9][a-z0-9-]*)\b/g
 
 /** Bare skill names the model may write without a plugin prefix. */
@@ -47,7 +48,8 @@ export function parseUsageSection(answer) {
 /** Per-request tracker; session-level integration activity survives requests. */
 export function createTracker() {
   // loaded: skill → number of the request that loaded it (this conversation; reset by /clear and compaction)
-  const session = { active: new Set(), loaded: new Map(), n: 0 }
+  // shown: what the footer already said this session (the injected-context list, the /explain HEAD hint).
+  const session = { active: new Set(), loaded: new Map(), n: 0, shown: { active: null, explainHint: false } }
   let req = null
   const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null, pressure: null, explain: null })
   return {
@@ -80,8 +82,10 @@ export function createTracker() {
       req = null
       session.n++
       const section = claimedOverride ? { present: true, applied: claimedOverride } : parseUsageSection(answer)
-      const s = summarize(r, section, [...session.active], session.loaded)
+      const s = summarize(r, section, [...session.active], session.loaded, session.shown)
       for (const k of s.activated) session.loaded.set(k, session.n)
+      if (s.footer && s.reportPresent && s.showActive) session.shown.active = s.active.join(',')
+      if (s.footer && s.explainHint) session.shown.explainHint = true
       return s
     },
     /** /clear or compaction: skills loaded before it are no longer known to be in context. */
@@ -90,21 +94,26 @@ export function createTracker() {
   }
 }
 
-export function summarize(r, section, active, earlier = new Map()) {
+/** `shown`: what this session's footer already said; omitted (pure use, golden fixtures) = nothing yet. */
+export function summarize(r, section, active, earlier = new Map(), shown = { active: null, explainHint: false }) {
   const failed = [...r.failed].filter((s) => !r.denied.has(s)), denied = [...r.denied].filter((s) => !r.activated.has(s))
   const activated = [...r.activated].filter((s) => !failed.includes(s))
   const matches = (claim) => activated.includes(claim)
   const claimedEarlier = section.applied.filter((c) => !matches(c) && earlier.has(c)).map((c) => ({ skill: c, n: earlier.get(c) }))
   const claimedNotObserved = section.applied.filter((c) => !matches(c) && !earlier.has(c))
   const observedNotClaimed = section.present ? activated.filter((s) => !section.applied.includes(s)) : []
-  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, active, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
+  // The injected-context list once per session (and when it changes); the /explain HEAD hint once per session.
+  const showActive = active.length > 0 && shown.active !== active.join(',')
+  const explainHint = !!r.explain?.commit && !shown.explainHint
+  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, active, showActive, explainHint, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
   return { ...evidence, footer: renderFooter(evidence) }
 }
 
 const short = (id) => id.replace(/^andrej-karpathy-skills:/, 'karpathy:')
 
 export function renderFooter(e) {
-  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain) return null
+  const hint = e.explainHint ?? true // pure calls without session state keep the hint
+  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain?.unit && !(e.explain?.commit && hint)) return null
   const parts = []
   parts.push(e.activated.length ? `activated ${e.activated.map(short).join(', ')}` : 'no skill loaded in this request')
   if (e.denied.length) parts.push(`denied ${e.denied.map(short).join(', ')}`)
@@ -120,9 +129,9 @@ export function renderFooter(e) {
     parts.push(x.total === undefined ? `explain ${x.unit}: record captured, no file written`
       : `explain ${x.unit}: ${x.passed}/${x.total} checks${x.failedRules?.length ? ` (failed: ${x.failedRules.join(', ')})` : ''}`)
   }
-  if (e.explain?.commit) parts.push('commit made: /explain HEAD explains it')
+  if (e.explain?.commit && hint) parts.push('commit made: /explain HEAD explains it')
   if (e.reportPresent) {
-    if (e.active.length) parts.push(`context injected this session: ${e.active.map((k) => INTEGRATIONS[k]).join(', ')}`)
+    if (e.active.length && (e.showActive ?? true)) parts.push(`context injected this session: ${e.active.map((k) => INTEGRATIONS[k]).join(', ')}`)
     if (e.claimedEarlier?.length) parts.push(`loaded earlier this session: ${e.claimedEarlier.map((x) => `${short(x.skill)} (#${x.n})`).join(', ')}`)
     if (e.claimedNotObserved.length) parts.push(`self-reported only (no engine event): ${e.claimedNotObserved.map(short).join(', ')}`)
     if (e.observedNotClaimed.length) parts.push(`activated but not reported: ${e.observedNotClaimed.map(short).join(', ')}`)

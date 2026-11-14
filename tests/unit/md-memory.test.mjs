@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { TEMPLATES, globToRegex, splitGlobs, parseSections, relPath, matchSections, trimSession, snapshotBlock, appendBlock, maxLinesFrom, sessionStartText, requestTitle, headingsOf, autoBlock, shouldNudge, preEditText, changedFiles, checkLine } from '../../plugins/workspace-core/lib/md-memory.mjs'
+import { TEMPLATES, globToRegex, splitGlobs, parseSections, relPath, matchSections, trimSession, snapshotBlock, appendBlock, maxLinesFrom, maxCharsFrom, sessionStartText, requestTitle, headingsOf, autoBlock, shouldNudge, preEditText, changedFiles, checkLine } from '../../plugins/workspace-core/lib/md-memory.mjs'
 
 test('globs: **, *, ?, {a,b}', () => {
   const m = (g, p) => globToRegex(g).test(p)
@@ -92,4 +92,13 @@ test('changedFiles: tool edits plus new or changed git entries, memory files exc
   assert.deepEqual(changedFiles(['src/t.js'], before, after), ['src/t.js', 'notes.txt', 'src/new.js', 'src/y.js'])
   assert.deepEqual(changedFiles([], null, ''), [])
   assert.equal(checkLine("cat >> .memory/session.md <<'EOF'\nnode --test\nEOF"), 'cat >> .memory/session.md <<\'EOF\'')
+})
+
+test('session.md is capped by characters too (AgentBridge: 146 lines were 18 KB)', () => {
+  const long = 'x'.repeat(280)
+  const blocks = Array.from({ length: 45 }, (_, i) => `## b${i}\n- ${long}\n`).join('\n')
+  const out = trimSession('# H\n\n' + blocks, 150, 12000)
+  assert.ok(out.length <= 12000, String(out.length)); assert.match(out, /## b44/); assert.doesNotMatch(out, /## b0\n/)
+  assert.ok(out.split('\n').length - 1 <= 150)
+  assert.equal(maxCharsFrom('20000'), 20000); assert.equal(maxCharsFrom('5'), 12000); assert.equal(maxCharsFrom(undefined), 12000)
 })
