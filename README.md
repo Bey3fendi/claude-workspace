@@ -17,8 +17,8 @@ It also includes an optional, disabled-by-default model router.
 **Start here:** [`WORKSPACE_DEVELOPER_GUIDE.md`](WORKSPACE_DEVELOPER_GUIDE.md) is the step-by-step playbook for new and existing projects, with every flag and switch. [`WORKSPACE_TEST_REPORT.md`](WORKSPACE_TEST_REPORT.md) is the latest validation round (2026-11-11: ready with limitations).
 
 ## What workspace-core adds to every session
-- **Workflow contracts:** a local keyword classifier attaches a short contract to each request (debug → systematic-debugging, feature → brainstorming, tests → TDD or verification, …). Measured: activation 20/20 vs 0/51 without. A ticket to build something new ("new app", "from scratch", a user story) is a feature even when it mentions tests or error messages; real breakage stays debug (0.12.2). English only.
-- **Root-cause gate:** in a debug request, the first source edit is held until Claude states a root cause (max 2 holds per request; tests and docs are never held).
+- **Workflow contracts:** a local keyword classifier attaches a short contract to each request (debug → systematic-debugging, feature → brainstorming, tests → TDD or verification, …). Measured: activation 20/20 vs 0/51 without. A ticket to build something new ("new app", "from scratch", a user story) is a feature even when it mentions tests or error messages; real breakage stays debug (0.12.2). Since 0.15.0 only your own words count (pasted output is ignored), questions get no contract, "exception" alone is not a bug word, and reviewer feedback ("check the review, fix or justify") gets `superpowers:receiving-code-review`. English only.
+- **Root-cause gate:** in a debug request, the first source edit is held until Claude states a root cause (max 2 holds per request, counted per response, so edits sent together are one hold; only source code is held, never tests, docs, logs or data).
 - **Compaction restore:** after a compaction, the request's contract is re-attached (noting what is already done).
 - **Context pressure:** past 300K tokens of context, Claude is asked to recommend **CLEAR** or **COMPACT** at the next natural stopping point, and to append a cold-start handoff to `.memory/session.md` first. Nothing has to be pasted back: the next session loads it.
 - **md-memory:**
@@ -78,10 +78,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.14.2 install --yes --marketplace Bey3fendi/claude-workspace#v0.14.2
+npx -y github:Bey3fendi/claude-workspace#v0.15.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.15.0
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.14.2 repair --marketplace Bey3fendi/claude-workspace#v0.14.2
+npx -y github:Bey3fendi/claude-workspace#v0.15.0 repair --marketplace Bey3fendi/claude-workspace#v0.15.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

@@ -277,6 +277,7 @@ export const register = (on) => {
       const w = sink.record('turn.step', { turnId: e.turnId, index: e.index, model: e.model, effort: e.effort ?? null })
       await flush(sink, w, (p, b) => $.fs.write(p, b))
       st.model = e.model; st.effort = e.effort ?? null; $.ui.status(statusText())
+      req.step = `${e.turnId}:${e.index}` // the root-cause gate counts holds per step
       // Collect visible text as it streams (debug: a tool call later in the same response sees it), and the
       // request's usage from its stop chunk (context pressure).
       const debug = req.class === 'debug'
@@ -316,9 +317,9 @@ export const register = (on) => {
     if (!req.gates || req.class !== 'debug') return after(await next(e))
     const d = decide(req, e)
     if (d.action === 'deny') {
-      req.denies++
-      tracker.gate('deny')
-      await flush(sink, sink.record('gate', { gate: 'root-cause', action: 'deny', tool: e.tool, n: req.denies }), (p, b) => $.fs.write(p, b))
+      // The edits of one model step are one hold: only the first is counted (sameStep marks the rest).
+      if (!d.sameStep) { req.denies++; req.deniedStep = req.step; tracker.gate('deny') }
+      await flush(sink, sink.record('gate', { gate: 'root-cause', action: 'deny', tool: e.tool, n: req.denies, ...(d.sameStep ? { sameStep: true } : {}) }), (p, b) => $.fs.write(p, b))
       return { deny: denyText(d.file) }
     }
     if (d.reason && !req.released && e.agentId === undefined) {

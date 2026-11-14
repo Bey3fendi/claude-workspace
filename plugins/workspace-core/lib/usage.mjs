@@ -112,7 +112,7 @@ export function renderFooter(e) {
   if (e.gate?.held) {
     const how = e.gate.released === 'root cause stated' ? ' until a root cause was stated'
       : e.gate.released === 'gate limit reached' ? ', then let it through (limit reached)' : ''
-    parts.push(`root-cause gate held ${e.gate.held} edit${e.gate.held > 1 ? 's' : ''}${how}`)
+    parts.push(`root-cause gate held edits ${e.gate.held === 1 ? 'once' : `${e.gate.held} times`}${how}`)
   }
   if (e.pressure) parts.push(`context ~${Math.round(e.pressure / 1000)}K: /clear-or-/compact advice attached`)
   if (e.explain?.unit) {
@@ -145,7 +145,7 @@ export function replay(rows) {
       case 'context.reset': t.contextReset(); break
       case 'skill.loaded': t.skillLoaded(e.skill); break
       case 'skill.failed': t.skillFailed(e.skill); break
-      case 'gate': t.gate(e.action, e.reason); break
+      case 'gate': if (!e.sameStep) t.gate(e.action, e.reason); break
       case 'pressure': pendingPressure = e.tokens; break
       case 'explain':
         if (e.action === 'record' && e.unit) t.explain({ unit: e.unit, files: e.files })

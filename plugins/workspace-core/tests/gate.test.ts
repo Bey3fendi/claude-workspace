@@ -45,6 +45,23 @@ test('non-debug request: edits are never held', async ($, on) => {
   expect((r as any).deny).toBeUndefined()
 })
 
+const step = async ($: any, index: number, text = '') => {
+  reply = text
+  for await (const _c of $.turn.step({ turnId: 't2', index, model: 'claude-opus-5-5', messageCount: 1 })) { /* drain */ }
+}
+
+test('edits sent together in one step are one hold; the next step gets its turn (AgentBridge 2026-11)', async ($, on) => {
+  engine(on)
+  await ask($, 'The checkout crashes with a TypeError. Fix it.')
+  await step($, 0)
+  for (let i = 0; i < 5; i++) expect(typeof ((await $.tool.call(EDIT as any)) as any).deny).toBe('string')
+  await step($, 1) // still no root cause: the second (last) hold
+  expect(typeof ((await $.tool.call(EDIT as any)) as any).deny).toBe('string')
+  expect(typeof ((await $.tool.call(EDIT as any)) as any).deny).toBe('string')
+  await step($, 2, 'Root cause: src/cart.js:5 reads cart.items before it is set, so the TypeError.')
+  expect(((await $.tool.call(EDIT as any)) as any).deny).toBeUndefined()
+})
+
 test('the gate gives up after two holds in one request', async ($, on) => {
   engine(on)
   await ask($, 'The checkout crashes with a TypeError. Fix it.')

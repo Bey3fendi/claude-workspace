@@ -7,7 +7,8 @@ const RULES = [
   ['continue', /\b(continue|pick up|resume|carry on)\b.{0,40}\b(where|from|last|previous|yesterday)\b|\b(last|previous) (session|time)\b|\bwhat did we (decide|do|agree)\b|\bwe (decided|agreed) (earlier|before|previously)\b/i],
   ['review', /\b(code[- ]?review|review (this|the|my|our|src\/|[\w./-]+\.\w+)|audit (this|the) code|look over (this|the|my) (code|diff|pr|changes)|review (pr|pull request|diff|changes))\b/i],
   ['tests', /\b(write|add|create|improve|increase|missing)\b.{0,40}\b(tests?|test cases?|test coverage|unit tests?|specs?)\b|\btest coverage\b|\b(with|and|plus|including) (unit )?tests\b|\btest[- ]first\b|\bTDD\b/i],
-  ['debug', /\b(bug|fails?|failing|failed|broken|crash(es|ed|ing)?|error|exception|stack ?trace|regression|wrong (result|output|amount|value)|(is|are|was|were|looks?|comes? out|gets?) (wrong|incorrect)|incorrect(ly)?|investigate (why|what|how|the (bug|issue|problem|failure))|doesn'?t work|not working|why (does|is|did)|what'?s going on|negative amount|flaky|intermittent|segfault|hangs?)\b/i],
+  // "exception" alone is a domain word too ("add a web filter exception"): only a thrown or raised one is a bug.
+  ['debug', /\b(bug|fails?|failing|failed|broken|crash(es|ed|ing)?|error|(?:uncaught|unhandled|thrown|throws?|raised?|raises) (?:an? )?exceptions?|exceptions? (?:was |is |gets? )?(?:thrown|raised)|an exception when|traceback|stack ?trace|regression|wrong (result|output|amount|value)|(is|are|was|were|looks?|comes? out|gets?) (wrong|incorrect)|incorrect(ly)?|investigate (why|what|how|the (bug|issue|problem|failure))|doesn'?t work|not working|why (does|is|did)|what'?s going on|negative amount|flaky|intermittent|segfault|hangs?)\b/i],
   ['architecture', /\b(architect(ure)?|design (a|an|the)|propose (a|an) design|restructure|refactor (the|this) (whole|entire|library|module|codebase)|pluggable|how should we (structure|organi[sz]e|design|restructure)|support multiple)\b/i],
   ['feature', /\b(add|implement|build|create|introduce|support for|let'?s add|we need|i want)\b.{0,60}\b(feature|support|option|command|endpoint|function|promotion|mode|button|page|screen|gift cards?|setting|level|block|power-?up|\w+)\b/i],
 ]
@@ -23,21 +24,34 @@ const FIX_FIRST = /^\s*(please\s+)?(fix|debug|investigate|diagnose|troubleshoot)
 const ASKED_ERROR = /\b(error|exception)s? (message|messages|handling|handler|page|state|toast|banner|code|codes|response|responses|dialog)\b|\b(show|shows|display|displays|throw|throws|raise|raises|return|returns|log|logs|handle|handles|surface|surfaces)( an?| the| a clear| a friendly| proper)? (error|exception)s?\b/gi
 
 const QUESTION =/^\s*(what|which|where|who|when|how (many|much|do i|does)|does|do|is|are|can you (tell|explain|show)|explain|show me)\b/i
-const ACTION = /\b(add|implement|fix|change|refactor|write|create|update|remove|delete|rename|migrate|design|review|debug|investigate)\b/i
+const ACTION = /\b(add|implement|fix|change|refactor|write|create|update|remove|delete|rename|migrate|design|review|debug|investigate)\b/i
+// A request phrased as a question ("two questions, is X optional?", "how should it look?") is a question unless it
+// also gives an instruction: an action verb starting a sentence or after "please", "can you", "let's" (AgentBridge
+// 2026-11: such questions were sent to debug or feature).
+const INSTRUCTION = /(?:^|[.!;,\n]\s*|\b(?:please|can you|could you|would you|will you|can we|could we|shall we|let'?s|lets|go ahead and|now|and|then|afterwards|first|yes)\s+)(?:add|implement|fix|change|refactor|write|create|update|remove|delete|rename|migrate|design|review|debug|investigate|build|make|run|open|push|merge|commit|install|do the|start|continue|keep going)\b/i
+// Pasted material (terminal output, review text, logs) is not the user's request; classify the user's own words.
+const PASTED = /<pasted_content\b[^>]*>[\s\S]*?<\/pasted_content>/gi
+// Feedback from a reviewer to act on: check each finding, fix or justify (receiving-code-review), not a bug hunt.
+const REVIEW_FEEDBACK = /\b(reviewers?|reviews|review (?:comments?|findings?|threads?|feedback)|(?:the|his|her|their|external|pr|code) review (?:is|was) done|findings?|pr comments?)\b/i
+const FEEDBACK_ACT = /\b(check|fix|justif\w*|address|respond|reply|apply|look at|resolve)\b/i
 
 /**
  * Classify a user prompt. Returns { class, rule } or { class: null } when no contract applies.
  * Trivial = a short informational question with no action verb; never gets a contract.
  */
 export function classify(text) {
-  const t = String(text ?? '').trim()
-  if (!t || t.startsWith('/')) return { class: null, reason: 'empty-or-command' }
-  if (t.length < 12) return { class: null, reason: 'too-short' }
+  const raw = String(text ?? '').trim()
+  if (!raw || raw.startsWith('/')) return { class: null, reason: 'empty-or-command' }
+  const t = raw.replace(PASTED, ' ').replace(/\s+/g, ' ').trim()
+  if (t.length < 12) return { class: null, reason: t === raw ? 'too-short' : 'paste-only' }
   if (RULES[0][1].test(t)) return { class: 'continue', reason: "keyword" }
+  if (REVIEW_FEEDBACK.test(t) && FEEDBACK_ACT.test(t)) return { class: 'review-feedback', reason: 'keyword' }
   // When the request asks for something to be built, error behaviour it describes is a requirement, not a bug.
   const forDebug = CREATE.test(t) ? t.replace(ASKED_ERROR, ' ') : t
   const debugRe = RULES.find(([k]) => k === 'debug')[1]
   if (QUESTION.test(t) && !ACTION.test(t) && !debugRe.test(forDebug) && t.length < 200) return { class: 'trivial', reason: 'question' }
+  const archRe = RULES.find(([k]) => k === 'architecture')[1]
+  if (t.includes('?') && !INSTRUCTION.test(t) && !debugRe.test(forDebug) && !archRe.test(t) && t.length < 400) return { class: 'trivial', reason: 'question' }
   if (RULES[1][1].test(t)) return { class: 'review', reason: 'keyword' }
   if (NEW_BUILD.test(t) && !FIX_FIRST.test(t) && !(BREAK.test(forDebug) && !CREATE.test(t))) {
     return { class: RULES.find(([k]) => k === 'architecture')[1].test(t) ? 'architecture' : 'feature', reason: 'new-build' }
@@ -60,6 +74,7 @@ export const CONTRACTS = {
   architecture: { skills: ['superpowers:brainstorming'], then: ['superpowers:writing-plans'], outcome: `explore options and trade-offs before proposing code; ${RECORD}` },
   // No Superpowers skill reviews code the user points at (requesting-code-review is for one's own work).
   review: { skills: [], then: [], outcome: 'read the code and its tests, then report findings by severity with file:line evidence; say what you did not check' },
+  'review-feedback': { skills: ['superpowers:receiving-code-review'], then: [], outcome: 'check each finding against the code; fix the valid ones, give the reason for each one you reject' },
   tests: {
     skills: ['superpowers:test-driven-development', 'superpowers:verification-before-completion'], then: [],
     pick: 'superpowers:test-driven-development for new or changed behaviour; superpowers:verification-before-completion for coverage of existing code',

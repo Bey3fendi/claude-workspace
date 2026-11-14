@@ -117,3 +117,23 @@ test('real breakage stays debug, also in a new app (QA 2026-11-11)', () => {
 test('non-English tickets get no contract (the keywords are English only)', () => {
   assert.equal(classify('Yeni bir yapılacaklar uygulaması geliştir: görev ekleme, silme, düzenleme.').class, null)
 })
+
+test('AgentBridge 2026-11 real prompts: pastes, questions, "exception", review feedback', () => {
+  const cases = [
+    ['here is the output: <pasted_content id="05b8"> FAIL version step 1: error, line too long, crash </pasted_content>', null],
+    ['it failed again: <pasted_content id="a1"> TypeError at x.js:3 </pasted_content>', 'debug'],
+    ['two questions, is exception also optional? if it is what should I add as a fullfill the struct?', 'trivial'],
+    ['for exception how should it is llok like in compute Impact?', 'trivial'],
+    ['I use pro plan of claude is it provide some sort of API usage limit for pro users?', 'trivial'],
+    ['Add a web filter exception for portal.vendor.com on Acme', 'feature'],
+    ['the parser throws an exception when the list is empty', 'debug'],
+    ['my other external reviewer agent do some reviews on PR, can you check them first? fix them if they make sense or justify them', 'review-feedback'],
+    ['external review is done, check the review, fix or justificate it, afterwards keep going with planning M6', 'review-feedback'],
+    ['My external reviewer agent have one finding first looking at it, fix it if it is make sense', 'review-feedback'],
+    ['yes, commit it and write the M1 plan, are you using the skills?', null],
+    ['yes keep going with Task 3', null],
+    ['How should we structure the rendering layer so it can be swapped later?', 'architecture'],
+  ]
+  for (const [text, want] of cases) assert.equal(classify(text).class, want, text)
+  assert.match(contractText('review-feedback'), /superpowers:receiving-code-review[\s\S]*fix the valid ones/)
+})

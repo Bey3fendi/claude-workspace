@@ -456,6 +456,13 @@ Phase 3M adds:
 - Advisory: an instruction, not checked by the engine.
 - Live (Sonnet, same question with and without it, $0.08): with it, the answer opened with the result and ended with a "Next:" line; without it, it opened with a preamble and had no next step.
 - The file grows from 80 to 89 lines (limit 100).
+**18. Upgrades from 3 days of real use (AgentBridge, 2026-11-15).** Source: 1,260 workspace events, 98 prompts and 97 answers in 16 sessions, the `.memory/` files and Ponytail's ledger.
+- 0.15.0, the gate: all 4 real holds were wasted. Claude sent several edits in one response; 2 were denied in the same second, the limit was reached and the rest went through, so no reply ever came between hold and edit. Holds now count per model step (`turn.step`): every source edit of a held step is held, and counted once. Only source-code extensions are held, because `> ui-svc.log` was held and Claude dropped its log to `/dev/null`. The deny text opens with "Held once, not an error".
+- 0.15.0, the classifier, re-run over the 98 real prompts:
+  - before: feature 16, debug 10, trivial 9, none 63;
+  - after: feature 12, debug 5, trivial 21, review-feedback 6, none 54.
+  - The fixes: `<pasted_content>` is stripped first; a `?` question with no instruction is trivial (design questions stay architecture); "exception" counts only when thrown or raised ("add a web filter exception" was debug, in a demo session); a new `review-feedback` class covers "reviewer… check, fix or justify".
+  - Found on the way: `ACTION` has held a stray backspace byte since Phase 3 step 1 and never matched, so action verbs never kept a "what/how…" prompt out of `trivial`.
 - 0.14.2: the footer marks a claimed skill loaded in an earlier request of the conversation as "loaded earlier this session (#n)" instead of "self-reported only" (user report: a plan continued in a later request); reset by /clear and compaction (`context.reset` event).
 - 0.14.1: the pre-edit hold now opens with "Paused once, not an error" (Claude Code labels any stopped tool call "Error:"; the explanation used to be the last line).
 

@@ -59,9 +59,26 @@ test('deny text names the file and the expected form, not the path', () => {
 test('footer reports the gate from engine events', async () => {
   const { createTracker, replay } = await import('../../plugins/workspace-core/lib/usage.mjs')
   const t = createTracker(); t.turnStart(); t.gate('deny'); t.gate('release', 'root cause stated')
-  assert.match(t.finish('done').footer, /root-cause gate held 1 edit until a root cause was stated/)
+  assert.match(t.finish('done').footer, /root-cause gate held edits once until a root cause was stated/)
   const t2 = createTracker(); t2.turnStart()
   assert.equal(t2.finish('done').footer, null, 'no gate, no skills: no footer')
   const rows = [{ ev: 'turn.start' }, { ev: 'gate', action: 'deny' }, { ev: 'gate', action: 'deny' }, { ev: 'gate', action: 'release', reason: 'gate limit reached' }, { ev: 'turn.complete' }]
-  assert.match(replay(rows)[0].footer, /held 2 edits, then let it through \(limit reached\)/)
+  assert.match(replay(rows)[0].footer, /held edits 2 times, then let it through \(limit reached\)/)
+})
+
+test('AgentBridge 2026-11: edits sent together are one hold; logs and data are never held', () => {
+  // Five parallel edits in step s1: all held, one counted; the next step may be held once more, then the limit.
+  const s = st({ step: 't:1' })
+  const first = decide(s, edit('src/a.js'))
+  assert.equal(first.action, 'deny'); assert.equal(first.sameStep, false)
+  s.denies = 1; s.deniedStep = 't:1'
+  for (let i = 0; i < 4; i++) assert.equal(decide(s, edit('src/b.js')).sameStep, true)
+  s.step = 't:2'
+  assert.equal(decide(s, edit('src/a.js')).sameStep, false)
+  s.denies = 2; s.deniedStep = 't:2'; s.step = 't:3'
+  assert.equal(decide(s, edit('src/a.js')).reason, 'gate limit reached')
+  for (const f of ['ui-svc.log', 'data/out.json', 'notes.txt', 'report.csv', 'README.md']) assert.ok(!gatedFile(f), f)
+  assert.equal(decide(st(), { tool: 'Bash', command: 'npm run svc > ui-svc.log 2>&1 &' }).action, 'pass')
+  for (const f of ['guard-core/src/protocol.cpp', 'src/x.tsx', 'include/a.hpp', 'web/app.vue']) assert.ok(gatedFile(f), f)
+  assert.match(denyText('src/a.js'), /^\[workspace gate: root cause first\] Held once, not an error/)
 })
