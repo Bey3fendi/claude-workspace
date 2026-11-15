@@ -8,7 +8,7 @@
 import { createSink, flush } from '../lib/sink.mjs'
 import { markerCounts, redact, short } from '../lib/events.mjs'
 import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
-import { classify, contractText, restoreText } from '../lib/contracts.mjs'
+import { classify, contractText, isFollowUp, restoreText } from '../lib/contracts.mjs'
 import { deniedSkills, trimListing } from '../lib/listing.mjs'
 import { decide, denyText, editTarget, gatedFile, statesRootCause } from '../lib/gates.mjs'
 import { CLOSE_TEXT, CODE_CLASSES, activeLevel, hasClosingLine, injectedLevel, promptLevel, reminderText } from '../lib/ponytail.mjs'
@@ -18,7 +18,8 @@ import { capRequest } from '../lib/subagent-cap.mjs'
 import { checkCommand, safetyText } from '../lib/safety.mjs'
 import { EXPLAIN_DIR, UNIT_RE, buildRecord, checkAfter, checkableEdit, citedPaths, exitFrom, feedbackText, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
 import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
-import { FILES, NUDGE_TEXT, appendBlock, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, preEditText, requestTitle, shouldNudge, maxLinesFrom, maxCharsFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
+import { FILES, NUDGE_TEXT, appendBlock, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, porcelainMap, preEditText, requestTitle, shouldNudge, maxLinesFrom, maxCharsFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
+import { changedPaths, mayWrite, snapshotMap } from '../lib/bash-edits.mjs'
 
 const sink = createSink()
 const tracker = createTracker()
@@ -184,6 +185,33 @@ async function gitStatus($, root) {
   try { const x = await $.process.run(['git', '-c', 'core.quotePath=false', 'status', '--porcelain', '-uall'], { cwd: root }); return x.exitCode === 0 ? x.stdout : null } catch { return null }
 }
 
+// Bash edits (lib/bash-edits.mjs): git status, then the blob hash of every dirty file (at most 500).
+async function dirtySnapshot($, root) {
+  const st = await gitStatus($, root)
+  if (st === null) return null
+  const entries = [...porcelainMap(st)].filter(([p]) => !/^\.(memory|explain|claude)\//.test(p))
+  const live = entries.filter(([, line]) => !/^(D.|.D)/.test(line)).map(([p]) => p).slice(0, 500)
+  let hashes = []
+  if (live.length) {
+    try { const h = await $.process.run(['git', 'hash-object', '--', ...live], { cwd: root }); if (h.exitCode === 0) hashes = h.stdout.trim().split('\n') } catch {}
+  }
+  return snapshotMap(entries, live, hashes)
+}
+async function bashEdits($, e, root, before) {
+  const after = await dirtySnapshot($, root)
+  if (!after) return
+  const files = changedPaths(before, after)
+  if (!files.length) return
+  for (const rel of files) {
+    const f = `${root}/${rel}`
+    if (e.agentId === undefined && gatedFile(f)) { req.pt.edited = true; req.pt.bashEdit = true }
+    if (checkableEdit(f)) req.codeEditAt = Date.now()
+    if (!req.mem.edited.includes(rel)) req.mem.edited.push(rel)
+  }
+  ex.lastEditAt = Date.now()
+  await flush(sink, sink.record('bash-edit', { files: files.length, agentId: e.agentId ?? null }), (p, b) => $.fs.write(p, b))
+}
+
 // Automatic memory: note which files this request changed and which memory files Claude wrote itself.
 async function memoryTrack($, e, r) {
   if (!SOURCE_EDIT_TOOLS.has(e.tool) || r?.deny !== undefined || r?.isError === true) return
@@ -263,8 +291,14 @@ export const register = (on) => {
     ex.requests = [...ex.requests, short(e.text ?? '', 300)].slice(-10)
     const contracts = (await $.env.get('CW_CONTRACTS')) !== '0'
     const gates = (await $.env.get('CW_GATES')) !== '0'
-    const c = classify(e.text)
-    req = { class: c.class, reason: c.reason, text: '', last: '', denies: 0, released: false, gates, contracts, skills: [], mem: freshMem({ title: requestTitle(e.text, redact) }), pt: freshPt() }
+    let c = classify(e.text)
+    // A short confirmation ("yes lets do all three") continues the previous request: it inherits a code-changing class,
+    // the skills already loaded, and a debug request's stated root cause (so the gate does not ask for it twice).
+    const prev = req
+    const followUp = !c.class && c.reason !== 'empty-or-command' && CODE_CLASSES.has(prev?.class) && isFollowUp(e.text) && (await $.env.get('CW_FOLLOW_UP')) !== '0'
+    if (followUp) c = { class: prev.class, reason: 'follow-up' }
+    const carried = followUp && prev.class === 'debug' && (prev.released || statesRootCause(prev.text))
+    req = { class: c.class, reason: c.reason, text: '', last: '', denies: 0, released: carried, gates, contracts, skills: followUp ? [...prev.skills] : [], mem: freshMem({ title: requestTitle(e.text, redact) }), pt: freshPt() }
     const level = (await $.env.get('CW_PONYTAIL')) === '0' ? null : activeLevel(pt.level)
     if ((await $.env.get('CW_MEMORY')) !== '0') {
       const root = await $.session.root().catch(() => null)
@@ -277,7 +311,9 @@ export const register = (on) => {
     }
     const add = []
     if (contracts) {
-      const text = c.class ? contractText(c.class, { ponytail: !!level, reason: c.reason }) : null
+      const text = !c.class ? null
+        : followUp ? restoreText(c.class, { invoked: req.skills, rootCauseStated: carried, ponytail: !!level, reason: c.reason, followUp: true })
+        : contractText(c.class, { ponytail: !!level, reason: c.reason })
       await flush(sink, sink.record('classify', { class: c.class, reason: c.reason, contract: !!text }), (p, b) => $.fs.write(p, b))
       if (text) add.push(text)
     }
@@ -476,8 +512,16 @@ export const register = (on) => {
 
   // Explain: remember each Bash command and its exit code for the next change record; a successful
   // `git commit` gets a footer hint. Kept in memory only (never written unless /explain runs).
+  // Edits made through Bash (lib/bash-edits.mjs): a command that may write is bracketed by two snapshots of the
+  // dirty files, and the files it changed count like edits (Ponytail, memory, the check note, Explain).
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    let root = null, before = null
+    if (typeof e.command === 'string' && mayWrite(e.command) === 'yes' && (await $.env.get('CW_BASH_EDITS')) !== '0' && !(await isOff($))) {
+      root = await $.session.root().catch(() => null)
+      if (root) before = await dirtySnapshot($, root).catch(() => null)
+    }
     const r = await next(e)
+    if (before && r?.deny === undefined) { try { await bashEdits($, e, root, before) } catch {} }
     if (typeof e.command !== 'string') return r
     const exit = exitFrom(r)
     if (exit === null) return r
@@ -569,8 +613,9 @@ export const register = (on) => {
     if (await isOff($)) return r
     // Ponytail's core rule for a request with no code contract: once, after its first source edit in the main loop.
     const level = activeLevel(pt.level)
-    if (level && !e?.agent_id && !req.pt.reminded && ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(e?.tool_name) &&
-      gatedFile(e.tool_input?.file_path ?? e.tool_input?.notebook_path) && (await $.env.get('CW_PONYTAIL')) !== '0') {
+    // A source file changed through Bash counts too (set by bashEdits; delivered with this or the next tool result).
+    const sourceEdit = (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(e?.tool_name) && gatedFile(e.tool_input?.file_path ?? e.tool_input?.notebook_path)) || req.pt.bashEdit
+    if (level && !e?.agent_id && !req.pt.reminded && sourceEdit && (await $.env.get('CW_PONYTAIL')) !== '0') {
       req.pt.reminded = true
       tracker.ponytail({ reminded: 'edit', level })
       await flush(sink, sink.record('ponytail', { action: 'remind', via: 'edit', level }), (p, b) => $.fs.write(p, b))

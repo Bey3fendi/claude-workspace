@@ -91,7 +91,7 @@ export const CONTRACTS = {
  * (the contract rode on the prompt, which the summary may drop). `invoked` = skills already loaded this request.
  * `rootCauseStated` keeps the debug step from being asked for twice.
  */
-export function restoreText(cls, { invoked = [], rootCauseStated = false, ponytail = false, reason = null } = {}) {
+export function restoreText(cls, { invoked = [], rootCauseStated = false, ponytail = false, reason = null, followUp = false } = {}) {
   const c = withPonytail(cls, CONTRACTS[cls], ponytail, reason)
   if (!c) return null
   const done = invoked.filter((s) => c.skills.includes(s) || c.then.includes(s))
@@ -99,8 +99,16 @@ export function restoreText(cls, { invoked = [], rootCauseStated = false, ponyta
     : c.pick ? `If not yet done, invoke the Skill tool with ${c.pick}.`
     : c.skills.length ? `If not yet done, invoke the Skill tool with ${c.skills.join(' or ')}.` : ''
   const outcome = cls === 'debug' && rootCauseStated ? 'root cause already stated; any fix stays minimal and is verified' : c.outcome
-  return `[workspace contract: ${cls}, restored after compaction] Applies to the latest user request until a new one arrives; the user's own instructions take precedence. ${skillLine}${skillLine ? ' ' : ''}Expected: ${outcome}.`
+  const head = followUp ? `[workspace contract: ${cls}, follow-up] This message continues the previous request's work; the user's own instructions take precedence.`
+    : `[workspace contract: ${cls}, restored after compaction] Applies to the latest user request until a new one arrives; the user's own instructions take precedence.`
+  return `${head} ${skillLine}${skillLine ? ' ' : ''}Expected: ${outcome}.`
 }
+
+// 0.18.1: a short confirmation carries no keywords but continues the previous request's work ("yes lets do all three",
+// "ok go ahead", "keep going with Task 3"). It inherits the previous request's class when that class changes code.
+// Still the user's words only: the previous class came from the previous prompt, never from Claude's answer.
+const FOLLOW_UP = /^\s*(?:yes|yeah|yep|yup|ok(?:ay)?|sure|alright|go ahead|do (?:it|that|both|all|them)|let'?s (?:do|go|proceed|continue|keep)|lets (?:do|go|proceed|continue|keep)|keep going|go on|proceed|continue with|next task|sounds good|looks good|perfect|agreed|approved)\b/i
+export const isFollowUp = (text) => { const t = String(text ?? '').replace(PASTED, ' ').trim(); return t.length > 0 && t.length <= 160 && FOLLOW_UP.test(t) }
 
 /**
  * With Ponytail active (0.16.0), a review uses its review skill (an audit, its audit skill): no Superpowers skill
