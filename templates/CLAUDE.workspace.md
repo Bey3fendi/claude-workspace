@@ -16,6 +16,10 @@ These are defaults from claude-workspace. Where the project's own instructions s
 {{/if}}
 ## Secrets
 - Never print, log or commit secrets. Keys live in `.env`, which must stay gitignored.
+{{#if noAttribution}}
+## Attribution
+- Do not credit Claude or Claude Code in anything you write for this project: no `Co-Authored-By: Claude` trailer, no "Generated with Claude Code" line, no AI-authorship note. This covers commit messages, PR and MR descriptions, review comments, issues, release notes and code comments; write them as the user's own work.
+{{/if}}
 ## Checks
 - When you say a test or check passed, quote its result line (e.g. `# pass 12 # fail 0`); the user did not see it run.
 {{#if responseStyle}}

@@ -32,6 +32,8 @@ Options
   --no-claude-md         Do not touch CLAUDE.md (the workspace file is still written; import it yourself)
   --no-response-style    Leave the ADHD-friendly response style out of the workspace file (--response-style: back in)
   --no-safety-denies     Leave out the safety deny rules (force-push, reset --hard, .env and key files; --safety-denies: back in)
+  --claude-attribution   Let Claude add itself to commits and PRs (default: no co-author trailer, no "Generated with"
+                         line, and a workspace rule against crediting Claude in MRs, reviews and issues)
   --stop-check <cmd>     Run <cmd> (e.g. "npm test") when a request changed code and ran no passing check after its last
                          edit; a failure sends Claude back to fix it. Kept in .claude/workspace.json (--no-stop-check: off)
   --edit-check <cmd>     Run <cmd> after each code edit; {file} is the edited file (e.g. "npx eslint {file}"); a failure is
@@ -66,6 +68,8 @@ export function parseArgs(argv) {
       case '--response-style': o.responseStyle = true; break
       case '--no-safety-denies': o.safetyDenies = false; break
       case '--safety-denies': o.safetyDenies = true; break
+      case '--claude-attribution': o.claudeAttribution = true; break
+      case '--no-claude-attribution': o.claudeAttribution = false; break
       case '--stop-check': o.stopCheck = val(); break
       case '--no-stop-check': o.stopCheck = false; break
       case '--edit-check': o.editCheck = val(); break

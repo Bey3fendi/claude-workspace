@@ -1,11 +1,12 @@
 // install (and repair): idempotent. A second run with nothing to do reports zero changes and
 // leaves every project file byte-identical.
 import { rmSync } from 'node:fs'
+import { isDeepStrictEqual } from 'node:util'
 import { preflight, findDuplicates, findRouterConflicts, dirtyTouchedFiles } from '../lib/detect.mjs'
 import { listPlugins, marketplaceAdd, marketplaceRemove, marketplaceUpdate, otherProjectsUsing, pluginInstall, pluginUninstall, pluginEnable, pluginUpdate, projectInstall } from '../lib/claude.mjs'
 import { pinState, pushHistory, localPluginVersion } from '../lib/history.mjs'
 import { loadManifest, newManifest, snapshot, finalize, saveManifest } from '../lib/manifest.mjs'
-import { addDenies, removeDenies, addRules } from '../lib/settings.mjs'
+import { NO_ATTRIBUTION, addDenies, removeDenies, addRules } from '../lib/settings.mjs'
 import { wantedDenies } from '../lib/context.mjs'
 import { addTrust, isTrusted, originRemote, readUserSettings, removeTrust, trustLine, writeUserSettings } from '../lib/automode.mjs'
 import { upsertBlock } from '../lib/gitignore.mjs'
@@ -37,6 +38,8 @@ export async function install(ctx, rep, { repair = false } = {}) {
   const mdTarget = o.claudeMd !== undefined ? targetOf(o) : prevMarker?.claudeMd ? prevMarker.claudeMd.target ?? null : TARGETS.project
   // Response style: the flag, else what the previous install chose, else on.
   const responseStyle = o.responseStyle ?? prevMarker?.claudeMd?.responseStyle ?? true
+  // No Claude attribution in commits, PRs and reviews (0.19.2): the flag, else the previous choice, else on.
+  const noAttribution = o.claudeAttribution !== undefined ? !o.claudeAttribution : prevMarker?.noAttribution ?? true
   // Safety deny rules (force-push, reset --hard, .env and key files): the flag, else the previous choice, else on.
   const safetyDenies = o.safetyDenies ?? prevMarker?.safetyDenies ?? true
   const denies = wantedDenies(ctx, safetyDenies)
@@ -168,6 +171,24 @@ export async function install(ctx, rep, { repair = false } = {}) {
   }
   m.addedDenies = [...new Set([...m.addedDenies, ...added])]
 
+  // ---- attribution: Claude Code's own setting, so no Co-Authored-By trailer and no "Generated with Claude Code" line
+  // is added to commits and PRs. In the shared settings.json, for the whole team. A value the user set is left alone.
+  settings = readJsonFile(ctx.p('.claude/settings.json'))
+  if (noAttribution && settings.attribution === undefined) {
+    writeJsonIfChanged(ctx.p('.claude/settings.json'), { ...settings, attribution: { ...NO_ATTRIBUTION } })
+    m.attributionAdded = true
+    rep.change('set attribution to empty in .claude/settings.json (no Claude co-author or "Generated with" line in commits and PRs)')
+  } else if (noAttribution && !m.attributionAdded && !isDeepStrictEqual(settings.attribution, NO_ATTRIBUTION)) {
+    rep.info('attribution in .claude/settings.json was set by you; left as is')
+  } else if (!noAttribution && m.attributionAdded) {
+    if (isDeepStrictEqual(settings.attribution, NO_ATTRIBUTION)) {
+      const { attribution, ...rest } = settings
+      writeJsonIfChanged(ctx.p('.claude/settings.json'), rest)
+      rep.change('removed the empty attribution from .claude/settings.json (--claude-attribution)')
+    }
+    m.attributionAdded = false
+  }
+
   // ---- md-memory and Explain allow rules: Claude writes .memory/ notes and .explain/ files without a prompt each time. They go in
   // the per-user settings.local.json: Claude Code ignores allow rules in the shared, committed settings.json.
   const allow = addRules(readJsonFile(ctx.p('.claude/settings.local.json')), 'allow', [...MEMORY_ALLOWS, ...EXPLAIN_ALLOWS])
@@ -193,7 +214,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
 
   // ---- CLAUDE.md: the owned file (always rewritten from the template) and the import block in the target
   let owned
-  try { owned = workspaceMd(ctx, { responseStyle }) } catch (e) { throw new UserError(e.message) }
+  try { owned = workspaceMd(ctx, { responseStyle, noAttribution }) } catch (e) { throw new UserError(e.message) }
   if ((readMaybe(ctx.p(OWNED))?.toString('utf8') ?? null) !== owned) { writeAtomic(ctx.p(OWNED), owned); rep.change(`wrote ${OWNED}`) }
   // an import left in the other target by an earlier install with a different --claude-md
   for (const t of Object.values(TARGETS).filter((t) => t !== mdTarget && m.files[t])) {
@@ -223,6 +244,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
     memory: 'md-memory (.memory/, built into workspace-core)',
     claudeMd: { target: mdTarget, created: mdTarget ? !m.files[mdTarget]?.existedBefore : false, responseStyle },
     safetyDenies,
+    noAttribution,
     ...(checks.stop || checks.edit ? { checks: Object.fromEntries(Object.entries(checks).filter(([, v]) => v)) } : {}),
   }
   if (writeJsonIfChanged(ctx.p('.claude/workspace.json'), marker)) rep.change('wrote .claude/workspace.json')

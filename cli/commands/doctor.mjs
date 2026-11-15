@@ -3,7 +3,8 @@
 import { detectPlatform, findDuplicates, findRouterConflicts } from '../lib/detect.mjs'
 import { claudeVersion, listPlugins, projectInstall } from '../lib/claude.mjs'
 import { loadManifest } from '../lib/manifest.mjs'
-import { missingDenies } from '../lib/settings.mjs'
+import { NO_ATTRIBUTION, missingDenies } from '../lib/settings.mjs'
+import { isDeepStrictEqual } from 'node:util'
 import { hasBlock, upsertBlock } from '../lib/gitignore.mjs'
 import { OWNED, TARGETS, importState, karpathyPin, lengthLimit, readVendored, workspaceMd } from '../lib/claude-md.mjs'
 import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
@@ -66,6 +67,13 @@ export async function doctor(ctx, rep) {
     add('safety-deny-rules', sm.length ? 'warn' : 'ok', sm.length ? `${sm.length} rule(s) missing (run repair)` : `${ctx.safetyDenies.length} present`)
   }
 
+  if (safeJson(ctx.p('.claude/workspace.json'))?.noAttribution === false) add('attribution', 'ok', 'Claude attribution kept (--claude-attribution)')
+  else {
+    const a = settings?.attribution
+    add('attribution', a === undefined ? 'warn' : 'ok', a === undefined ? 'no attribution setting in .claude/settings.json: Claude adds itself to commits and PRs (run repair)'
+      : isDeepStrictEqual(a, NO_ATTRIBUTION) ? 'empty: no Claude co-author or "Generated with" line in commits and PRs' : 'set by you in .claude/settings.json (left as is)')
+  }
+
   // Check hooks (opt-in) and auto mode trust (a hint, never a warning).
   const ck = checksConfig(safeJson(ctx.p('.claude/workspace.json')))
   add('check-hooks', 'info', ck.stop || ck.edit ? [ck.stop && `stop "${ck.stop}"`, ck.edit && `edit "${ck.edit}"`].filter(Boolean).join(', ') + (ctx.env.CW_CHECKS === '0' ? '; CW_CHECKS=0 turns them off in this shell' : '')
@@ -109,7 +117,7 @@ export async function doctor(ctx, rep) {
     const ownedNow = readMaybe(ctx.p(OWNED))?.toString('utf8') ?? null
     const marker = safeJson(ctx.p('.claude/workspace.json'))
     let want = null
-    try { want = workspaceMd(ctx, { responseStyle: marker?.claudeMd?.responseStyle !== false }) } catch {}
+    try { want = workspaceMd(ctx, { responseStyle: marker?.claudeMd?.responseStyle !== false, noAttribution: marker?.noAttribution !== false }) } catch {}
     add('claude-md-file', ownedNow == null ? 'fail' : ownedNow === want ? 'ok' : 'warn', ownedNow == null ? `${OWNED} missing (run repair)`
       : ownedNow === want ? `${OWNED} matches the template` : `drift: ${OWNED.split('/').pop()} differs from template (run repair)`)
     if (ownedNow != null) {

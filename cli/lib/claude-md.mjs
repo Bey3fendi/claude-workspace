@@ -53,7 +53,7 @@ export function render(template, vars) {
 
 /** The owned file for the features this install has. `responseStyle: false` is `--no-response-style`. */
 export function workspaceMd(ctx, opts = {}) {
-  const features = { mdMemory: true, contracts: true, karpathy: true, responseStyle: true, ...opts }
+  const features = { mdMemory: true, contracts: true, karpathy: true, responseStyle: true, noAttribution: true, ...opts }
   const template = readFileSync(join(ctx.repoRoot, 'templates', 'CLAUDE.workspace.md'), 'utf8')
   const pin = karpathyPin(ctx.lock)
   const k = features.karpathy && pin ? readVendored(ctx.repoRoot, pin) : null

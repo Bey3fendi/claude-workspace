@@ -469,6 +469,31 @@ test('--no-response-style leaves the section out; repair keeps the choice; --res
   assert.equal(cli(sb, ['doctor']).code, 0)
 })
 
+test('Claude attribution is off by default (setting + workspace rule); --claude-attribution brings it back; a value of your own is kept', () => {
+  const sb = sandbox()
+  const settings = () => JSON.parse(read(join(sb.project, '.claude', 'settings.json')))
+  const owned = () => read(join(sb.project, '.claude', 'workspace', 'CLAUDE.workspace.md'))
+  const check = () => cli(sb, ['doctor']).json.checks.find((c) => c.id === 'attribution')
+  assert.equal(cli(sb, ['install']).code, 0)
+  assert.deepEqual(settings().attribution, { commit: '', pr: '' })
+  assert.match(owned(), /## Attribution\n- Do not credit Claude or Claude Code/)
+  assert.equal(check().status, 'ok')
+  assert.equal(cli(sb, ['repair', '--claude-attribution']).code, 0)
+  assert.equal(settings().attribution, undefined)
+  assert.doesNotMatch(owned(), /## Attribution/)
+  assert.equal(cli(sb, ['repair']).code, 0)
+  assert.equal(settings().attribution, undefined, 'repair keeps the choice')
+  assert.equal(cli(sb, ['repair', '--no-claude-attribution']).code, 0)
+  assert.deepEqual(settings().attribution, { commit: '', pr: '' })
+  // a value the user set is theirs, through install and uninstall
+  const sb2 = sandbox()
+  write(join(sb2.project, '.claude', 'settings.json'), JSON.stringify({ attribution: { commit: 'Reviewed-by: me' } }, null, 2) + '\n')
+  assert.equal(cli(sb2, ['install', '--allow-dirty']).code, 0)
+  assert.deepEqual(JSON.parse(read(join(sb2.project, '.claude', 'settings.json'))).attribution, { commit: 'Reviewed-by: me' })
+  assert.equal(cli(sb2, ['uninstall']).code, 0)
+  assert.deepEqual(JSON.parse(read(join(sb2.project, '.claude', 'settings.json'))), { attribution: { commit: 'Reviewed-by: me' } })
+})
+
 test('--stop-check / --edit-check go into the committed marker; repair keeps them; --no-stop-check clears one', () => {
   const sb = sandbox()
   const marker = () => JSON.parse(read(join(sb.project, '.claude', 'workspace.json')))

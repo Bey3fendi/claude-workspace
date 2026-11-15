@@ -69,6 +69,7 @@ It also includes an optional, disabled-by-default model router.
   - when a request changed source code and the answer has no closing line (what was skipped or not checked, and any risk), asks for that line once.
   - `/ponytail lite|full|ultra` and "stop ponytail" are followed.
 
+- **No Claude attribution** (0.19.2, on by default): Claude Code's `attribution` setting is set to empty in `.claude/settings.json` (shared with the team), so no `Co-Authored-By: Claude` trailer goes into commits and no "Generated with Claude Code" line into PRs. The workspace file adds a rule for what the setting does not reach: MR descriptions, review comments, issues, release notes and code comments. A value you set yourself is left alone. `--claude-attribution` turns both off; `repair` keeps the choice.
 - **Safety guard** (0.17.0), two layers against destructive or leaking commands:
   - **Deny rules** in `.claude/settings.json` from `policies/safety-denies.json`: the plain forms of `git push --force`/`-f`, `git reset --hard` and `git clean -f`, and `Read` of `.env` files (`.env`, `.env.local`, `.env.production`, …), `*.pem`, `id_rsa`-style keys, `~/.ssh/**` and `~/.aws/credentials`. Claude Code also applies the `Read` rules to `cat`/`head`/`tail`/`sed` in Bash. Templates such as `.env.example` stay readable. A deny rule wins over every allow rule, so a teammate cannot allow these locally. `--no-safety-denies` leaves them out; repair keeps the choice; `--safety-denies` puts them back.
   - **A Bash check** in workspace-core (`lib/safety.mjs`) that reads the command the way a shell splits it. It also catches `git -C . push -f`, `git push origin +main`, `--force-with-lease`, `sh -c '…'`, `$(cat .env)`, `< .env`, `grep`/`source`/`base64`/`curl -d @` on secret files, and `rm -rf` on `/`, `~`, `$HOME`, `.`, `..`, `*` or `.git`. Text in quotes and heredoc bodies is data, so a commit message may name these commands. Claude is told to ask you to run the command yourself (`! <command>`). It covers subagents too, and stays on under `CW_OFF=1`. `CW_SAFETY=0` turns it off.
@@ -125,10 +126,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.19.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.19.1
+npx -y github:Bey3fendi/claude-workspace#v0.19.2 install --yes --marketplace Bey3fendi/claude-workspace#v0.19.2
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.19.1 repair --marketplace Bey3fendi/claude-workspace#v0.19.1
+npx -y github:Bey3fendi/claude-workspace#v0.19.2 repair --marketplace Bey3fendi/claude-workspace#v0.19.2
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project
@@ -160,7 +161,7 @@ The devcontainer feature in [`devcontainer/`](devcontainer/README.md) installs t
 ## What it changes
 
 **Project files** are the only files it touches:
-- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 1 `permissions.deny` skill rule from `policies/skill-denies.json` and the safety deny rules from `policies/safety-denies.json` (unless `--no-safety-denies`).
+- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 1 `permissions.deny` skill rule from `policies/skill-denies.json` and the safety deny rules from `policies/safety-denies.json` (unless `--no-safety-denies`), and `attribution: { "commit": "", "pr": "" }` (unless `--claude-attribution` or you set your own).
 - `CLAUDE.md` (or `CLAUDE.local.md`): the managed import block only. `.claude/workspace/CLAUDE.workspace.md`: the owned file it imports.
 - `.memory/session.md`, `context.md`, `decisions.md`: created as templates if missing; existing ones are never overwritten. Uninstall removes only the templates nobody wrote in. The folder is not under `.claude/`, because Claude Code asks before every edit there (and a headless run cannot write there at all).
 - `.claude/settings.local.json` (per user, gitignored): two `permissions.allow` rules, `Edit(.memory/**)` and `Edit(.explain/**)` (each covers every file-editing tool), so Claude updates the memory files and writes `/explain` files without asking. It is not in `settings.json`, because Claude Code ignores allow rules in the shared, committed settings.

@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { pluginUninstall, marketplaceRemove, otherProjectsUsing } from '../lib/claude.mjs'
 import { loadManifest } from '../lib/manifest.mjs'
-import { removeDenies, removeRules, removeMarketplaceKeys } from '../lib/settings.mjs'
+import { NO_ATTRIBUTION, removeDenies, removeRules, removeMarketplaceKeys } from '../lib/settings.mjs'
 import { removeBlock } from '../lib/gitignore.mjs'
 import { TARGETS, removeImport } from '../lib/claude-md.mjs'
 import { WORKSPACE_DIR } from '../lib/context.mjs'
@@ -82,6 +82,7 @@ function keyLevel(ctx, rep, rel, f, m) {
   if (rel === '.claude/settings.json') {
     let s = readJsonFile(abs)
     s = removeMarketplaceKeys(removeDenies(s, m.addedDenies), m.marketplace.name)
+    if (m.attributionAdded && isDeepStrictEqual(s.attribution, NO_ATTRIBUTION)) { const { attribution, ...rest } = s; s = rest }
     for (const id of m.disabledPlugins ?? []) {
       if (s.enabledPlugins?.[id] !== false) continue
       const { [id]: _, ...rest } = s.enabledPlugins

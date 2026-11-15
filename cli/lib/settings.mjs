@@ -2,6 +2,9 @@
 // everything else (including unknown keys and their order) is preserved.
 
 /** Append the rules missing from permissions[kind] ('deny' | 'allow'). */
+/** Claude Code's attribution setting with both lines empty: no co-author trailer in commits, no "Generated with" line in PRs. */
+export const NO_ATTRIBUTION = Object.freeze({ commit: '', pr: '' })
+
 export function addRules(settings, kind, rules) {
   const s = structuredClone(settings)
   s.permissions ??= {}
