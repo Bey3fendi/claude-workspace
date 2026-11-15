@@ -58,17 +58,27 @@ function matchParen(s, open) {
   return -1
 }
 
+// Index of the command word: past VAR=value assignments, wrappers (sudo, env, …) and `timeout [opts] <duration>`.
+function startOf(ws) {
+  let i = 0
+  for (;;) {
+    if (i < ws.length && /^[A-Za-z_]\w*=/.test(ws[i])) i++
+    else if (i < ws.length && base(ws[i]) === 'timeout') { i++; while (i < ws.length && ws[i].startsWith('-')) i++; i++ }
+    else if (i < ws.length && WRAPPERS.has(base(ws[i]))) { i++; while (i < ws.length && ws[i].startsWith('-')) i++ }
+    else break
+  }
+  return i
+}
+/** The simple commands of a shell command line, each as its words from the command word on (redirects dropped). Shared with Explain. */
+export const simpleCommands = (command) =>
+  parse(dropHeredocs(String(command ?? ''))).map((ws) => ws.slice(startOf(ws)).filter((w) => w !== '<' && w !== '>')).filter((ws) => ws.length)
+
 const shortHas = (a, f) => /^-[^-]/.test(a) && a.slice(1).includes(f)
 
 function checkWords(ws) {
   // input redirect from a secret file, whatever the command
   for (let i = 0; i + 1 < ws.length; i++) if (ws[i] === '<' && isSecret(ws[i + 1])) return { rule: 'secret-read', target: ws[i + 1] }
-  let i = 0
-  for (;;) {
-    if (i < ws.length && /^[A-Za-z_]\w*=/.test(ws[i])) i++
-    else if (i < ws.length && WRAPPERS.has(base(ws[i]))) { i++; while (i < ws.length && ws[i].startsWith('-')) i++ }
-    else break
-  }
+  const i = startOf(ws)
   const cmd = base(ws[i] ?? ''), args = ws.slice(i + 1).filter((a) => a !== '<' && a !== '>')
   if (SHELLS.has(cmd)) { const c = args.findIndex((a) => shortHas(a, 'c')); if (c >= 0 && args[c + 1]) return checkCommand(args[c + 1]) }
   if (cmd === 'git') {

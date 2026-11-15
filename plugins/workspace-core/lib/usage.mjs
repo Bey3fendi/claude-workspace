@@ -65,6 +65,8 @@ export function createTracker() {
     explain(info) { req ??= fresh(); req.explain = { ...(req.explain ?? {}), ...info } },
     /** Ponytail driven by the workspace: { reminded: 'contract'|'edit', level } | { level, closing: bool } | { asked: true }. */
     ponytail(info) { req ??= fresh(); req.ponytail = { ...(req.ponytail ?? {}), ...info } },
+    /** After the last code edit of this request: { status: 'none' } (no test/check ran) | { status: 'failed', exit } (the last one failed). */
+    check(info) { (req ??= fresh()).check = info },
     /** Phase 4 gate outcome for this request: action 'deny' | 'release'. */
     gate(action, reason) {
       req ??= fresh()
@@ -107,7 +109,7 @@ export function summarize(r, section, active, earlier = new Map(), shown = { act
   // The injected-context list once per session (and when it changes); the /explain HEAD hint once per session.
   const showActive = active.length > 0 && shown.active !== active.join(',')
   const explainHint = !!r.explain?.commit && !shown.explainHint
-  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, ponytail: r.ponytail ?? null, active, showActive, explainHint, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
+  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, ponytail: r.ponytail ?? null, check: r.check ?? null, active, showActive, explainHint, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
   return { ...evidence, footer: renderFooter(evidence) }
 }
 
@@ -115,7 +117,7 @@ const short = (id) => id.replace(/^andrej-karpathy-skills:/, 'karpathy:')
 
 export function renderFooter(e) {
   const hint = e.explainHint ?? true // pure calls without session state keep the hint
-  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain?.unit && !(e.explain?.commit && hint) && e.ponytail?.closing === undefined) return null
+  if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain?.unit && !(e.explain?.commit && hint) && e.ponytail?.closing === undefined && !e.check) return null
   const parts = []
   parts.push(e.activated.length ? `activated ${e.activated.map(short).join(', ')}` : 'no skill loaded in this request')
   if (e.denied.length) parts.push(`denied ${e.denied.map(short).join(', ')}`)
@@ -126,6 +128,7 @@ export function renderFooter(e) {
     parts.push(`root-cause gate held edits ${e.gate.held === 1 ? 'once' : `${e.gate.held} times`}${how}`)
   }
   if (e.ponytail?.closing !== undefined) parts.push(`ponytail ${e.ponytail.level}: ${e.ponytail.reminded ? 'rule repeated, ' : ''}closing line ${e.ponytail.closing ? 'present' : 'missing'}${e.ponytail.asked ? ' (asked for it)' : ''}`)
+  if (e.check) parts.push(e.check.status === 'failed' ? `the last check after the code edit failed (exit ${e.check.exit})` : 'no test or check ran after the last code edit')
   if (e.pressure) parts.push(`context ~${Math.round(e.pressure / 1000)}K: /clear-or-/compact advice attached`)
   if (e.explain?.unit) {
     const x = e.explain
@@ -163,6 +166,7 @@ export function replay(rows) {
         else if (e.action === 'closing') t.ponytail({ level: e.level, closing: e.present })
         else if (e.action === 'close-asked') t.ponytail({ asked: true })
         break
+      case 'check': t.check(e.exit == null ? { status: e.status } : { status: e.status, exit: e.exit }); break
       case 'pressure': pendingPressure = e.tokens; break
       case 'explain':
         if (e.action === 'record' && e.unit) t.explain({ unit: e.unit, files: e.files })

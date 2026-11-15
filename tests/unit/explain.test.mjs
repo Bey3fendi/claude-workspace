@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT } from '../helpers.mjs'
-import { buildRecord, citedPaths, exitFrom, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom, EXPLAIN_ALLOWS } from '../../plugins/workspace-core/lib/explain.mjs'
+import { buildRecord, checkAfter, checkableEdit, citedPaths, exitFrom, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom, EXPLAIN_ALLOWS } from '../../plugins/workspace-core/lib/explain.mjs'
 import { createTracker } from '../../plugins/workspace-core/lib/usage.mjs'
 import { ENTRIES } from '../../cli/lib/gitignore.mjs'
 
@@ -88,6 +88,26 @@ test('helpers: target, exit codes, commits, verification commands, unit ids, wor
   assert.equal(exitFrom({ deny: 'no' }), null)
   assert.ok(isCommit('git commit -m "x"') && isCommit('git -c user.name=a commit -F -') && !isCommit('git commit --dry-run') && !isCommit('git log'))
   assert.ok(isVerification('npm test') && isVerification('cargo test -q') && !isVerification('git push'))
+})
+
+test('verification: only a command that starts with a runner counts, not the word "test" somewhere (0.17.1, AgentBridge count)', () => {
+  for (const c of ['cd /p; npm test 2>&1 | grep -E "^# fail"', 'npm run guard:test', 'npm run typecheck', 'npx tsc --noEmit', 'timeout 60 node --test tests/a.test.ts',
+    'CI=1 pnpm test', 'python3 -m pytest -q', 'git add a && npm test && git commit -m x', 'make', 'cargo clippy', 'echo "$(npm test)"'])
+    assert.ok(isVerification(c), c)
+  for (const c of ['grep -rn test src', "sed -i 's/npm test/x/' README.md", 'git commit -m "run npm test later"', 'test -f a.txt', 'cat tests/a.test.ts',
+    "cat > notes.md <<'EOF'\nnpm test\nEOF", 'npm run dev', 'ls tests'])
+    assert.ok(!isVerification(c), c)
+})
+
+test('check note: what followed the last code edit; markup, docs and tests are not code a test covers', () => {
+  const cmds = [{ cmd: 'npm test', exit: 0, at: 5 }, { cmd: 'grep test src', exit: 0, at: 20 }]
+  assert.deepEqual(checkAfter(cmds, 10), { status: 'none' }, 'a test before the edit and a grep after it')
+  assert.equal(checkAfter([...cmds, { cmd: 'npm test', exit: 0, at: 30 }], 10), null)
+  assert.deepEqual(checkAfter([...cmds, { cmd: 'npm test', exit: 1, at: 30 }], 10), { status: 'failed', exit: 1 })
+  assert.equal(checkAfter([{ cmd: 'npm test', exit: 1, at: 30 }, { cmd: 'npx tsc', exit: 0, at: 40 }], 10), null, 'the last check decides')
+  assert.equal(checkAfter([{ cmd: 'npm test | tail -3', exit: 1, at: 30 }], 10), null, 'a piped exit code is not the test\'s')
+  assert.ok(checkableEdit('/p/src/cart.ts') && checkableEdit('guard-core/src/decide.cpp'))
+  for (const f of ['/p/docs/index.html', 'a.css', 'README.md', 'tests/cart.test.js', 'src/cart.test.ts']) assert.ok(!checkableEdit(f), f)
   assert.equal(nextUnitId(['u-0001.json', 'u-0009.json', 'x.json']), 'u-0010')
   assert.equal(nextUnitId([]), 'u-0001')
   assert.equal(wordsFrom('500'), 500); assert.equal(wordsFrom('5'), 300); assert.equal(wordsFrom(undefined), 300)

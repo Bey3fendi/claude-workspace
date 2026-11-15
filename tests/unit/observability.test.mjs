@@ -6,7 +6,7 @@ import { redact, redactDeep, projectKey, markerCounts } from '../../plugins/work
 import { createSink, flush } from '../../plugins/workspace-core/lib/sink.mjs'
 import { createReader } from '../../observability/reader.mjs'
 import { usageForSession, renderUsage } from '../../observability/derive.mjs'
-import { parseUsageSection, createTracker, USAGE_INSTRUCTION } from '../../plugins/workspace-core/lib/usage.mjs'
+import { parseUsageSection, createTracker, replay, USAGE_INSTRUCTION } from '../../plugins/workspace-core/lib/usage.mjs'
 import { ROOT } from '../helpers.mjs'
 
 const FIX = join(ROOT, 'tests', 'fixtures', 'events')
@@ -176,4 +176,16 @@ test('footer: a skill loaded in an earlier request is "loaded earlier (#n)", unt
   t.turnStart()
   const after = t.finish('x\nWorkspace Usage\n- Applied: superpowers:executing-plans')
   assert.deepEqual(after.claimedNotObserved, ['superpowers:executing-plans'], 'after /clear or compaction it is not known to be in context')
+})
+
+test('footer: the check note says when no test ran after a code edit, or the last one failed; replay keeps it (0.17.1)', () => {
+  const t = createTracker()
+  t.turnStart(); t.check({ status: 'none' })
+  assert.match(t.finish('done').footer, /no skill loaded in this request · no test or check ran after the last code edit/)
+  t.turnStart(); t.check({ status: 'failed', exit: 1 })
+  assert.match(t.finish('done').footer, /the last check after the code edit failed \(exit 1\)/)
+  t.turnStart()
+  assert.equal(t.finish('done').footer, null, 'nothing to report: no footer')
+  const rows = [{ ev: 'turn.start', agentId: null, t: 1 }, { ev: 'check', status: 'failed', exit: 2 }, { ev: 'turn.complete', agentId: null, reason: 'answer' }]
+  assert.match(replay(rows)[0].footer, /the last check after the code edit failed \(exit 2\)/)
 })

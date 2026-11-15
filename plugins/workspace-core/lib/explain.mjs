@@ -3,6 +3,8 @@
 // codes, skills, new decisions); the model writes .explain/units/<id>.md from it; the validator below
 // checks the file mechanically. No gates: a failed check is reported once and in the footer, never blocks.
 // Pure logic; the mod (hooks/register.mjs) does the I/O.
+import { simpleCommands } from './safety.mjs'
+import { gatedFile } from './gates.mjs'
 export const EXPLAIN_DIR = '.explain'
 export const EXPLAIN_ALLOWS = [`Edit(${EXPLAIN_DIR}/**)`]
 export const UNIT_RE = /(?:^|[\\/])\.explain[\\/]units[\\/](u-\d{4,})\.md$/
@@ -10,11 +12,13 @@ export const SECTIONS = ['## What changed', '## Why', '## How it works now', '##
 export const BANNED = ['robust', 'seamless', 'seamlessly', 'leverage', 'leverages', 'leveraging', 'comprehensive', 'various', 'enhance', 'enhanced', 'enhances', 'streamline', 'streamlined', 'it should be noted', 'in order to', 'as mentioned']
 export const DEFAULT_WORDS = 300
 const MAX_COMMANDS = 20
-const VERIFY_RE = /\b(test|tests|jest|vitest|mocha|pytest|ctest|tox|cargo (test|build|check|clippy)|go (test|build|vet)|tsc|eslint|ruff|mypy|flake8|make|gradle|mvn|dotnet (test|build)|node --test|npm (run )?(test|build|lint|check)|pnpm (run )?(test|build|lint)|yarn (test|build|lint)|bun test|claude plugin (test|validate))\b/
+// A test, lint, typecheck or build run: a simple command (lib/safety.mjs splits the line the way a shell does) that starts
+// with a runner. Before 0.17.1 the word "test" anywhere matched (grep, sed scripts, commit messages, `test -f`).
+const RUNNER = /^(?:(?:npm|pnpm|yarn|bun) (?:run )?(?:test|build|lint|check|typecheck|[\w:.-]*(?:test|lint|check|build)[\w:.-]*)|npx (?:tsc|vitest|jest|eslint|mocha|playwright)|bun test|jest|vitest|mocha|pytest|ctest|tox|tsc|eslint|ruff|mypy|flake8|pyright|mvn|gradle|\.\/gradlew|\.\/mvnw|python3? -m (?:pytest|unittest|mypy|ruff)|cargo (?:test|build|check|clippy|nextest)|go (?:test|build|vet)|dotnet (?:test|build)|node (?:--\S+ )*--test|make|cmake --build|claude plugin (?:test|validate))(?: |$)/
 // Commands that only look around; left out of the record so it stays short.
 const QUIET_RE = /^\s*(ls|cat|head|tail|pwd|echo|grep|rg|find|wc|sed -n|git (status|log|diff|show|branch|rev-parse))\b/
 
-export const isVerification = (cmd) => VERIFY_RE.test(cmd)
+export const isVerification = (cmd) => simpleCommands(cmd).some((ws) => RUNNER.test(ws.join(' ')))
 /** A pipe outside quotes (not `||`); with `set -o pipefail` the exit code is honest again. */
 export const isPiped = (cmd) => !/pipefail/.test(cmd) && /(^|[^|])\|(?!\|)/.test(cmd.replace(/'[^']*'|"[^"]*"/g, ''))
 export const exitFrom = (r) => {
@@ -22,6 +26,17 @@ export const exitFrom = (r) => {
   if (r?.isError !== true) return 0
   const m = /Exit code (\d+)/.exec(r?.text ?? '')
   return m ? Number(m[1]) : 1
+}
+// Check note (0.17.1, footer only): an edit to code a test could cover (not tests, docs, markup or styles), and what
+// followed the last one. AgentBridge: 19 of 23 code-changing requests ran a passing test after their last edit.
+const MARKUP = /\.(html?|css|scss|sass|less)$/i
+export const checkableEdit = (file) => gatedFile(file) && !MARKUP.test(file)
+/** After `since`: { status: 'none' } (no check ran), { status: 'failed', exit } (the last one failed), or null (it passed).
+ *  A piped command's exit code is the last stage's, so a piped check is never called failed. */
+export function checkAfter(commands, since) {
+  const last = (commands ?? []).filter((c) => c.at >= since && isVerification(c.cmd)).at(-1)
+  if (!last) return { status: 'none' }
+  return last.exit !== 0 && !isPiped(last.cmd) ? { status: 'failed', exit: last.exit } : null
 }
 export const isCommit = (cmd) => /\bgit\b[^|;&]*\bcommit\b/.test(cmd) && !/--dry-run/.test(cmd)
 

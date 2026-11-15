@@ -16,7 +16,7 @@ import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom }
 import { executionNote } from '../lib/execution.mjs'
 import { capRequest } from '../lib/subagent-cap.mjs'
 import { checkCommand, safetyText } from '../lib/safety.mjs'
-import { EXPLAIN_DIR, UNIT_RE, buildRecord, citedPaths, exitFrom, feedbackText, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
+import { EXPLAIN_DIR, UNIT_RE, buildRecord, checkAfter, checkableEdit, citedPaths, exitFrom, feedbackText, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
 import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
 import { FILES, NUDGE_TEXT, appendBlock, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, preEditText, requestTitle, shouldNudge, maxLinesFrom, maxCharsFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
 
@@ -358,6 +358,8 @@ export const register = (on) => {
     if (await isOff($)) return next(e)
     const after = async (r) => {
       if (e.agentId === undefined && r?.deny === undefined && r?.isError !== true && gatedFile(editTarget(e))) req.pt.edited = true
+      // Check note (footer): the time of the last edit to code a test could cover (any agent; markup and styles left out).
+      if (r?.deny === undefined && r?.isError !== true && checkableEdit(editTarget(e))) req.codeEditAt = Date.now()
       try { await memoryTrack($, e, r) } catch {}
       try { return await explainCheck($, e, r) } catch { return r }
     }
@@ -389,6 +391,15 @@ export const register = (on) => {
       const present = hasClosingLine(e.answer)
       tracker.ponytail({ level: pt.level, closing: present })
       await flush(sink, sink.record('ponytail', { action: 'closing', present, level: pt.level }), (p, b) => $.fs.write(p, b))
+    }
+    // Check note (lib/explain.mjs checkAfter): footer only, never sent to Claude.
+    if (main && req.codeEditAt && !req.checkNoted && e.reason === 'answer') {
+      req.checkNoted = true
+      const info = checkAfter(ex.commands, req.codeEditAt)
+      if (info) {
+        tracker.check(info)
+        await flush(sink, sink.record('check', info), (p, b) => $.fs.write(p, b))
+      }
     }
     const ev = main ? tracker.finish(e.answer) : null
     const w = sink.record('turn.complete', {
