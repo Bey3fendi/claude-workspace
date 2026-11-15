@@ -28,6 +28,11 @@ It also includes an optional, disabled-by-default model router.
   - When a request changes files and Claude writes no log block, the workspace appends a facts-only one: the request's first line (secrets redacted), the files changed (git included, so Bash edits count), the last check after the last edit and its exit code, and the sections added to `decisions.md` / `context.md`.
   - Before an automatic compaction, a git snapshot (last commit and changed files) is appended to the log.
   - The files are yours to read, edit and commit.
+- **CI (`/ci`)** (0.18.0): you type it after a push, or before one. It checks the latest CI run of the current branch (or `/ci <run id>`, `/ci <PR number>`) with `gh`, reads the failed log, reproduces the failing step locally with the command from `.github/workflows/`, and fixes it. Nothing runs unless you type it.
+  - It is a debugging request: the debug contract (`superpowers:systematic-debugging`), Ponytail's rule when it is active, and the root-cause gate before the first source edit. A slash command skips the keyword classifier, so workspace-core starts the request when the skill loads.
+  - Fix the code, not the test or the workflow, unless that is what is wrong; never skip a test or add `continue-on-error`. A CI-environment problem (secret, runner, flaky test) is reported, not "fixed". When this machine lacks what the workflow installs, it says so and installs nothing.
+  - It never commits or pushes unless you ask. No GitHub App, workflow file or secret is added. Needs the `gh` CLI for the run and its log; without it (or after GitHub drops logs, about 90 days) it reproduces from the workflow file.
+  - Live check on log_daemon (C++, Haiku, $0.014 and $0.018): an unpushed commit that broke the formatter test was found, root-caused at `formatter.cpp:13` before the edit, fixed in one line and verified with the workflow's `ctest` command. Without the test packages it reported them missing and proved the bug with a small reproduction. Against a real failed run (a throwaway PR, since closed): `/ci 1` read the run's `--log-failed` output, reproduced the same 2 failures, fixed the line, 22/22 tests passed locally, and the pushed fix turned CI green ($0.012).
 - **Plan execution:** plans run in Superpowers' **Native** mode (`superpowers:executing-plans`): every task inline in the current session, then one fresh review of the whole branch. `superpowers:subagent-driven-development` is denied, and the method is stated at session start, so the plan handoff doesn't ask.
 - **Explain (`/explain`):** you ask for it, it writes a short explanation of a change for a reader who didn't watch the session. Nothing runs unless you type it, and nothing ever blocks.
   - `/explain` explains the uncommitted changes; `/explain HEAD` (or any commit) explains a commit. After a commit, the footer suggests it.
@@ -107,10 +112,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.17.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.17.1
+npx -y github:Bey3fendi/claude-workspace#v0.18.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.18.0
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.17.1 repair --marketplace Bey3fendi/claude-workspace#v0.17.1
+npx -y github:Bey3fendi/claude-workspace#v0.18.0 repair --marketplace Bey3fendi/claude-workspace#v0.18.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

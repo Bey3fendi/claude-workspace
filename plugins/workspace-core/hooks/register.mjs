@@ -76,6 +76,27 @@ const statusText = () =>
   `cw ${st.model ? st.model.replace(/^claude-/, '') : '?'}${st.effort ? `/${st.effort}` : ''} · skills ${st.skills} · req ${st.requests}`
 
 // Explain: when the developer runs /explain, capture the change record by code and hand it to the skill.
+// /ci (skills/ci): fixing a CI failure is a debugging request. A slash command skips prompt.submit's classifier,
+// so the request starts here: the debug contract (systematic-debugging), Ponytail's rule when it is active, and
+// the root-cause gate on source edits. (Called from the skill.prompt hook.)
+async function ciPrompt($, e, r) {
+  if (typeof r?.text !== 'string' || e.agentId !== undefined || (await isOff($))) return r
+  const gates = (await $.env.get('CW_GATES')) !== '0'
+  const contracts = (await $.env.get('CW_CONTRACTS')) !== '0'
+  req = { class: 'debug', reason: 'ci', text: '', last: '', denies: 0, released: false, gates, contracts, skills: [e.skill], mem: freshMem({ title: 'CI check and fix (/ci)' }), pt: freshPt() }
+  const level = (await $.env.get('CW_PONYTAIL')) === '0' ? null : activeLevel(pt.level)
+  const add = []
+  if (contracts) add.push(contractText('debug', { ponytail: !!level, reason: 'ci' }))
+  if (level) {
+    add.push(reminderText(level))
+    req.pt.reminded = true
+    tracker.ponytail({ reminded: 'contract', level })
+    await flush(sink, sink.record('ponytail', { action: 'remind', via: 'contract', level }), (p, b) => $.fs.write(p, b))
+  }
+  await flush(sink, sink.record('classify', { class: 'debug', reason: 'ci', contract: contracts }), (p, b) => $.fs.write(p, b))
+  return add.length ? { ...r, text: `${r.text}\n\n${add.join('\n\n')}` } : r
+}
+
 // (Called from the skill.prompt hook: one unmatched hook per event.)
 async function explainPrompt($, e, r) {
   if (e.pluginName !== 'workspace-core' || !/(^|:)explain$/.test(e.skill ?? '') || typeof r?.text !== 'string') return r
@@ -423,6 +444,7 @@ export const register = (on) => {
     await flush(sink, w, (p, b) => $.fs.write(p, b))
     $.ui.status(statusText())
     if (e.pluginName === 'workspace-core' && /(^|:)explain$/.test(e.skill ?? '')) { try { return await explainPrompt($, e, r) } catch { return r } }
+    if (e.pluginName === 'workspace-core' && /(^|:)ci$/.test(e.skill ?? '')) { try { return await ciPrompt($, e, r) } catch { return r } }
     return r
   })
 
