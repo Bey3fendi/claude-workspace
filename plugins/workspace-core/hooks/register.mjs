@@ -19,7 +19,7 @@ import { capRequest } from '../lib/subagent-cap.mjs'
 import { checkCommand, safetyText } from '../lib/safety.mjs'
 import { EXPLAIN_DIR, UNIT_RE, buildRecord, checkAfter, checkableEdit, citedPaths, exitFrom, feedbackText, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
 import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
-import { FILES, NUDGE_TEXT, appendBlock, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, porcelainMap, preEditText, requestTitle, shouldNudge, maxLinesFrom, maxCharsFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
+import { FILES, NUDGE_TEXT, appendBlock, staleSections, staleText, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, porcelainMap, preEditText, requestTitle, shouldNudge, maxLinesFrom, maxCharsFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
 import { changedPaths, mayWrite, snapshotMap } from '../lib/bash-edits.mjs'
 
 const sink = createSink()
@@ -44,7 +44,7 @@ const SOURCE_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
 // commands start, the memory headings at its start, and whether it was logged / nudged already.
 // Ponytail per request: reminded (the core rule was attached), edited (a source-code file was changed), closeAsked.
 const freshPt = () => ({ reminded: false, edited: false, closeAsked: false })
-const freshMem = (o = {}) => ({ edited: [], wrote: { session: false, decisions: false, context: false }, cmdStart: ex.commands.length, heads: { decisions: [], context: [] }, sessionAt: null, gitAt: null, title: '', logged: false, nudged: false, ...o })
+const freshMem = (o = {}) => ({ edited: [], wrote: { session: false, decisions: false, context: false }, cmdStart: ex.commands.length, heads: { decisions: [], context: [] }, contextAt: null, staleAsked: false, sessionAt: null, gitAt: null, title: '', logged: false, nudged: false, ...o })
 let req = { class: null, reason: null, text: '', last: '', denies: 0, released: false, gates: true, contracts: true, skills: [], mem: freshMem(), pt: freshPt() }
 // Ponytail (lib/ponytail.mjs): its level as last announced in its own injected text, or set by the user's
 // /ponytail <level> or "stop ponytail". null = not seen this session (not installed, or not injected yet).
@@ -85,7 +85,9 @@ async function ciPrompt($, e, r) {
   if (typeof r?.text !== 'string' || e.agentId !== undefined || (await isOff($))) return r
   const gates = (await $.env.get('CW_GATES')) !== '0'
   const contracts = (await $.env.get('CW_CONTRACTS')) !== '0'
-  req = { class: 'debug', reason: 'ci', text: '', last: '', denies: 0, released: false, gates, contracts, skills: [e.skill], mem: freshMem({ title: 'CI check and fix (/ci)' }), pt: freshPt() }
+  req = { class: 'debug', reason: 'ci', text: '', last: '', denies: 0, released: false, gates, contracts, skills: [e.skill], pt: freshPt(),
+    // the memory snapshots prompt.submit took for this same prompt stay (the stale-notes check and the autolog compare against them)
+    mem: freshMem({ cmdStart: req.mem.cmdStart, heads: req.mem.heads, contextAt: req.mem.contextAt, sessionAt: req.mem.sessionAt, gitAt: req.mem.gitAt, title: 'CI check and fix (/ci)' }) }
   const level = (await $.env.get('CW_PONYTAIL')) === '0' ? null : activeLevel(pt.level)
   const add = []
   if (contracts) add.push(contractText('debug', { ponytail: !!level, reason: 'ci' }))
@@ -297,6 +299,15 @@ async function memoryEnd($, e, root) {
     await flush(sink, sink.record('memory', { action: 'nudge', class: req.class }), (p, b) => $.fs.write(p, b))
     return NUDGE_TEXT
   }
+  // Stale notes: once per request, not after the design nudge (that one already asked for the notes). CW_MEMORY_STALE=0 turns it off.
+  if (!m.nudged && !m.staleAsked && m.contextAt !== null && (await $.env.get('CW_MEMORY_STALE')) !== '0') {
+    const stale = staleSections(m.contextAt, await readText($, `${root}/${FILES.context}`), files)
+    if (stale.length) {
+      m.staleAsked = true
+      await flush(sink, sink.record('memory', { action: 'stale-ask', sections: stale.length }), (p, b) => $.fs.write(p, b))
+      return staleText(stale)
+    }
+  }
   m.logged = true
   if (wroteSession || (await $.env.get('CW_MEMORY_AUTOLOG')) === '0') return null
   const lastEdit = ex.lastEditAt
@@ -358,7 +369,8 @@ export const register = (on) => {
     if ((await $.env.get('CW_MEMORY')) !== '0') {
       const root = await $.session.root().catch(() => null)
       if (root) {
-        req.mem.heads = { decisions: headingsOf(await readText($, `${root}/${FILES.decisions}`)), context: headingsOf(await readText($, `${root}/${FILES.context}`)) }
+        req.mem.contextAt = await readText($, `${root}/${FILES.context}`)
+        req.mem.heads = { decisions: headingsOf(await readText($, `${root}/${FILES.decisions}`)), context: headingsOf(req.mem.contextAt) }
         // Snapshots, so changes made through Bash count too (Claude often appends to .memory/ with `cat >>`).
         req.mem.sessionAt = await readText($, `${root}/${FILES.session}`)
         req.mem.gitAt = await gitStatus($, root)

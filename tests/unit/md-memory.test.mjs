@@ -102,3 +102,22 @@ test('session.md is capped by characters too (AgentBridge: 146 lines were 18 KB)
   assert.ok(out.split('\n').length - 1 <= 150)
   assert.equal(maxCharsFrom('20000'), 20000); assert.equal(maxCharsFrom('5'), 12000); assert.equal(maxCharsFrom(undefined), 12000)
 })
+
+test('0.19.1: stale sections, the ask text, a 10-file snapshot, snapshots trimmed first', async () => {
+  const { staleSections, staleText } = await import('../../plugins/workspace-core/lib/md-memory.mjs')
+  const ctx = '# C\n\n## Mock API\n<!-- paths: src/mock/** -->\n- GET only\n\n## Store\n<!-- paths: src/store/** -->\n- JSON\n'
+  assert.deepEqual(staleSections(ctx, ctx, ['src/mock/a.ts']).map((s) => s.id), ['context.md#Mock API'])
+  assert.deepEqual(staleSections(ctx, ctx.replace('GET only', 'GET and POST'), ['src/mock/a.ts']), [], 'updated')
+  assert.deepEqual(staleSections('', ctx, ['src/mock/a.ts']), [], 'a section added in this request is new, not stale')
+  assert.deepEqual(staleSections(ctx, ctx, ['README.md']), [])
+  assert.match(staleText(staleSections(ctx, ctx, ['src/mock/a.ts', 'src/store/b.ts'])), /: "Mock API" \(src\/mock\/\*\*\), "Store" \(src\/store\/\*\*\)\. Before you finish/)
+  const porcelain = Array.from({ length: 30 }, (_, i) => ` M f${i}.ts`).join('\n')
+  const snap = snapshotBlock({ stamp: 's', porcelain })
+  assert.equal(snap.split('\n').filter((l) => l.startsWith('  - ')).length, 11)
+  assert.match(snap, /… and 20 more/)
+  const work = (n) => `## 2026-11-1${n} 10:00 · work ${n}\n- done\n`
+  const snapB = (n) => `## 2026-11-1${n} 11:00 · auto-snapshot (auto)\n` + '- x\n'.repeat(10)
+  const out = trimSession('# H\n\n' + work(1) + snapB(2) + work(3) + snapB(4) + work(5), 12)
+  assert.match(out, /work 1/); assert.match(out, /work 3/); assert.match(out, /work 5/)
+  assert.doesNotMatch(out, /auto-snapshot/)
+})

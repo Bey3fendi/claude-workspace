@@ -34,7 +34,8 @@ It also includes an optional, disabled-by-default model router.
   - `context.md` and `decisions.md` hold `## ` sections tagged `<!-- paths: src/cart/** -->`. A section reaches Claude before it changes a matching file: with the read, or in place of its first edit there (that edit is not applied; the retry is). Once per session and per subagent.
   - Claude writes the notes itself, following short rules given at session start. The feature and architecture contracts also ask for the agreed decisions to be recorded. When a request with a design step (brainstorming, writing-plans, or an architecture request) changes code but records nothing, Claude is asked once, at the end, to add them.
   - When a request changes files and Claude writes no log block, the workspace appends a facts-only one: the request's first line (secrets redacted), the files changed (git included, so Bash edits count), the last check after the last edit and its exit code, and the sections added to `decisions.md` / `context.md`.
-  - Before an automatic compaction, a git snapshot (last commit and changed files) is appended to the log.
+  - Stale notes (0.19.1): when a request changes files that a `context.md` section's paths cover, and the section was left as it was, Claude is asked once before it finishes to fix any fact that is now wrong and to add the request's decisions to `decisions.md`. Automatic, for every kind of request; nothing is asked when no section covers the changed files. `CW_MEMORY_STALE=0` turns it off. (AgentBridge: notes kept saying "the receiver gets 400 today" after the fix shipped. Live, Haiku: a "10% loyalty discount" note was rewritten after the bug fix that removed it.)
+  - Before an automatic compaction, a git snapshot (last commit and at most 10 changed files) is appended to the log. When the log is over its cap, snapshot blocks are dropped before work blocks.
   - The files are yours to read, edit and commit.
 - **CI (`/ci`)** (0.18.0): you type it after a push, or before one. It checks the latest CI run of the current branch (or `/ci <run id>`, `/ci <PR number>`) with `gh`, reads the failed log, reproduces the failing step locally with the command from `.github/workflows/`, and fixes it. Nothing runs unless you type it.
   - It is a debugging request: the debug contract (`superpowers:systematic-debugging`), Ponytail's rule when it is active, and the root-cause gate before the first source edit. A slash command skips the keyword classifier, so workspace-core starts the request when the skill loads.
@@ -103,6 +104,7 @@ claude --settings '{"enabledPlugins":{"workspace-core@cw-workspace":false,"super
 | `CW_MEMORY_PREEDIT=0` | notes arrive only with a read, never in place of a first edit |
 | `CW_MEMORY_AUTOLOG=0` | no facts-only block at the end of a request |
 | `CW_MEMORY_NUDGE=0` | no end-of-request request to record a design step's decisions |
+| `CW_MEMORY_STALE=0` | no end-of-request question about `context.md` sections that cover changed files |
 | `CW_EXPLAIN=0` | no Explain (no command capture, `/explain` writes nothing) |
 | `CW_EXPLAIN_WORDS=500` | Explain word budget outside `<details>` (default 300) |
 | `CW_SUBAGENT_CAP=0` | no subagent cap (subagents may run on Fable or at xhigh/max effort) |
@@ -123,10 +125,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.19.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.19.0
+npx -y github:Bey3fendi/claude-workspace#v0.19.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.19.1
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.19.0 repair --marketplace Bey3fendi/claude-workspace#v0.19.0
+npx -y github:Bey3fendi/claude-workspace#v0.19.1 repair --marketplace Bey3fendi/claude-workspace#v0.19.1
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

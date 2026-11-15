@@ -64,7 +64,7 @@ export function parseSections(text, file) {
     if (!block.startsWith('## ')) continue
     const m = block.match(/<!--\s*paths:\s*(.+?)\s*-->/)
     if (!m) continue
-    out.push({ id: `${file}#${block.split('\n')[0].slice(3).trim()}`, globs: splitGlobs(m[1]).map(globToRegex), body: block.trim() })
+    out.push({ id: `${file}#${block.split('\n')[0].slice(3).trim()}`, globs: splitGlobs(m[1]).map(globToRegex), paths: m[1], body: block.trim() })
   }
   return out
 }
@@ -99,7 +99,10 @@ export function sessionStartText(sessionText, { rules = true } = {}) {
 
 /** Mechanical PreCompact block (not written by Claude). */
 export function snapshotBlock({ stamp, trigger = 'compact', lastCommit = '', porcelain = '' }) {
-  const changed = String(porcelain).split('\n').filter(Boolean).slice(0, 15).map((l) => `  - ${l.trim()}`)
+  // At most 10 files (0.19.1): two snapshots of ~37 lines each were pushing real work out of the 150-line log.
+  const all = String(porcelain).split('\n').filter(Boolean)
+  const changed = all.slice(0, 10).map((l) => `  - ${l.trim()}`)
+  if (all.length > 10) changed.push(`  - … and ${all.length - 10} more`)
   return [`## ${stamp} · auto-snapshot (${trigger})`,
     '- Written by the PreCompact hook, not by Claude: check the block above for intent and next step.',
     lastCommit && `- Last commit: ${lastCommit}`, changed.length ? '- Uncommitted:' : '- Working tree clean', ...changed].filter(Boolean).join('\n')
@@ -110,7 +113,9 @@ export function appendBlock(text, block) {
   return t + (t.endsWith('\n') || !t ? '' : '\n') + '\n' + block + '\n'
 }
 
-/** Keep at most maxLines lines and maxChars characters, dropping the oldest "## " blocks (the header stays). */
+/** Keep at most maxLines lines and maxChars characters, dropping the oldest "## " blocks (the header stays).
+ *  Auto-snapshot blocks go first (oldest first), since they hold no intent; the newest block always stays. */
+const SNAPSHOT = /^## [^\n]*· auto-snapshot \(/
 export function trimSession(text, maxLines = DEFAULT_MAX_LINES, maxChars = DEFAULT_MAX_CHARS) {
   const t = String(text ?? '')
   if (!t) return t
@@ -118,7 +123,10 @@ export function trimSession(text, maxLines = DEFAULT_MAX_LINES, maxChars = DEFAU
   const header = parts[0].startsWith('## ') ? '' : parts.shift()
   const count = (s) => s.split('\n').length - 1
   const over = () => count(header + parts.join('')) > maxLines || (header + parts.join('')).length > maxChars
-  while (parts.length > 1 && over()) parts.shift()
+  while (parts.length > 1 && over()) {
+    const i = parts.findIndex((p, k) => k < parts.length - 1 && SNAPSHOT.test(p))
+    parts.splice(i === -1 ? 0 : i, 1)
+  }
   let out = header + parts.join('')
   if (count(out) > maxLines) out = out.split('\n').slice(0, maxLines).join('\n') + '\n'
   return out
@@ -215,6 +223,22 @@ export function autoBlock({ stamp, cls, title, files, check, added = {} }) {
   lines.push(`- Recorded: ${rec.length ? rec.join('; ') : 'nothing new in decisions.md or context.md'}`)
   lines.push('- Next step: not recorded; check the request and the files above.')
   return lines.join('\n')
+}
+
+/**
+ * Stale notes (0.19.1): context.md sections whose paths cover a file this request changed, and whose text is the same as at
+ * the request's start. In AgentBridge such notes kept saying "the receiver gets 400 today" after the fix shipped.
+ */
+export function staleSections(before, after, files) {
+  const prev = new Map(parseSections(before, 'context.md').map((s) => [s.id, s.body]))
+  return parseSections(after, 'context.md').filter((s) => prev.get(s.id) === s.body && files.some((f) => s.globs.some((g) => g.test(f))))
+}
+export function staleText(sections) {
+  const list = sections.slice(0, 6).map((s) => `"${s.id.split('#')[1]}" (${s.paths})`).join(', ') + (sections.length > 6 ? ` and ${sections.length - 6} more` : '')
+  return `[md-memory] This request changed files that these .memory/context.md sections describe, and they were not updated: ${list}. ` +
+    'Before you finish, read each one. Where a fact is now wrong (a route, a field, a status, a date), fix it in place and keep its paths line. ' +
+    'Add any decision from this request that a later session must not undo to .memory/decisions.md (a "## " title, a <!-- paths: … --> line, then Decision / Why / Rejected). ' +
+    'If every note is still right and nothing was decided, say so in one line. Then finish your reply as before.'
 }
 
 /** Ask once, at the end of a designed change, for the decisions to be written down. */

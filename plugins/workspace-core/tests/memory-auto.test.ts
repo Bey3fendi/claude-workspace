@@ -169,3 +169,41 @@ test('Bash work counts: git-only changes are listed, a Bash-written block suppre
   await ($ as any).classic.Stop({ stop_hook_active: false })
   expect(files[SESSION]).toBe(before)
 })
+
+// 0.19.1: stale notes. A context.md section whose paths cover a file the request changed, left as it was, is asked about once.
+const CTX = '# Context\n\n## Mock API\n<!-- paths: src/mock/** -->\n- GET only; /logs/url.\n\n## Store\n<!-- paths: src/store/** -->\n- JSON file.\n'
+const stop = async ($: any) => ((await ($ as any).classic.Stop({ stop_hook_active: false })) as any)?.block ?? null
+
+test('a request that changes files a context.md section describes, without touching it, is asked once', async ($, on) => {
+  const files: Record<string, string> = { [SESSION]: LOG, [CONTEXT]: CTX }
+  engine(on, files, { CW_MEMORY_PREEDIT: '0' })
+  await ask($, 'yes do it')
+  await write($, `${ROOT}/src/mock/server.ts`)
+  const block = await stop($)
+  expect(block).toContain('[md-memory] This request changed files that these .memory/context.md sections describe')
+  expect(block).toContain('"Mock API" (src/mock/**)')
+  expect(block).not.toContain('"Store"')
+  // the second Stop: no second ask; the facts-only block is written instead
+  expect(await stop($)).toBeNull()
+  expect(files[SESSION]).toContain('Auto-logged by the workspace')
+})
+
+test('no ask when the section was updated, when no section covers the file, or with CW_MEMORY_STALE=0', async ($, on) => {
+  const files: Record<string, string> = { [SESSION]: LOG, [CONTEXT]: CTX }
+  engine(on, files, { CW_MEMORY_PREEDIT: '0' })
+  await ask($, 'here is the KB page')
+  await write($, `${ROOT}/src/mock/server.ts`)
+  await write($, CONTEXT, CTX.replace('GET only; /logs/url.', 'GET and POST; /logs/urls.'))
+  expect(await stop($)).toBeNull()
+  await ask($, 'here is the KB page again')
+  await write($, `${ROOT}/src/other/x.ts`)
+  expect(await stop($)).toBeNull()
+})
+
+test('CW_MEMORY_STALE=0', async ($, on) => {
+  const files: Record<string, string> = { [SESSION]: LOG, [CONTEXT]: CTX }
+  engine(on, files, { CW_MEMORY_PREEDIT: '0', CW_MEMORY_STALE: '0' })
+  await ask($, 'yes do it')
+  await write($, `${ROOT}/src/mock/server.ts`)
+  expect(await stop($)).toBeNull()
+})
