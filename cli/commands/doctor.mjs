@@ -58,6 +58,11 @@ export async function doctor(ctx, rep) {
 
   const miss = settings ? missingDenies(settings, ctx.denies) : ctx.denies
   add('skill-deny-rules', miss.length ? 'warn' : 'ok', miss.length ? `${miss.length} rule(s) missing (run repair)` : `${ctx.denies.length} present`)
+  if (safeJson(ctx.p('.claude/workspace.json'))?.safetyDenies === false) add('safety-deny-rules', 'ok', 'skipped (--no-safety-denies)')
+  else {
+    const sm = settings ? missingDenies(settings, ctx.safetyDenies) : ctx.safetyDenies
+    add('safety-deny-rules', sm.length ? 'warn' : 'ok', sm.length ? `${sm.length} rule(s) missing (run repair)` : `${ctx.safetyDenies.length} present`)
+  }
 
   const giText = readMaybe(ctx.p('.gitignore'))?.toString('utf8')
   add('gitignore', !hasBlock(giText) ? 'warn' : upsertBlock(giText) === giText ? 'ok' : 'warn', !hasBlock(giText) ? 'managed block missing (run repair)'

@@ -5,7 +5,10 @@ import { readdirSync, existsSync, readFileSync, writeFileSync, rmSync, mkdirSync
 import { hashFile } from '../../cli/lib/util.mjs'
 import { sandbox, cli, tree, git, write, read, calls, ROOT } from '../helpers.mjs'
 
-const POLICY_RULES = JSON.parse(readFileSync(join(ROOT, 'policies', 'skill-denies.json'), 'utf8')).rules.length
+const rulesOf = (f) => JSON.parse(readFileSync(join(ROOT, 'policies', f), 'utf8')).rules
+const SKILL_RULES = rulesOf('skill-denies.json')
+const SAFETY_RULES = rulesOf('safety-denies.json')
+const POLICY_RULES = SKILL_RULES.length + SAFETY_RULES.length
 
 const LOCK = JSON.parse(readFileSync(new URL('../../workspace.lock.json', import.meta.url), 'utf8'))
 const regOf = (sb) => JSON.parse(read(join(sb.home, '.claude', 'plugins', 'installed_plugins.json'))).plugins
@@ -464,4 +467,20 @@ test('--no-response-style leaves the section out; repair keeps the choice; --res
   assert.equal(cli(sb, ['repair', '--response-style']).code, 0)
   assert.match(owned(), /## Response style \(ADHD-friendly\)/)
   assert.equal(cli(sb, ['doctor']).code, 0)
+})
+
+test('--no-safety-denies leaves the safety rules out; repair keeps the choice; --safety-denies puts them back', () => {
+  const sb = sandbox()
+  const deny = () => JSON.parse(read(join(sb.project, '.claude', 'settings.json'))).permissions.deny
+  const check = () => cli(sb, ['doctor']).json.checks.find((c) => c.id === 'safety-deny-rules')
+  assert.equal(cli(sb, ['install']).code, 0)
+  assert.ok(SAFETY_RULES.every((r) => deny().includes(r)))
+  assert.equal(check().status, 'ok')
+  assert.equal(cli(sb, ['repair', '--no-safety-denies']).code, 0)
+  assert.deepEqual(deny(), SKILL_RULES, 'only the skill rules stay')
+  assert.match(check().detail ?? check().message ?? JSON.stringify(check()), /skipped/)
+  assert.equal(cli(sb, ['repair']).code, 0)
+  assert.deepEqual(deny(), SKILL_RULES, 'repair keeps the choice')
+  assert.equal(cli(sb, ['repair', '--safety-denies']).code, 0)
+  assert.equal(deny().length, POLICY_RULES)
 })

@@ -1,0 +1,25 @@
+{
+  "description": "permissions.deny safety rules merged into project .claude/settings.json (0.17.0; --no-safety-denies leaves them out). A backstop, not a boundary: Bash rules match the command text from its start (and each subcommand), so variants such as `git -C . push -f` or a script reading a file itself are not covered here; workspace-core's safety check (lib/safety.mjs) catches more of them. Read rules also apply to Grep/Glob (best effort) and to cat/head/tail/sed in Bash. A deny rule wins over any allow rule, in every settings file. Template files (.env.example, .env.sample) stay readable.",
+  "rules": [
+    "Bash(git push --force)",
+    "Bash(git push --force *)",
+    "Bash(git push -f)",
+    "Bash(git push -f *)",
+    "Bash(git reset --hard)",
+    "Bash(git reset --hard *)",
+    "Bash(git clean -f*)",
+    "Read(**/.env)",
+    "Read(**/.env.local)",
+    "Read(**/.env.*.local)",
+    "Read(**/.env.development)",
+    "Read(**/.env.production)",
+    "Read(**/.env.staging)",
+    "Read(**/.env.test)",
+    "Read(**/*.pem)",
+    "Read(**/id_rsa*)",
+    "Read(**/id_ecdsa*)",
+    "Read(**/id_ed25519*)",
+    "Read(~/.ssh/**)",
+    "Read(~/.aws/credentials)"
+  ]
+}

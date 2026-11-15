@@ -15,6 +15,7 @@ import { CLOSE_TEXT, CODE_CLASSES, activeLevel, hasClosingLine, injectedLevel, p
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 import { executionNote } from '../lib/execution.mjs'
 import { capRequest } from '../lib/subagent-cap.mjs'
+import { checkCommand, safetyText } from '../lib/safety.mjs'
 import { EXPLAIN_DIR, UNIT_RE, buildRecord, citedPaths, exitFrom, feedbackText, isCommit, isVerification, newDecisions, nextUnitId, parseHunks, parseNumstat, parseTarget, recordText, validate, wordsFrom } from '../lib/explain.mjs'
 import { OWNED, KARPATHY_HEADING, importsWorkspace } from '../lib/claude-md.mjs'
 import { FILES, NUDGE_TEXT, appendBlock, autoBlock, changedFiles, checkLine, headingsOf, injectText, matchSections, preEditText, requestTitle, shouldNudge, maxLinesFrom, maxCharsFrom, parseSections, relPath, sessionStartText, snapshotBlock, stampOf, trimSession } from '../lib/md-memory.mjs'
@@ -425,6 +426,19 @@ export const register = (on) => {
     const w = sink.record('tool.call', { tool: 'Skill', skill: e.skill ?? null, agentId: e.agentId ?? null, ...outcome })
     await flush(sink, w, (p, b) => $.fs.write(p, b))
     return r
+  }).catch(($, e, next) => next(e))
+
+  // Safety check (lib/safety.mjs): refuse force-push, reset --hard, git clean -f, rm -rf on /, ~, . or .git, and Bash reads
+  // of .env and key files. Every agent, and also under CW_OFF: it adds nothing to the conversation unless it refuses.
+  // CW_SAFETY=0 turns it off. A failure in the check lets the command through (the deny rules still apply).
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    if (typeof e.command !== 'string') return next(e)
+    let off = false
+    try { off = (await $.env.get('CW_SAFETY')) === '0' } catch {}
+    const hit = off ? null : checkCommand(e.command)
+    if (!hit) return next(e)
+    await flush(sink, sink.record('safety', { rule: hit.rule, agent: e.agentId !== undefined }), (p, b) => $.fs.write(p, b))
+    return { deny: safetyText(hit) }
   }).catch(($, e, next) => next(e))
 
   // Explain: remember each Bash command and its exit code for the next change record; a successful

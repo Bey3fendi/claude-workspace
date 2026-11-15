@@ -6,6 +6,7 @@ import { listPlugins, marketplaceAdd, marketplaceRemove, marketplaceUpdate, othe
 import { pinState, pushHistory, localPluginVersion } from '../lib/history.mjs'
 import { loadManifest, newManifest, snapshot, finalize, saveManifest } from '../lib/manifest.mjs'
 import { addDenies, removeDenies, addRules } from '../lib/settings.mjs'
+import { wantedDenies } from '../lib/context.mjs'
 import { upsertBlock } from '../lib/gitignore.mjs'
 import { OWNED, TARGETS, addImport, importState, removeImport, targetOf, workspaceMd } from '../lib/claude-md.mjs'
 import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
@@ -35,6 +36,9 @@ export async function install(ctx, rep, { repair = false } = {}) {
   const mdTarget = o.claudeMd !== undefined ? targetOf(o) : prevMarker?.claudeMd ? prevMarker.claudeMd.target ?? null : TARGETS.project
   // Response style: the flag, else what the previous install chose, else on.
   const responseStyle = o.responseStyle ?? prevMarker?.claudeMd?.responseStyle ?? true
+  // Safety deny rules (force-push, reset --hard, .env and key files): the flag, else the previous choice, else on.
+  const safetyDenies = o.safetyDenies ?? prevMarker?.safetyDenies ?? true
+  const denies = wantedDenies(ctx, safetyDenies)
   if (mdTarget) {
     const st = importState(readMaybe(ctx.p(mdTarget))?.toString('utf8') ?? '')
     if (st.state === 'malformed') throw new UserError(`${mdTarget} line ${st.problem.line}: ${st.problem.problem}. Fix or remove the claude-workspace markers there, then re-run (nothing was changed)`)
@@ -141,20 +145,20 @@ export async function install(ctx, rep, { repair = false } = {}) {
     { source, workspaceVersion: ctx.lock.workspaceVersion, plugins: after })) rep.info('recorded the previous versions in the manifest (see `claude-workspace rollback`)')
   m.workspaceVersion = ctx.lock.workspaceVersion
 
-  // ---- skill deny rules (invocation overlap policy)
+  // ---- deny rules: skill invocation overlap policy, plus the safety policy (policies/safety-denies.json)
   settings = readJsonFile(ctx.p('.claude/settings.json'))
   // Rules this workspace added earlier but the current policy no longer has (e.g. the claude-mem rules before 0.8.0).
-  const stale = m.addedDenies.filter((r) => !ctx.denies.includes(r))
+  const stale = m.addedDenies.filter((r) => !denies.includes(r))
   if (stale.length) {
     writeJsonIfChanged(ctx.p('.claude/settings.json'), removeDenies(settings, stale))
     rep.change(`removed ${stale.length} permissions.deny rule(s) the policy no longer has`)
     m.addedDenies = m.addedDenies.filter((r) => !stale.includes(r))
     settings = readJsonFile(ctx.p('.claude/settings.json'))
   }
-  const { settings: merged, added } = addDenies(settings, ctx.denies)
+  const { settings: merged, added } = addDenies(settings, denies)
   if (added.length) {
     writeJsonIfChanged(ctx.p('.claude/settings.json'), merged)
-    rep.change(`added ${added.length} permissions.deny skill rule(s)`)
+    rep.change(`added ${added.length} permissions.deny rule(s)`)
   }
   m.addedDenies = [...new Set([...m.addedDenies, ...added])]
 
@@ -212,6 +216,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
     plugins: ctx.pluginIds,
     memory: 'md-memory (.memory/, built into workspace-core)',
     claudeMd: { target: mdTarget, created: mdTarget ? !m.files[mdTarget]?.existedBefore : false, responseStyle },
+    safetyDenies,
   }
   if (writeJsonIfChanged(ctx.p('.claude/workspace.json'), marker)) rep.change('wrote .claude/workspace.json')
 

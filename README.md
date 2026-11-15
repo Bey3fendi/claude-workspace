@@ -55,6 +55,11 @@ It also includes an optional, disabled-by-default model router.
   - when a request changed source code and the answer has no closing line (what was skipped or not checked, and any risk), asks for that line once.
   - `/ponytail lite|full|ultra` and "stop ponytail" are followed.
 
+- **Safety guard** (0.17.0), two layers against destructive or leaking commands:
+  - **Deny rules** in `.claude/settings.json` from `policies/safety-denies.json`: the plain forms of `git push --force`/`-f`, `git reset --hard` and `git clean -f`, and `Read` of `.env` files (`.env`, `.env.local`, `.env.production`, …), `*.pem`, `id_rsa`-style keys, `~/.ssh/**` and `~/.aws/credentials`. Claude Code also applies the `Read` rules to `cat`/`head`/`tail`/`sed` in Bash. Templates such as `.env.example` stay readable. A deny rule wins over every allow rule, so a teammate cannot allow these locally. `--no-safety-denies` leaves them out; repair keeps the choice; `--safety-denies` puts them back.
+  - **A Bash check** in workspace-core (`lib/safety.mjs`) that reads the command the way a shell splits it. It also catches `git -C . push -f`, `git push origin +main`, `--force-with-lease`, `sh -c '…'`, `$(cat .env)`, `< .env`, `grep`/`source`/`base64`/`curl -d @` on secret files, and `rm -rf` on `/`, `~`, `$HOME`, `.`, `..`, `*` or `.git`. Text in quotes and heredoc bodies is data, so a commit message may name these commands. Claude is told to ask you to run the command yourself (`! <command>`). It covers subagents too, and stays on under `CW_OFF=1`. `CW_SAFETY=0` turns it off.
+  - **Not covered:** a script or program that opens `.env` or a key itself (`python app.py`, `npm run x`), and `grep -r` over a folder that contains `.env`. Only Claude Code's sandbox stops those. This guard is against mistakes, not a security boundary.
+
 ### Is Ponytail working?
 Check from evidence, not from Claude's word:
 - **Footer:** after a request that changed code it shows `ponytail full: rule repeated, closing line present` (or `missing`).
@@ -66,7 +71,7 @@ To run Claude in the project as a plain user would (a demo of your product, for 
 ```
 claude --settings '{"enabledPlugins":{"workspace-core@cw-workspace":false,"superpowers@cw-workspace":false,"ponytail@cw-workspace":false}}'
 ```
-- `CW_OFF=1 claude` turns off only workspace-core: no memory, contracts, holds, Ponytail driving or footer. Claude sees nothing from it (the skill listing is not trimmed either). The local event log still records the session, marked `off: true`, and the subagent cap stays on.
+- `CW_OFF=1 claude` turns off only workspace-core: no memory, contracts, holds, Ponytail driving or footer. Claude sees nothing from it (the skill listing is not trimmed either). The local event log still records the session, marked `off: true`, and the subagent cap and the safety check stay on.
 - The `CLAUDE.md` import still loads the workspace file (general rules). Use `--no-claude-md` at install if a demo must not see it.
 
 | Switch (environment) | Effect |
@@ -88,6 +93,7 @@ claude --settings '{"enabledPlugins":{"workspace-core@cw-workspace":false,"super
 | `CW_EXPLAIN=0` | no Explain (no command capture, `/explain` writes nothing) |
 | `CW_EXPLAIN_WORDS=500` | Explain word budget outside `<details>` (default 300) |
 | `CW_SUBAGENT_CAP=0` | no subagent cap (subagents may run on Fable or at xhigh/max effort) |
+| `CW_SAFETY=0` | no Bash safety check (the safety deny rules in settings still apply) |
 | `CW_PLAN_EXECUTION=0` | no plan-execution note (subagent mode stays denied; remove its rule in `policies/skill-denies.json` to allow it) |
 
 A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/context-pressure.sh`) takes precedence: workspace-core then adds no second note.
@@ -101,10 +107,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.16.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.16.1
+npx -y github:Bey3fendi/claude-workspace#v0.17.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.17.0
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.16.1 repair --marketplace Bey3fendi/claude-workspace#v0.16.1
+npx -y github:Bey3fendi/claude-workspace#v0.17.0 repair --marketplace Bey3fendi/claude-workspace#v0.17.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project
@@ -136,7 +142,7 @@ The devcontainer feature in [`devcontainer/`](devcontainer/README.md) installs t
 ## What it changes
 
 **Project files** are the only files it touches:
-- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 1 `permissions.deny` skill rule from `policies/skill-denies.json`.
+- `.claude/settings.json`: Claude Code's own `extraKnownMarketplaces` and `enabledPlugins` entries, plus 1 `permissions.deny` skill rule from `policies/skill-denies.json` and the safety deny rules from `policies/safety-denies.json` (unless `--no-safety-denies`).
 - `CLAUDE.md` (or `CLAUDE.local.md`): the managed import block only. `.claude/workspace/CLAUDE.workspace.md`: the owned file it imports.
 - `.memory/session.md`, `context.md`, `decisions.md`: created as templates if missing; existing ones are never overwritten. Uninstall removes only the templates nobody wrote in. The folder is not under `.claude/`, because Claude Code asks before every edit there (and a headless run cannot write there at all).
 - `.claude/settings.local.json` (per user, gitignored): two `permissions.allow` rules, `Edit(.memory/**)` and `Edit(.explain/**)` (each covers every file-editing tool), so Claude updates the memory files and writes `/explain` files without asking. It is not in `settings.json`, because Claude Code ignores allow rules in the shared, committed settings.

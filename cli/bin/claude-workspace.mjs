@@ -31,6 +31,7 @@ Options
   --claude-md=local      Put the CLAUDE.md import in CLAUDE.local.md (not committed) instead of CLAUDE.md
   --no-claude-md         Do not touch CLAUDE.md (the workspace file is still written; import it yourself)
   --no-response-style    Leave the ADHD-friendly response style out of the workspace file (--response-style: back in)
+  --no-safety-denies     Leave out the safety deny rules (force-push, reset --hard, .env and key files; --safety-denies: back in)
   --session <id>         usage: session id (or a prefix) instead of the latest
   --json                 Print one JSON result document
   --version, --help
@@ -57,6 +58,8 @@ export function parseArgs(argv) {
       case '--no-claude-md': o.claudeMd = false; break
       case '--no-response-style': o.responseStyle = false; break
       case '--response-style': o.responseStyle = true; break
+      case '--no-safety-denies': o.safetyDenies = false; break
+      case '--safety-denies': o.safetyDenies = true; break
       case '--claude-md': o.claudeMd = mdTarget(val()); break
       case '--remove-claude-mem': o.removeClaudeMem = true; break
       case '--no-fix': o.noFix = true; break

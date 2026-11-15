@@ -12,6 +12,11 @@ export function loadLock(root = REPO_ROOT) {
 export function loadDenies(root = REPO_ROOT) {
   return JSON.parse(readFileSync(join(root, 'policies', 'skill-denies.json'), 'utf8')).rules
 }
+export function loadSafetyDenies(root = REPO_ROOT) {
+  return JSON.parse(readFileSync(join(root, 'policies', 'safety-denies.json'), 'utf8')).rules
+}
+/** The deny rules an install wants: the skill policy, plus the safety rules unless --no-safety-denies. */
+export const wantedDenies = (ctx, safety = true) => [...ctx.denies, ...(safety ? ctx.safetyDenies : [])]
 
 /** Files in the project that the workspace may modify. Everything else is off limits. */
 export const TOUCHED = ['.claude/settings.json', '.claude/settings.local.json', '.claude/workspace.json', '.gitignore']
@@ -26,6 +31,7 @@ export function createContext(opts = {}, env = process.env) {
     env,
     lock,
     denies: loadDenies(),
+    safetyDenies: loadSafetyDenies(),
     repoRoot: REPO_ROOT,
     projectRoot,
     home,
