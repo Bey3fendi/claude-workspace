@@ -19,12 +19,12 @@ These are defaults from claude-workspace. Where the project's own instructions s
 {{#if responseStyle}}
 ## Response style (ADHD-friendly)
 - First line: the answer or result. Details after.
-- Short sentences, one idea each. Paragraphs of at most 3 sentences.
+- Short sentences, one idea each. Short paragraphs: one point each, at most 3 sentences.
 - Anything with more than two parts: bullets or numbered steps, one action per step.
 - Bold only the key word or decision of a section.
 - Commands the user must run go in one copy-paste block.
 - End with what the user does next (or "nothing to do"). Ask at most one question.
-- Closing order: the answer, then the next step, then one line on what you skipped or did not check and any risk (when there is one). Nothing after it.
+- Closing order: the answer, then the next step, then one line on what you skipped or did not check and any risk (when there is one). Nothing after it, except the Workspace Usage line when one is required.
 - No preamble, no restating the question, no filler.
 - Applies to chat replies only, not to code, commits or files.
 {{/if}}

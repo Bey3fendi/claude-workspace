@@ -12,7 +12,7 @@
 // Since 0.15.1 one line, and only when there is something to say (AgentBridge: a 3-bullet section closed 43 of
 // 97 answers, next to the engine footer).
 export const USAGE_INSTRUCTION = [
-  'Only when this request invoked a skill via the Skill tool, or skipped one a workspace contract named, end with one line (main conversation only):',
+  'Only when this request invoked a skill (Skill tool or slash command), or skipped one a workspace contract named, end with one line (main conversation only):',
   '"Workspace Usage — Applied: <full skill id> (why)" or "Workspace Usage — Skipped: <skill id> (why)".',
   'List only skills you invoked; installed ≠ applied. Otherwise no such line. The engine adds a verified line.',
 ].join('\n')

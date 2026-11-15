@@ -93,7 +93,7 @@ export function injectText(rel, hits) {
 export function sessionStartText(sessionText, { rules = true } = {}) {
   // rules = false: the project's CLAUDE.md imports the workspace file, which carries the same rules
   const s = String(sessionText ?? '').trim()
-  const log = s ? `[md-memory] Project session log (.memory/session.md). Read it before continuing; the newest block is last.\n\n${s}` : ''
+  const log = s ? `[md-memory] Project session log (.memory/session.md), below; the newest block is last.\n\n${s}` : ''
   return [rules ? MEMORY_RULES : '', log].filter(Boolean).join('\n\n') || null
 }
 
