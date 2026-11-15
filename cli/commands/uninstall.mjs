@@ -9,6 +9,7 @@ import { removeDenies, removeRules, removeMarketplaceKeys } from '../lib/setting
 import { removeBlock } from '../lib/gitignore.mjs'
 import { TARGETS, removeImport } from '../lib/claude-md.mjs'
 import { WORKSPACE_DIR } from '../lib/context.mjs'
+import { readUserSettings, removeTrust, writeUserSettings } from '../lib/automode.mjs'
 import { hashFile, readMaybe, readJsonFile, writeAtomic, writeJsonIfChanged, rmrf, removeEmptyDirs, UserError } from '../lib/util.mjs'
 import { rmSync, existsSync } from 'node:fs'
 
@@ -59,6 +60,14 @@ export async function uninstall(ctx, rep) {
   removeEmptyDirs(ctx.p('.memory'), ctx.projectRoot)
   // Explain's files are the developer's own notes: kept, and named, since without the gitignore block they show as untracked.
   if (existsSync(ctx.p('.explain'))) rep.warn('kept .explain/: your local /explain notes; no longer gitignored, so delete it or ignore it yourself')
+
+  // --trust-remote's line in ~/.claude/settings.json (only that line; the rest of the user's settings stay).
+  if (m.autoMode?.line) {
+    try {
+      const r = removeTrust(readUserSettings(ctx), m.autoMode.line, m.autoMode.created)
+      if (r.removed) { writeUserSettings(ctx, r.settings); rep.change(`removed "${m.autoMode.line}" from autoMode.environment in ${ctx.configDir}/settings.json`) }
+    } catch (err) { rep.warn(`left autoMode.environment in ${ctx.configDir}/settings.json as is: ${err.message}`) }
+  }
 
   rmrf(ctx.p(WORKSPACE_DIR))
   if (!m.claudeDirExisted) removeEmptyDirs(ctx.p('.claude'), ctx.projectRoot)

@@ -32,6 +32,12 @@ Options
   --no-claude-md         Do not touch CLAUDE.md (the workspace file is still written; import it yourself)
   --no-response-style    Leave the ADHD-friendly response style out of the workspace file (--response-style: back in)
   --no-safety-denies     Leave out the safety deny rules (force-push, reset --hard, .env and key files; --safety-denies: back in)
+  --stop-check <cmd>     Run <cmd> (e.g. "npm test") when a request changed code and ran no passing check after its last
+                         edit; a failure sends Claude back to fix it. Kept in .claude/workspace.json (--no-stop-check: off)
+  --edit-check <cmd>     Run <cmd> after each code edit; {file} is the edited file (e.g. "npx eslint {file}"); a failure is
+                         shown to Claude next to the edit (--no-edit-check: off)
+  --trust-remote         Name this repo's origin in autoMode.environment of ~/.claude/settings.json, so auto mode trusts
+                         pushes to it (--no-trust-remote: remove the line again)
   --session <id>         usage: session id (or a prefix) instead of the latest
   --json                 Print one JSON result document
   --version, --help
@@ -60,6 +66,12 @@ export function parseArgs(argv) {
       case '--response-style': o.responseStyle = true; break
       case '--no-safety-denies': o.safetyDenies = false; break
       case '--safety-denies': o.safetyDenies = true; break
+      case '--stop-check': o.stopCheck = val(); break
+      case '--no-stop-check': o.stopCheck = false; break
+      case '--edit-check': o.editCheck = val(); break
+      case '--no-edit-check': o.editCheck = false; break
+      case '--trust-remote': o.trustRemote = true; break
+      case '--no-trust-remote': o.trustRemote = false; break
       case '--claude-md': o.claudeMd = mdTarget(val()); break
       case '--remove-claude-mem': o.removeClaudeMem = true; break
       case '--no-fix': o.noFix = true; break

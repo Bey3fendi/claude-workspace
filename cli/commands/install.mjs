@@ -7,6 +7,7 @@ import { pinState, pushHistory, localPluginVersion } from '../lib/history.mjs'
 import { loadManifest, newManifest, snapshot, finalize, saveManifest } from '../lib/manifest.mjs'
 import { addDenies, removeDenies, addRules } from '../lib/settings.mjs'
 import { wantedDenies } from '../lib/context.mjs'
+import { addTrust, isTrusted, originRemote, readUserSettings, removeTrust, trustLine, writeUserSettings } from '../lib/automode.mjs'
 import { upsertBlock } from '../lib/gitignore.mjs'
 import { OWNED, TARGETS, addImport, importState, removeImport, targetOf, workspaceMd } from '../lib/claude-md.mjs'
 import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
@@ -39,6 +40,11 @@ export async function install(ctx, rep, { repair = false } = {}) {
   // Safety deny rules (force-push, reset --hard, .env and key files): the flag, else the previous choice, else on.
   const safetyDenies = o.safetyDenies ?? prevMarker?.safetyDenies ?? true
   const denies = wantedDenies(ctx, safetyDenies)
+  // Check hooks (0.19.0): the flag (false clears it), else the previous choice, else none. Shared via the committed marker.
+  for (const [k, v] of [['stop', o.stopCheck], ['edit', o.editCheck]]) if (typeof v === 'string' && (!v.trim() || v.length > 500)) throw new UserError(`--${k}-check needs a command of 1-500 characters`)
+  const prevCmd = (v) => (typeof v === 'string' && v.trim() && v.length <= 500 ? v : null)
+  const pick = (v, prev) => (v === false ? null : typeof v === 'string' ? v.trim() : prevCmd(prev))
+  const checks = { stop: pick(o.stopCheck, prevMarker?.checks?.stop), edit: pick(o.editCheck, prevMarker?.checks?.edit) }
   if (mdTarget) {
     const st = importState(readMaybe(ctx.p(mdTarget))?.toString('utf8') ?? '')
     if (st.state === 'malformed') throw new UserError(`${mdTarget} line ${st.problem.line}: ${st.problem.problem}. Fix or remove the claude-workspace markers there, then re-run (nothing was changed)`)
@@ -217,6 +223,7 @@ export async function install(ctx, rep, { repair = false } = {}) {
     memory: 'md-memory (.memory/, built into workspace-core)',
     claudeMd: { target: mdTarget, created: mdTarget ? !m.files[mdTarget]?.existedBefore : false, responseStyle },
     safetyDenies,
+    ...(checks.stop || checks.edit ? { checks: Object.fromEntries(Object.entries(checks).filter(([, v]) => v)) } : {}),
   }
   if (writeJsonIfChanged(ctx.p('.claude/workspace.json'), marker)) rep.change('wrote .claude/workspace.json')
 
@@ -248,6 +255,36 @@ export async function install(ctx, rep, { repair = false } = {}) {
       rep.warn(`${CLAUDE_MEM_ID} is explicitly enabled in .claude/settings.json: two memory systems will run (left as is)`)
     }
   }
+
+  // ---- auto mode trust (opt-in, user settings): --trust-remote names this repo's origin in autoMode.environment of
+  // ~/.claude/settings.json, the only place Claude Code reads it from. Remembered; --no-trust-remote removes the line.
+  const trust = o.trustRemote ?? m.autoMode?.trust ?? false
+  if (trust) {
+    const remote = originRemote(ctx)
+    if (!remote) {
+      rep.warn('--trust-remote: this project has no usable git remote "origin"; nothing added to autoMode.environment')
+      m.autoMode = { ...(m.autoMode ?? {}), trust: true }
+    } else {
+      const line = trustLine(remote)
+      let cur = readUserSettings(ctx)
+      // The origin changed since the line was added: the old line goes first.
+      if (m.autoMode?.line && m.autoMode.line !== line) {
+        const old = removeTrust(cur, m.autoMode.line, m.autoMode.created)
+        if (old.removed) { cur = old.settings; writeUserSettings(ctx, cur); rep.change(`removed "${m.autoMode.line}" from autoMode.environment (the origin changed)`) }
+        m.autoMode = { trust: true }
+      }
+      if (!isTrusted(cur, remote)) {
+        const r = addTrust(cur, line)
+        writeUserSettings(ctx, r.settings)
+        rep.change(`added "${line}" to autoMode.environment in ${ctx.configDir}/settings.json`)
+        m.autoMode = { trust: true, line, created: r.created }
+      } else m.autoMode = { ...(m.autoMode ?? {}), trust: true }
+    }
+  } else if (m.autoMode?.line) {
+    const r = removeTrust(readUserSettings(ctx), m.autoMode.line, m.autoMode.created)
+    if (r.removed) { writeUserSettings(ctx, r.settings); rep.change(`removed "${m.autoMode.line}" from autoMode.environment in ${ctx.configDir}/settings.json`) }
+    m.autoMode = { trust: false }
+  } else if (o.trustRemote === false) m.autoMode = { trust: false }
 
   finalize(ctx, m)
   saveManifest(ctx, m)

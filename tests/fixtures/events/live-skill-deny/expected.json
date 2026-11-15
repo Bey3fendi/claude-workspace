@@ -26,6 +26,7 @@
         "explain": null,
         "ponytail": null,
         "check": null,
+        "stopCheck": null,
         "active": [
           "ponytail",
           "superpowers",

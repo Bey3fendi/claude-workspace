@@ -469,6 +469,41 @@ test('--no-response-style leaves the section out; repair keeps the choice; --res
   assert.equal(cli(sb, ['doctor']).code, 0)
 })
 
+test('--stop-check / --edit-check go into the committed marker; repair keeps them; --no-stop-check clears one', () => {
+  const sb = sandbox()
+  const marker = () => JSON.parse(read(join(sb.project, '.claude', 'workspace.json')))
+  const info = () => cli(sb, ['doctor']).json.checks.find((c) => c.id === 'check-hooks')
+  assert.equal(cli(sb, ['install']).code, 0)
+  assert.equal(marker().checks, undefined, 'none by default')
+  assert.match(JSON.stringify(info()), /none set/)
+  assert.equal(cli(sb, ['repair', '--stop-check', 'npm test', '--edit-check', 'npx eslint {file}']).code, 0)
+  assert.deepEqual(marker().checks, { stop: 'npm test', edit: 'npx eslint {file}' })
+  assert.match(JSON.stringify(info()), /stop \\"npm test\\", edit \\"npx eslint \{file\}\\"/)
+  assert.equal(cli(sb, ['repair']).code, 0)
+  assert.deepEqual(marker().checks, { stop: 'npm test', edit: 'npx eslint {file}' }, 'repair keeps them')
+  assert.equal(cli(sb, ['repair', '--no-stop-check']).code, 0)
+  assert.deepEqual(marker().checks, { edit: 'npx eslint {file}' })
+  assert.equal(cli(sb, ['repair', '--stop-check']).code, 2, 'a value is required')
+})
+
+test('--trust-remote names the origin in ~/.claude/settings.json; uninstall removes only that line', () => {
+  const sb = sandbox()
+  const userSettings = join(sb.home, '.claude', 'settings.json')
+  write(userSettings, JSON.stringify({ model: 'opus' }, null, 2) + '\n')
+  git(sb.project, 'init', '-q'); git(sb.project, 'remote', 'add', 'origin', 'git@github.com:Acme/app.git')
+  const trust = () => cli(sb, ['doctor']).json.checks.find((c) => c.id === 'auto-mode-trust')
+  assert.equal(cli(sb, ['install', '--allow-dirty']).code, 0)
+  assert.equal(JSON.parse(read(userSettings)).autoMode, undefined, 'nothing without the flag')
+  assert.equal(trust().status, 'info')
+  assert.equal(cli(sb, ['repair', '--trust-remote', '--allow-dirty']).code, 0)
+  assert.deepEqual(JSON.parse(read(userSettings)).autoMode, { environment: ['$defaults', "Source control: github.com/Acme/app (this project's repo)"] })
+  assert.equal(trust().status, 'ok')
+  assert.equal(cli(sb, ['repair', '--allow-dirty']).code, 0)
+  assert.equal(JSON.parse(read(userSettings)).autoMode.environment.length, 2, 'repair adds it once')
+  assert.equal(cli(sb, ['uninstall']).code, 0)
+  assert.deepEqual(JSON.parse(read(userSettings)), { model: 'opus' })
+})
+
 test('--no-safety-denies leaves the safety rules out; repair keeps the choice; --safety-denies puts them back', () => {
   const sb = sandbox()
   const deny = () => JSON.parse(read(join(sb.project, '.claude', 'settings.json'))).permissions.deny

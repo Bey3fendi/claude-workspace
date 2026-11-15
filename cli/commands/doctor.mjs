@@ -10,6 +10,8 @@ import { CLAUDE_MEM_ID, claudeMemInstalls } from '../lib/claude-mem.mjs'
 import { FILES as MEMORY_FILES, MEMORY_ALLOWS } from '../../plugins/workspace-core/lib/md-memory.mjs'
 import { EXPLAIN_ALLOWS } from '../../plugins/workspace-core/lib/explain.mjs'
 import { cmpVersion, readJsonFile, readMaybe } from '../lib/util.mjs'
+import { isTrusted, originRemote, readUserSettings } from '../lib/automode.mjs'
+import { checksConfig } from '../../plugins/workspace-core/lib/checks.mjs'
 
 export async function doctor(ctx, rep) {
   const checks = []
@@ -62,6 +64,18 @@ export async function doctor(ctx, rep) {
   else {
     const sm = settings ? missingDenies(settings, ctx.safetyDenies) : ctx.safetyDenies
     add('safety-deny-rules', sm.length ? 'warn' : 'ok', sm.length ? `${sm.length} rule(s) missing (run repair)` : `${ctx.safetyDenies.length} present`)
+  }
+
+  // Check hooks (opt-in) and auto mode trust (a hint, never a warning).
+  const ck = checksConfig(safeJson(ctx.p('.claude/workspace.json')))
+  add('check-hooks', 'info', ck.stop || ck.edit ? [ck.stop && `stop "${ck.stop}"`, ck.edit && `edit "${ck.edit}"`].filter(Boolean).join(', ') + (ctx.env.CW_CHECKS === '0' ? '; CW_CHECKS=0 turns them off in this shell' : '')
+    : 'none set (optional: install --stop-check "npm test", --edit-check "npx eslint {file}")')
+  const remote = originRemote(ctx)
+  if (remote) {
+    let us = null
+    try { us = readUserSettings(ctx) } catch {}
+    add('auto-mode-trust', isTrusted(us, remote) ? 'ok' : 'info', isTrusted(us, remote) ? `${remote} is named in autoMode.environment`
+      : `auto mode does not know ${remote}, so it may block a push there (optional: install --trust-remote)`)
   }
 
   const giText = readMaybe(ctx.p('.gitignore'))?.toString('utf8')

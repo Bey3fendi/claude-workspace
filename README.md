@@ -21,6 +21,12 @@ It also includes an optional, disabled-by-default model router.
 - **Root-cause gate:** in a debug request, the first source edit is held until Claude states a root cause (max 2 holds per request, counted per response, so edits sent together are one hold; only source code is held, never tests, docs, logs or data).
 - **Follow-ups** (0.18.1): a short confirmation right after a code-changing request ("yes lets do all three", "ok go ahead", "keep going with Task 3") continues that request's contract, marked `follow-up`. The skills already invoked count, so Claude is not asked to invoke them again, and a stated root cause stays stated. Questions and new requests are classified as usual. `CW_FOLLOW_UP=0` turns it off.
 - **Edits made through Bash** (0.18.1): a command that may write (a `python3 - <<EOF` script, `sed -i`, a redirect, a build) is bracketed by two git snapshots of the changed files. A file changed between them counts as an edit for Ponytail's rule, the memory log, Explain and the footer check note. Read-only commands (`cat`, `grep`, `git status`, …) take no snapshot, and git commands that move the tree (`checkout`, `pull`, `stash`) are not edits. Tracked after the fact: the root-cause gate cannot hold an edit made through Bash. `CW_BASH_EDITS=0` turns it off.
+- **Check hooks** (0.19.0, opt-in): a check that has to run is a hook, not a prompt.
+  - `install --stop-check "npm test"`: at the end of a request that changed code and ran no passing check after its last code edit, the workspace runs the command once. On a failure Claude gets the last 40 lines and is sent back to fix the cause (at most twice per request). When Claude already ran a passing test, nothing runs. The footer says `stop check passed`, `stop check failed (exit 1), sent back`, or `… a check passed after the fix`.
+  - `install --edit-check "npx eslint {file}"`: after each code edit (Edit tools, and files a Bash command changed), the command runs on that file (`{file}` is the quoted path; without it the whole command runs). A failure is shown to Claude next to the edit.
+  - Both live in the committed `.claude/workspace.json`, so the team shares them; `repair` keeps them, `--no-stop-check` / `--no-edit-check` clear them. `CW_CHECKS=0` turns them off for a shell. Your own settings hooks: exit 2 sends Claude back; exit 1 is ignored.
+  - Live (Haiku, $0.03 for three runs): told to only edit, Haiku capped the coupon but left an older bug; the stop check failed, Claude fixed the real bug and the tests passed (3/3). When Claude ran `npm test` itself, no stop check ran. An edit with a syntax error got the `node --check` failure next to it and was reverted.
+- **Auto mode trust** (0.19.0, opt-in): auto mode blocks a push to a repo it does not know. It reads its trusted repos only from your own `~/.claude/settings.json` (`autoMode.environment`), never from project files. `doctor` says when this repo's `origin` is not named there; `install --trust-remote` adds `"Source control: github.com/owner/repo (this project's repo)"` (after `"$defaults"` when it starts the list, so the built-in rules stay). `uninstall` or `--no-trust-remote` removes only that line.
 - **Compaction restore:** after a compaction, the request's contract is re-attached (noting what is already done).
 - **Context pressure:** past 300K tokens of context, Claude is asked to recommend **CLEAR** or **COMPACT** at the next natural stopping point, and to append a cold-start handoff to `.memory/session.md` first. Nothing has to be pasted back: the next session loads it.
 - **md-memory:**
@@ -100,6 +106,7 @@ claude --settings '{"enabledPlugins":{"workspace-core@cw-workspace":false,"super
 | `CW_EXPLAIN=0` | no Explain (no command capture, `/explain` writes nothing) |
 | `CW_EXPLAIN_WORDS=500` | Explain word budget outside `<details>` (default 300) |
 | `CW_SUBAGENT_CAP=0` | no subagent cap (subagents may run on Fable or at xhigh/max effort) |
+| `CW_CHECKS=0` | the stop check and edit check do not run (set them with `install --stop-check` / `--edit-check`) |
 | `CW_FOLLOW_UP=0` | short confirmations ("yes do it") do not continue the previous request's contract |
 | `CW_BASH_EDITS=0` | no git snapshots around Bash commands that may write (files changed by scripts are not counted as edits) |
 | `CW_SAFETY=0` | no Bash safety check (the safety deny rules in settings still apply) |
@@ -116,10 +123,10 @@ A user-level hook command containing `context-pressure` (e.g. `~/.claude/hooks/c
 ## Use
 ```bash
 # straight from GitHub (pinned release; no checkout needed)
-npx -y github:Bey3fendi/claude-workspace#v0.18.1 install --yes --marketplace Bey3fendi/claude-workspace#v0.18.1
+npx -y github:Bey3fendi/claude-workspace#v0.19.0 install --yes --marketplace Bey3fendi/claude-workspace#v0.19.0
 
 # a project already on an older version: move it to this one
-npx -y github:Bey3fendi/claude-workspace#v0.18.1 repair --marketplace Bey3fendi/claude-workspace#v0.18.1
+npx -y github:Bey3fendi/claude-workspace#v0.19.0 repair --marketplace Bey3fendi/claude-workspace#v0.19.0
 
 # or from a checkout of this repo
 node /path/to/claude-workspace/cli/bin/claude-workspace.mjs install --yes      # in your project

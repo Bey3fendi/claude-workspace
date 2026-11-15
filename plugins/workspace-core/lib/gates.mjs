@@ -25,6 +25,8 @@ export function editTarget(e) {
 
 /** Edits the gate holds: source files only. Tests (writing a reproducing test first is good debugging) and docs pass. */
 export const gatedFile = (f) => typeof f === 'string' && f.length > 0 && !TEST_PATH.test(f) && CODE.test(f)
+/** Any code file, tests included (the edit check lints tests too). */
+export const codeFile = (f) => typeof f === 'string' && f.length > 0 && CODE.test(f)
 
 const LOCATION = /[\w./\\-]+\.[A-Za-z]{1,5}:\d+|\bline \d+\b|\bin `?[\w.]+\(?\)?`? (?:at|on) line\b/i
 const CAUSAL = /\bbecause\b|\bcaused by\b|\bdue to\b|\bthe (?:bug|issue|problem|defect) is\b|\bcomes from\b|\bstems from\b/i

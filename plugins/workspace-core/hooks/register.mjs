@@ -10,7 +10,8 @@ import { markerCounts, redact, short } from '../lib/events.mjs'
 import { USAGE_INSTRUCTION, createTracker, parseUsageSection } from '../lib/usage.mjs'
 import { classify, contractText, isFollowUp, restoreText } from '../lib/contracts.mjs'
 import { deniedSkills, trimListing } from '../lib/listing.mjs'
-import { decide, denyText, editTarget, gatedFile, statesRootCause } from '../lib/gates.mjs'
+import { codeFile, decide, denyText, editTarget, gatedFile, statesRootCause } from '../lib/gates.mjs'
+import { checksConfig, editCheckText, fillFile, outputTail, shouldStopCheck, stopBlockText } from '../lib/checks.mjs'
 import { CLOSE_TEXT, CODE_CLASSES, activeLevel, hasClosingLine, injectedLevel, promptLevel, reminderText } from '../lib/ponytail.mjs'
 import { contextTokens, decidePressure, hasExternalPressureHook, thresholdFrom } from '../lib/pressure.mjs'
 import { executionNote } from '../lib/execution.mjs'
@@ -207,9 +208,63 @@ async function bashEdits($, e, root, before) {
     if (e.agentId === undefined && gatedFile(f)) { req.pt.edited = true; req.pt.bashEdit = true }
     if (checkableEdit(f)) req.codeEditAt = Date.now()
     if (!req.mem.edited.includes(rel)) req.mem.edited.push(rel)
+    if (!pendingChecks.includes(rel)) pendingChecks.push(rel)
   }
   ex.lastEditAt = Date.now()
   await flush(sink, sink.record('bash-edit', { files: files.length, agentId: e.agentId ?? null }), (p, b) => $.fs.write(p, b))
+}
+
+// Opt-in check hooks (lib/checks.mjs): the commands from .claude/workspace.json, read once per process.
+// CW_CHECKS=0 turns both off. A command runs with `sh -c` in the project root; $ calls do not count
+// against the hook's 10 s budget, so a test suite may take up to the timeout.
+let CHECKS = null
+const pendingChecks = [] // files changed through Bash, edit-checked at that command's PostToolUse
+async function checksFor($, root) {
+  let off = false
+  try { off = (await $.env.get('CW_CHECKS')) === '0' } catch {}
+  if (off || !root) return { stop: null, edit: null }
+  CHECKS ??= checksConfig(await readText($, `${root}/.claude/workspace.json`))
+  return CHECKS
+}
+async function runCheck($, root, cmd, timeoutMs) {
+  try {
+    const x = await $.process.run(['sh', '-c', cmd], { cwd: root, timeoutMs })
+    return { exit: x.exitCode, tail: outputTail(x.stdout, x.stderr) }
+  } catch (err) { return { exit: null, status: /time/i.test(String(err?.message ?? err)) ? 'timeout' : 'error' } }
+}
+// Stop check: once per unchecked code edit, when no passing check ran after it; a failure is the Stop hook's block.
+async function stopCheck($, root) {
+  const { stop } = await checksFor($, root)
+  if (!shouldStopCheck({ cmd: stop, codeEditAt: req.codeEditAt, checkedAt: req.stopCheckAt ?? 0, blocks: req.stopBlocks ?? 0, commands: ex.commands })) return null
+  req.stopCheckAt = Date.now()
+  const x = await runCheck($, root, stop, 600_000)
+  const info = x.exit === null ? { status: x.status } : x.exit === 0 ? { status: 'passed' } : { status: 'failed', exit: x.exit }
+  tracker.stopCheck(info)
+  await flush(sink, sink.record('stop-check', info), (p, b) => $.fs.write(p, b))
+  if (x.exit === null) return null
+  req.checkNoted = true // the footer reports the stop check instead of the "no test ran" note
+  if (x.exit === 0) { ex.commands = [...ex.commands, { cmd: stop, exit: 0, at: Date.now(), agent: false }]; return null }
+  req.stopBlocks = (req.stopBlocks ?? 0) + 1
+  req.stopExit = x.exit
+  return stopBlockText(stop, x.exit, x.tail)
+}
+// Edit check: after a code edit (Edit tools, or files a Bash command changed), run on each file (at most 5 per call).
+async function editCheck($, e) {
+  const files = SOURCE_EDIT_TOOLS.has(e?.tool_name) ? [e.tool_input?.file_path ?? e.tool_input?.notebook_path]
+    : e?.tool_name === 'Bash' ? pendingChecks.splice(0) : []
+  if (!files.length) return []
+  const root = await $.session.root().catch(() => null)
+  const { edit } = await checksFor($, root)
+  if (!edit || !root) return []
+  const rels = [...new Set(files.map((f) => relPath(root, f)).filter((f) => f && codeFile(f) &&!/^\.(memory|explain|claude)\//.test(f)))].slice(0, 5)
+  const cmds = edit.includes('{file}') ? rels.map((rel) => [rel, fillFile(edit, rel)]) : rels.length ? [[rels.join(', '), edit]] : []
+  const out = []
+  for (const [rel, cmd] of cmds) {
+    const x = await runCheck($, root, cmd, 60_000)
+    await flush(sink, sink.record('edit-check', { exit: x.exit, status: x.status ?? null, agentId: e.agent_id ?? null }), (p, b) => $.fs.write(p, b))
+    if (x.exit) out.push(editCheckText(cmd, rel, x.exit, outputTail(x.tail, '', 30, 3000)))
+  }
+  return out
 }
 
 // Automatic memory: note which files this request changed and which memory files Claude wrote itself.
@@ -458,6 +513,13 @@ export const register = (on) => {
         await flush(sink, sink.record('check', info), (p, b) => $.fs.write(p, b))
       }
     }
+    // The stop check sent Claude back and a check passed since: the footer says so.
+    if (main && req.stopBlocks && !req.stopFixed && e.reason === 'answer' && checkAfter(ex.commands, req.stopCheckAt) === null) {
+      req.stopFixed = true
+      const info = { status: 'fixed', exit: req.stopExit }
+      tracker.stopCheck(info)
+      await flush(sink, sink.record('stop-check', info), (p, b) => $.fs.write(p, b))
+    }
     const ev = main ? tracker.finish(e.answer) : null
     const w = sink.record('turn.complete', {
       turnId: e.turnId, agentId: e.agentId ?? null, reason: e.reason ?? null,
@@ -621,6 +683,10 @@ export const register = (on) => {
       await flush(sink, sink.record('ponytail', { action: 'remind', via: 'edit', level }), (p, b) => $.fs.write(p, b))
       r = { ...r, additionalContext: [...(r?.additionalContext ?? []), reminderText(level)] }
     }
+    // Edit check (opt-in): a failure is added next to the tool result (PostToolUse cannot undo the edit).
+    let fails = []
+    try { fails = await editCheck($, e) } catch { fails = [] }
+    if (fails.length) r = { ...r, additionalContext: [...(r?.additionalContext ?? []), ...fails] }
     if (e?.tool_name === 'Skill') {
       tracker.skillLoaded(e.tool_input?.skill ?? null)
       await flush(sink, sink.record('skill.loaded', { skill: e.tool_input?.skill ?? null, agentId: e.agent_id ?? null }), (p, b) => $.fs.write(p, b))
@@ -660,12 +726,16 @@ export const register = (on) => {
     return r
   }).catch(($, e, next) => next(e))
 
+  // Stop check first (opt-in; a failing check sends Claude back before anything else is asked).
   // md-memory: keep session.md within its cap after every turn (oldest blocks dropped first).
   on('classic.Stop', async ($, e, next) => {
     const r = await next(e)
     if (await isOff($)) return r
-    if ((await $.env.get('CW_MEMORY')) === '0') { const ask = await ponytailClose($, e).catch(() => null); return ask ? { ...r, block: ask } : r }
     const root = await $.session.root().catch(() => null)
+    let failed = null
+    if (root) { try { failed = await stopCheck($, root) } catch { failed = null } }
+    if (failed) return { ...r, block: failed }
+    if ((await $.env.get('CW_MEMORY')) === '0') { const ask = await ponytailClose($, e).catch(() => null); return ask ? { ...r, block: ask } : r }
     if (!root) return r
     const p = `${root}/${FILES.session}`
     let nudge = null

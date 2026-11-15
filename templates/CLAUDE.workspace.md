@@ -16,6 +16,8 @@ These are defaults from claude-workspace. Where the project's own instructions s
 {{/if}}
 ## Secrets
 - Never print, log or commit secrets. Keys live in `.env`, which must stay gitignored.
+## Checks
+- When you say a test or check passed, quote its result line (e.g. `# pass 12 # fail 0`); the user did not see it run.
 {{#if responseStyle}}
 ## Response style (ADHD-friendly)
 - First line: the answer or result. Details after.

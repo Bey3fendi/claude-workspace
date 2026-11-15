@@ -27,6 +27,7 @@
         "explain": null,
         "ponytail": null,
         "check": null,
+        "stopCheck": null,
         "active": [
           "superpowers",
           "caveman"
@@ -57,6 +58,7 @@
         "explain": null,
         "ponytail": null,
         "check": null,
+        "stopCheck": null,
         "active": [
           "superpowers",
           "caveman"
@@ -82,6 +84,7 @@
         "explain": null,
         "ponytail": null,
         "check": null,
+        "stopCheck": null,
         "active": [
           "superpowers",
           "caveman"
@@ -107,6 +110,7 @@
         "explain": null,
         "ponytail": null,
         "check": null,
+        "stopCheck": null,
         "active": [
           "superpowers",
           "caveman"
