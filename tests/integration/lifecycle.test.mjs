@@ -511,6 +511,25 @@ test('--stop-check / --edit-check go into the committed marker; repair keeps the
   assert.equal(cli(sb, ['repair', '--stop-check']).code, 2, 'a value is required')
 })
 
+test('doctor warns when the last recorded session had a hook error; usage lists it (1.0 M1)', async () => {
+  const { projectKey } = await import('../../plugins/workspace-core/lib/events.mjs')
+  const sb = sandbox()
+  assert.equal(cli(sb, ['install']).code, 0)
+  const check = () => cli(sb, ['doctor']).json.checks.find((c) => c.id === 'hook-errors')
+  assert.equal(check(), undefined, 'no recorded session: no check')
+  const dir = join(sb.env.XDG_STATE_HOME, 'claude-workspace', 'events', projectKey(sb.project))
+  const row = (o) => JSON.stringify({ v: 1, sid: 'sess-aaaa1111', run: 'r1', ...o })
+  write(join(dir, 'sess-aaaa1111.r1.000.jsonl'), [row({ t: 1, seq: 0, ev: 'session.start', root: sb.project }), row({ t: 2, seq: 1, ev: 'turn.start', agentId: null }),
+    row({ t: 3, seq: 2, ev: 'hook.error', hook: 'prompt.submit', kind: 'throw', message: 'boom' }), row({ t: 4, seq: 3, ev: 'turn.complete', agentId: null, reason: 'answer' })].join('\n') + '\n')
+  const c = check()
+  assert.equal(c.status, 'warn')
+  assert.match(c.message, /the last session \(sess-aaa\) had 1 hook error\(s\) in workspace-core \(prompt\.submit\)/)
+  assert.equal(cli(sb, ['doctor']).code, 0, 'a warning, not a failure')
+  const u = JSON.stringify(cli(sb, ['usage']).json)
+  assert.match(u, /"footer":"workspace-core: 1 hook error \(prompt\.submit\)"/)
+  assert.match(u, /"hookErrors":\[\{"t":3,"hook":"prompt\.submit","part":null,"kind":"throw","message":"boom"\}\]/)
+})
+
 test('--trust-remote names the origin in ~/.claude/settings.json; uninstall removes only that line', () => {
   const sb = sandbox()
   const userSettings = join(sb.home, '.claude', 'settings.json')

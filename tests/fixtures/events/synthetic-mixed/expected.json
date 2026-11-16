@@ -28,6 +28,7 @@
         "ponytail": null,
         "check": null,
         "stopCheck": null,
+        "hookErrors": [],
         "active": [
           "superpowers",
           "caveman"
@@ -59,6 +60,7 @@
         "ponytail": null,
         "check": null,
         "stopCheck": null,
+        "hookErrors": [],
         "active": [
           "superpowers",
           "caveman"
@@ -85,6 +87,7 @@
         "ponytail": null,
         "check": null,
         "stopCheck": null,
+        "hookErrors": [],
         "active": [
           "superpowers",
           "caveman"
@@ -111,6 +114,7 @@
         "ponytail": null,
         "check": null,
         "stopCheck": null,
+        "hookErrors": [],
         "active": [
           "superpowers",
           "caveman"
@@ -131,7 +135,8 @@
       "cacheRead": 5000,
       "cacheWrite": 300
     },
-    "ponytail": null
+    "ponytail": null,
+    "hookErrors": []
   },
   "text": [
     "session sess-synth-1 · /work/demo · interactive",

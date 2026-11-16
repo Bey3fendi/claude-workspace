@@ -4,10 +4,38 @@ permissions:
   contents: read
 jobs:
   unit:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - run: npm test
       - run: npm run check:marketplace
+
+  # Engine tests and validators against the Claude Code version the lock names as tested (the newest in
+  # workspace.lock.json claudeCode.tested). No login and no model calls: `claude plugin test` runs the
+  # module hooks in the engine's own test kit.
+  engine:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      DISABLE_AUTOUPDATER: '1' # stay on the pinned version
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Install Claude Code at the lock's tested version
+        run: |
+          v=$(node -p "require('./workspace.lock.json').claudeCode.tested.at(-1)")
+          npm install -g --no-fund --no-audit "@anthropic-ai/claude-code@$v"
+          claude --version
+      - run: claude plugin validate .
+      - run: claude plugin validate --strict plugins/workspace-core
+      - run: claude plugin test plugins/workspace-core
