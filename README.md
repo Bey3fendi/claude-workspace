@@ -12,7 +12,9 @@ On request, **`/explain`** writes a short explanation of a change, built from fa
 
 It also includes an optional, disabled-by-default model router.
 
-**Status: Phase 6 (hardening) done; released on GitHub.** Phases 0–4 and 6 are done; Phase 5 (router) and the macOS run are deferred. See `docs/PLAN.md`.
+**Status: Phase 6 (hardening) done; released on GitHub.** Phases 0–4 and 6 are done; Phase 5 (router) and the macOS run are deferred. History: `docs/history/PLAN.md`.
+
+**Freeze until 1.0 (rule R5 of [`docs/PLAN-v1.0.md`](docs/PLAN-v1.0.md)):** until 1.0, nothing new runs unless you type it. New slash commands and install flags may still be added; new automatic behaviour may not. Work until then makes what exists visible, enforced or measured.
 
 **Start here:** [`WORKSPACE_DEVELOPER_GUIDE.md`](WORKSPACE_DEVELOPER_GUIDE.md) is the step-by-step playbook for new and existing projects, with every flag and switch. [`WORKSPACE_TEST_REPORT.md`](WORKSPACE_TEST_REPORT.md) is the latest validation round (2026-11-11: ready with limitations).
 

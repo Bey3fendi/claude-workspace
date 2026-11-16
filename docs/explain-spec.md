@@ -1,6 +1,6 @@
 # Spec: Explain, so the developer always understands what the agent did
 
-Status: a slim version is implemented in 0.12.0 (2026-11-11), agreed with the user: on demand (`/explain`), no gates, local only. Not built: the Stop and commit gates, comprehension checks and understanding debt, the developer profile and its adaptation, MAP.md, TIMELINE.md, roll-ups, the post-commit hook. What was built and the live results: docs/PLAN.md item 13. Language of all templates and generated text: English.
+Status: a slim version is implemented in 0.12.0 (2026-11-11), agreed with the user: on demand (`/explain`), no gates, local only. Not built: the Stop and commit gates, comprehension checks and understanding debt, the developer profile and its adaptation, MAP.md, TIMELINE.md, roll-ups, the post-commit hook. What was built and the live results: docs/history/PLAN.md item 13. Language of all templates and generated text: English.
 
 ## 1. The problem and the promise
 
