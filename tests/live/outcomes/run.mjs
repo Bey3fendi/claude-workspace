@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Workflow-outcome runner (plan §6; live, costs real requests). Linux/WSL/macOS.
 //   node tests/live/outcomes/run.mjs [--conditions nocontract,with] [--runs 1] [--concurrency 2]
-//        [--only id,id] [--workdir DIR] [--out DIR]
+//        [--only id,id] [--workdir DIR] [--out DIR] [--model sonnet]  (conditions: nocontract, with, nogate, off)
 // Each run is write-enabled but scoped: acceptEdits + Read/Grep/Glob/Edit/Write/Skill + test commands
 // only, in a fixture copy that has the workspace installed and is reset with git between runs.
 // claude-mem is disabled for these runs so memories of earlier fixture sessions cannot leak answers.
@@ -34,6 +34,7 @@ const CONDITION = {
   nocontract: { env: { CW_CONTRACTS: '0' }, note: 'workspace-core on, Phase 3 contracts off' },
   with: { env: {}, note: 'workspace-core on incl. Phase 3 contracts and Phase 4 gates' },
   nogate: { env: { CW_GATES: '0' }, note: 'contracts on, Phase 4 gates off' },
+  off: { env: { CW_OFF: '1' }, note: 'workspace-core inert (CW_OFF=1): plain Claude Code baseline' },
 }
 
 // ---------------------------------------------------------------- one installed fixture per worker slot
@@ -60,7 +61,7 @@ function runOne({ c, p, i }, dir) {
   mkdirSync(rdir, { recursive: true })
   const a = ['-p', p.prompt, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'acceptEdits',
     '--allowedTools', 'Skill', 'Read', 'Grep', 'Glob', 'Edit', 'Write', 'Bash(node --test:*)', 'Bash(npm test:*)', 'Bash(npm run test:*)',
-    '--settings', JSON.stringify({ enabledPlugins: { 'claude-mem@thedotmack': false } })]
+    '--settings', JSON.stringify({ enabledPlugins: { 'claude-mem@thedotmack': false } }), ...(args.model ? ['--model', String(args.model)] : [])]
   const env = { ...process.env, ...CONDITION[c].env, CW_EVENTS_DIR: join(rdir, 'core') }
   return new Promise((done) => {
     const t0 = Date.now()

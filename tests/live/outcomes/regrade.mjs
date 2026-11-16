@@ -32,7 +32,7 @@ for (const name of readdirSync(join(WORK, 'runs')).sort()) {
     cpSync(FIXTURE, dir, { recursive: true })
     git(dir, 'init', '-q'); git(dir, 'add', '-A'); git(dir, 'commit', '-qm', 'fixture')
     const patch = join(rdir, 'diff.patch')
-    if (readFileSync(patch, 'utf8').trim()) git(dir, 'apply', '--whitespace=nowarn', patch)
+    if (readFileSync(patch, 'utf8').trim()) git(dir, 'apply', '--whitespace=nowarn', '--exclude=.memory/*', patch)
     const final = { changed: changedFiles(dir), graders: runGraders(dir, p, spec.graders) }
     const steps = timeline(parseStream(readFileSync(join(rdir, 'stream.jsonl'), 'utf8')))
     const r = { ...old, final, skills: [...new Set(steps.filter((s) => s.kind === 'skill').map((s) => s.skill))], graded: grade(p, steps, final), regraded: true }

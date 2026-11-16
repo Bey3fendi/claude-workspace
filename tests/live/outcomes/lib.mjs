@@ -97,9 +97,11 @@ export function grade(spec, steps, final) {
         break
       }
       case 'diffWithin': {
-        const files = Object.keys(final.changed)
+        // .memory/ is written by the workspace itself (the facts-only session log), not by the task
+        const own = Object.entries(final.changed).filter(([f]) => !f.startsWith('.memory/'))
+        const files = own.map(([f]) => f)
         const outside = files.filter((f) => !c.files.some((g) => (g.endsWith('/') ? f.startsWith(g) : f === g)))
-        const lines = Object.values(final.changed).reduce((a, b) => a + b, 0)
+        const lines = own.reduce((a, [, n]) => a + n, 0)
         const ok = !outside.length && (c.maxLines == null || lines <= c.maxLines)
         set(c.type, ok, outside.length ? `changed outside scope: ${outside.join(', ')}` : c.maxLines != null && lines > c.maxLines ? `${lines} lines changed > ${c.maxLines}` : `${files.length ? files.join(', ') : 'no files'} · ${lines} lines`)
         break
