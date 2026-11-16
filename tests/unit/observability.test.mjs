@@ -2,11 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { redact, redactDeep, projectKey, markerCounts } from '../../plugins/workspace-core/lib/events.mjs'
+import { redact, redactDeep, projectKey, markerCounts, errorRow } from '../../plugins/workspace-core/lib/events.mjs'
 import { createSink, flush } from '../../plugins/workspace-core/lib/sink.mjs'
 import { createReader } from '../../observability/reader.mjs'
 import { usageForSession, renderUsage } from '../../observability/derive.mjs'
-import { parseUsageSection, createTracker, replay, USAGE_INSTRUCTION } from '../../plugins/workspace-core/lib/usage.mjs'
+import { parseUsageSection, createTracker, replay, USAGE_INSTRUCTION, hookErrorLine, checksLine } from '../../plugins/workspace-core/lib/usage.mjs'
 import { ROOT } from '../helpers.mjs'
 
 const FIX = join(ROOT, 'tests', 'fixtures', 'events')
@@ -188,4 +188,54 @@ test('footer: the check note says when no test ran after a code edit, or the las
   assert.equal(t.finish('done').footer, null, 'nothing to report: no footer')
   const rows = [{ ev: 'turn.start', agentId: null, t: 1 }, { ev: 'check', status: 'failed', exit: 2 }, { ev: 'turn.complete', agentId: null, reason: 'answer' }]
   assert.match(replay(rows)[0].footer, /the last check after the code edit failed \(exit 2\)/)
+})
+
+// ---------------------------------------------------------------- 1.0 M1: hook errors and check commands
+
+test('errorRow: hook, part, kind and a short redacted message from an Error, a HookFailure or a thrown value', () => {
+  assert.deepEqual(errorRow('prompt.submit', new Error('boom')), { hook: 'prompt.submit', kind: 'throw', message: 'boom' })
+  assert.deepEqual(errorRow('classic.Stop', { kind: 'timeout', budget: 1000 }), { hook: 'classic.Stop', kind: 'timeout', message: '' })
+  assert.deepEqual(errorRow('tool.call', 'odd', 'tool Bash'), { hook: 'tool.call', part: 'tool Bash', kind: 'throw', message: 'odd' })
+  const r = errorRow('x', new Error(`token=sk-ant-${'a'.repeat(30)} ${'y'.repeat(400)}`))
+  assert.ok(!r.message.includes('sk-ant-'), 'redacted')
+  assert.ok(r.message.length <= 200, 'short')
+})
+
+test('footer: hook errors get their own line, counted per request; replay rebuilds it from hook.error rows', () => {
+  assert.equal(hookErrorLine([]), null)
+  assert.equal(hookErrorLine(['prompt.submit']), 'workspace-core: 1 hook error (prompt.submit)')
+  assert.equal(hookErrorLine(['tool.call', 'classic.Stop', 'tool.call']), 'workspace-core: 3 hook errors (tool.call, classic.Stop)')
+  const t = createTracker()
+  t.turnStart(); t.hookError('prompt.submit')
+  assert.equal(t.finish('done').footer, 'workspace-core: 1 hook error (prompt.submit)', 'alone when nothing else is reported')
+  t.turnStart(); t.skillPrompt('superpowers:brainstorming'); t.hookError('classic.Stop')
+  const f = t.finish('done').footer.split('\n')
+  assert.match(f[0], /^Verified by engine: activated superpowers:brainstorming/)
+  assert.equal(f[1], 'workspace-core: 1 hook error (classic.Stop)')
+  t.turnStart()
+  assert.equal(t.finish('done').footer, null, 'the next request starts clean')
+  const rows = [{ ev: 'turn.start', agentId: null, t: 1 }, { ev: 'hook.error', hook: 'turn.step', kind: 'throw', message: 'x' }, { ev: 'turn.complete', agentId: null, reason: 'answer' }]
+  assert.equal(replay(rows)[0].footer, 'workspace-core: 1 hook error (turn.step)')
+})
+
+test("usage lists the session's hook errors", () => {
+  const events = [
+    { ev: 'session.start', t: 1, root: '/p' },
+    { ev: 'hook.error', t: 2, hook: 'prompt.submit', kind: 'throw', message: 'boom' },
+    { ev: 'hook.error', t: 3, hook: 'classic.Stop', part: 'stop-check', kind: 'timeout', message: '' },
+  ]
+  const v = usageForSession({ sid: 's1', events })
+  assert.equal(v.hookErrors.length, 2)
+  const text = renderUsage(v)
+  assert.match(text, /hook errors: 2 /)
+  assert.match(text, /\n {2}prompt\.submit: throw: boom\n/)
+  assert.match(text, /\n {2}classic\.Stop \(stop-check\): timeout\n/)
+  assert.doesNotMatch(renderUsage(usageForSession({ sid: 's2', events: [events[0]] })), /hook errors/)
+})
+
+test('checksLine: the commands that run through sh -c, or null', () => {
+  assert.equal(checksLine({}), null)
+  assert.equal(checksLine({ stop: null, edit: null }), null)
+  assert.equal(checksLine({ stop: 'npm test' }), 'workspace-core: stop check: npm test (from .claude/workspace.json, run with sh -c)')
+  assert.match(checksLine({ stop: 'npm test', edit: 'npx eslint {file}' }), /stop check: npm test · edit check: npx eslint \{file\}/)
 })

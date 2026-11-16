@@ -18,7 +18,13 @@ export function usageForSession({ sid, projectKey = null, events }) {
     requests: replay(events).map(({ footer, ...r }) => ({ ...r, footer })),
     usage,
     ponytail: ponytailSummary(events),
+    hookErrors: hookErrors(events),
   }
+}
+
+/** The session's `hook.error` rows (1.0 M1): which workspace-core hook failed, where, and how. */
+export function hookErrors(events) {
+  return events.filter((e) => e.ev === 'hook.error').map((e) => ({ t: e.t ?? null, hook: e.hook ?? null, part: e.part ?? null, kind: e.kind ?? null, message: e.message ?? '' }))
 }
 
 /**
@@ -54,6 +60,10 @@ export function renderUsage(v) {
       (p.asked ? ` · asked for it ${p.asked}×` : ''))
   }
   if (v.ponytailLedger) L.push(`ponytail ledger: ${v.ponytailLedger}`)
+  if (v.hookErrors?.length) {
+    L.push(`hook errors: ${v.hookErrors.length} (workspace-core failed open: the request went on without that hook)`)
+    for (const x of v.hookErrors) L.push(`  ${x.hook}${x.part ? ` (${x.part})` : ''}: ${x.kind}${x.message ? `: ${x.message}` : ''}`)
+  }
   L.push(`tokens: in ${v.usage.in}, out ${v.usage.out}, cache read ${v.usage.cacheRead}, cache write ${v.usage.cacheWrite}`)
   return L.join('\n')
 }

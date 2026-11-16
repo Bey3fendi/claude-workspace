@@ -82,3 +82,16 @@ export function markerCounts(content) {
 function safeStringify(v) { try { return JSON.stringify(v) } catch { return String(v) } }
 
 export const short = (s, n = 160) => (typeof s === 'string' ? redact(s).slice(0, n) : s)
+
+// ---------------------------------------------------------------- hook errors
+
+/**
+ * The data of a `hook.error` row: which hook failed (and which part of it, for a failure the hook caught
+ * itself), how (`throw` or `timeout`), and a short redacted message. `err` is an Error, a thrown value, or
+ * the engine's HookFailure (`next.error` in a `.catch` handler). Pure: the hook records and writes the row.
+ */
+export function errorRow(hook, err, part) {
+  const kind = err?.kind === 'timeout' ? 'timeout' : 'throw'
+  const raw = err != null && typeof err === 'object' ? err.message : err
+  return { hook, ...(part ? { part } : {}), kind, message: short(String(raw ?? ''), 200) }
+}

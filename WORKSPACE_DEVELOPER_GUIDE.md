@@ -73,6 +73,8 @@ Start `claude` in the project folder and work normally. The behaviours below wer
 
 Read the **footer** under each answer ("Verified by engine: …"). It lists what really loaded, holds and checks, and flags claims the model made that no engine event backs up. A skill loaded in an earlier request of the same conversation shows as "loaded earlier this session (#n)" (until `/clear` or compaction), not as unbacked.
 
+Two more footer lines can appear. `workspace-core: 1 hook error (prompt.submit)` means a workspace-core hook failed in that request: the request went on without it (fail open), and `claude-workspace usage` shows which part failed and why; `doctor` warns about it until a clean session. `workspace-core: stop check: npm test · edit check: … (from .claude/workspace.json, run with sh -c)` shows once per session which check commands will run, because they come from a committed file and run through the shell.
+
 **Memory etiquette:** keep `session.md` short (it is capped at 150 lines; the oldest blocks are dropped). Most of it fills itself: a request that changes files and leaves no block gets a facts-only one from the workspace, and a designed change is asked once to record its decisions. Claude's own blocks are better (only Claude knows the next step), so ask for a handoff before you stop. Put durable facts in `context.md` and choices in `decisions.md`, each section with a `<!-- paths: … -->` tag, or it is never loaded.
 
 ### A5. Test, debug, deliver

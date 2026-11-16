@@ -27,6 +27,7 @@
         "ponytail": null,
         "check": null,
         "stopCheck": null,
+        "hookErrors": [],
         "active": [
           "ponytail",
           "superpowers",
@@ -58,7 +59,8 @@
       },
       "asked": 0,
       "tracked": false
-    }
+    },
+    "hookErrors": []
   },
   "text": [
     "session 20610b62-74a0-41c9-91aa-3c1fd4e944ea · /home/user/spikes/p1 · headless",

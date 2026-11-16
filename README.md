@@ -12,7 +12,9 @@ On request, **`/explain`** writes a short explanation of a change, built from fa
 
 It also includes an optional, disabled-by-default model router.
 
-**Status: Phase 6 (hardening) done; released on GitHub.** Phases 0–4 and 6 are done; Phase 5 (router) and the macOS run are deferred. See `docs/PLAN.md`.
+**Status: Phase 6 (hardening) done; released on GitHub.** Phases 0–4 and 6 are done; Phase 5 (router) and the macOS run are deferred. History: `docs/history/PLAN.md`.
+
+**Freeze until 1.0 (rule R5 of [`docs/PLAN-v1.0.md`](docs/PLAN-v1.0.md)):** until 1.0, nothing new runs unless you type it. New slash commands and install flags may still be added; new automatic behaviour may not. Work until then makes what exists visible, enforced or measured.
 
 **Start here:** [`WORKSPACE_DEVELOPER_GUIDE.md`](WORKSPACE_DEVELOPER_GUIDE.md) is the step-by-step playbook for new and existing projects, with every flag and switch. [`WORKSPACE_TEST_REPORT.md`](WORKSPACE_TEST_REPORT.md) is the latest validation round (2026-11-11: ready with limitations).
 
@@ -25,6 +27,7 @@ It also includes an optional, disabled-by-default model router.
   - `install --stop-check "npm test"`: at the end of a request that changed code and ran no passing check after its last code edit, the workspace runs the command once. On a failure Claude gets the last 40 lines and is sent back to fix the cause (at most twice per request). When Claude already ran a passing test, nothing runs. The footer says `stop check passed`, `stop check failed (exit 1), sent back`, or `… a check passed after the fix`.
   - `install --edit-check "npx eslint {file}"`: after each code edit (Edit tools, and files a Bash command changed), the command runs on that file (`{file}` is the quoted path; without it the whole command runs). A failure is shown to Claude next to the edit.
   - Both live in the committed `.claude/workspace.json`, so the team shares them; `repair` keeps them, `--no-stop-check` / `--no-edit-check` clear them. `CW_CHECKS=0` turns them off for a shell. Your own settings hooks: exit 2 sends Claude back; exit 1 is ignored.
+  - They run through `sh -c`, so whoever opens the project should see them: the footer shows `workspace-core: stop check: npm test (from .claude/workspace.json, run with sh -c)` once per session, and `doctor` lists them.
   - Live (Haiku, $0.03 for three runs): told to only edit, Haiku capped the coupon but left an older bug; the stop check failed, Claude fixed the real bug and the tests passed (3/3). When Claude ran `npm test` itself, no stop check ran. An edit with a syntax error got the `node --check` failure next to it and was reverted.
 - **Auto mode trust** (0.19.0, opt-in): auto mode blocks a push to a repo it does not know. It reads its trusted repos only from your own `~/.claude/settings.json` (`autoMode.environment`), never from project files. `doctor` says when this repo's `origin` is not named there; `install --trust-remote` adds `"Source control: github.com/owner/repo (this project's repo)"` (after `"$defaults"` when it starts the list, so the built-in rules stay). `uninstall` or `--no-trust-remote` removes only that line.
 - **Compaction restore:** after a compaction, the request's contract is re-attached (noting what is already done).
@@ -63,6 +66,7 @@ It also includes an optional, disabled-by-default model router.
   - The file is about 90 lines (roughly 1,100 tokens), loaded every session and cached after the first request. When it is imported, workspace-core does not repeat the md-memory rules at session start.
   - The guidelines have no skill call to observe, so the footer can only say they were loaded ("Karpathy guidelines (loaded via CLAUDE.md)"). Judge them by outcomes: diff size, rewrites, questions before code.
 - **Workspace Usage footer:** an engine-verified line under each answer (skills activated, gate holds, pressure advice, Explain checks), shown to you, never sent to the model. Since 0.15.1 the injected-context list and the `/explain HEAD` hint appear once per session, and Claude adds its own one-line "Workspace Usage —" note only when it invoked or skipped a skill. Since 0.17.1 it also says when a request changed code and no test, lint, typecheck or build ran after the last code edit, or the last one failed ("no test or check ran after the last code edit"). Edits to tests, docs, HTML and styles do not count. It never blocks, and Claude never sees it.
+- **Hook errors are shown** (1.0 M1): every workspace-core hook fails open (the request goes on without it) and records a `hook.error` row in the event log. The footer adds `workspace-core: 1 hook error (prompt.submit)`, `claude-workspace usage` lists each error, and `doctor` warns when the last session had any.
 - **Ponytail, with no `/ponytail-*` command** (0.16.0). Ponytail's own hooks inject its rules once, at session start; in long sessions they fade. In AgentBridge its closing line was in 16 of 97 answers. Once Ponytail has announced its level ("PONYTAIL MODE ACTIVE — level: full"), workspace-core:
   - repeats its core rule with the contract of each request that changes code (feature, debug, tests, architecture, review feedback), and for any other request after its first source edit;
   - sends "review this / review my PR / is this over-engineered" to `ponytail:ponytail-review`, and "audit the repo / what can I delete" to `ponytail:ponytail-audit`;
@@ -179,7 +183,9 @@ Backups and the manifest live in `.claude/workspace/`, which is gitignored.
 npm test                    # node:test, hermetic (fake claude/npx), runs on Linux/WSL/macOS
 npm run gen:marketplace     # regenerate .claude-plugin/marketplace.json from workspace.lock.json
 claude plugin validate .    # marketplace; plugins/workspace-core with --strict
+claude plugin test plugins/workspace-core   # engine tests of the hooks (no login, no model calls)
 ```
+CI (`.github/workflows/test.yml`) runs the unit tests on Linux and macOS, and the validators and engine tests on the Claude Code version the lock lists as tested. `CW_TEST_FAULT=<hook>:<before|after>` is a test seam only: it makes that hook throw, so the engine tests can check the error policy.
 
 ## License
 

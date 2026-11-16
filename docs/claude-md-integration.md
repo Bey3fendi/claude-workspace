@@ -1,6 +1,6 @@
 # Spec: CLAUDE.md integration for claude-workspace
 
-Status: implemented in 0.10.0 (2026-11-11; the user lifted the 19 Nov hold). Deviations and live results: docs/PLAN.md item 11.
+Status: implemented in 0.10.0 (2026-11-11; the user lifted the 19 Nov hold). Deviations and live results: docs/history/PLAN.md item 11.
 
 ## Goal
 

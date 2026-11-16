@@ -13,6 +13,10 @@ import { EXPLAIN_ALLOWS } from '../../plugins/workspace-core/lib/explain.mjs'
 import { cmpVersion, readJsonFile, readMaybe } from '../lib/util.mjs'
 import { isTrusted, originRemote, readUserSettings } from '../lib/automode.mjs'
 import { checksConfig } from '../../plugins/workspace-core/lib/checks.mjs'
+import { projectKey } from '../../plugins/workspace-core/lib/events.mjs'
+import { createReader } from '../../observability/reader.mjs'
+import { hookErrors } from '../../observability/derive.mjs'
+import { eventsDirOf } from './usage.mjs'
 
 export async function doctor(ctx, rep) {
   const checks = []
@@ -76,8 +80,17 @@ export async function doctor(ctx, rep) {
 
   // Check hooks (opt-in) and auto mode trust (a hint, never a warning).
   const ck = checksConfig(safeJson(ctx.p('.claude/workspace.json')))
-  add('check-hooks', 'info', ck.stop || ck.edit ? [ck.stop && `stop "${ck.stop}"`, ck.edit && `edit "${ck.edit}"`].filter(Boolean).join(', ') + (ctx.env.CW_CHECKS === '0' ? '; CW_CHECKS=0 turns them off in this shell' : '')
+  // Shown in full: they come from the committed .claude/workspace.json and run through `sh -c`, so a teammate sees what runs.
+  add('check-hooks', 'info', ck.stop || ck.edit ? [ck.stop && `stop "${ck.stop}"`, ck.edit && `edit "${ck.edit}"`].filter(Boolean).join(', ')
+    + ' (from .claude/workspace.json; run with sh -c in the project root: the stop check when Claude stops after a code edit, the edit check after each edit)'
+    + (ctx.env.CW_CHECKS === '0' ? '; CW_CHECKS=0 turns them off in this shell' : '')
     : 'none set (optional: install --stop-check "npm test", --edit-check "npx eslint {file}")')
+
+  // Hook errors (1.0 M1): workspace-core fails open, so a failed hook is only visible in its event log.
+  const he = lastSessionHookErrors(ctx)
+  if (he) add('hook-errors', he.errors.length ? 'warn' : 'ok', he.errors.length
+    ? `the last session (${he.sid.slice(0, 8)}) had ${he.errors.length} hook error(s) in workspace-core (${[...new Set(he.errors.map((x) => x.hook))].join(', ')}); details: claude-workspace usage`
+    : `none in the last session (${he.sid.slice(0, 8)})`)
   const remote = originRemote(ctx)
   if (remote) {
     let us = null
@@ -151,6 +164,15 @@ function finish(rep, checks, notInstalled = false) {
   rep.info(notInstalled ? `doctor: ${failed} check(s) failed: the workspace is not installed here; run \`claude-workspace install\` (most of these follow from that)`
     : failed ? `doctor: ${failed} check(s) failed` : 'doctor: all required checks passed')
   return { ok: failed === 0, checks }
+}
+
+/** The `hook.error` rows of this project's most recent recorded session, or null when none is recorded. */
+function lastSessionHookErrors(ctx) {
+  try {
+    const key = projectKey(ctx.projectRoot)
+    const s = [...createReader(eventsDirOf(ctx)).sessions().values()].filter((x) => x.projectKey === key).sort((a, b) => b.lastMtime - a.lastMtime)[0]
+    return s ? { sid: s.sid, errors: hookErrors(s.events) } : null
+  } catch { return null }
 }
 
 function safeJson(p) { try { return readJsonFile(p, { missing: null }) } catch { return null } }

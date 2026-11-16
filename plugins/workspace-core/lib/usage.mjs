@@ -51,7 +51,7 @@ export function createTracker() {
   // shown: what the footer already said this session (the injected-context list, the /explain HEAD hint).
   const session = { active: new Set(), loaded: new Map(), n: 0, shown: { active: null, explainHint: false } }
   let req = null
-  const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null, pressure: null, explain: null, ponytail: null })
+  const fresh = () => ({ activated: new Set(), completed: new Set(), denied: new Set(), failed: new Set(), gate: null, pressure: null, explain: null, ponytail: null, hookErrors: [] })
   return {
     // Keep what arrived since the last finish (a slash-command skill loads before its turn starts).
     turnStart() { req ??= fresh() },
@@ -69,6 +69,8 @@ export function createTracker() {
     check(info) { (req ??= fresh()).check = info },
     /** The project's stop check (0.19.0): { status: 'passed' } | { status: 'failed', exit } | { status: 'timeout' | 'error' }. */
     stopCheck(info) { (req ??= fresh()).stopCheck = info },
+    /** A workspace-core hook failed (1.0 M1): its name, counted in the footer of the request it happened in (or the next). */
+    hookError(hook) { if (hook) (req ??= fresh()).hookErrors.push(hook) },
     /** Phase 4 gate outcome for this request: action 'deny' | 'release'. */
     gate(action, reason) {
       req ??= fresh()
@@ -111,13 +113,36 @@ export function summarize(r, section, active, earlier = new Map(), shown = { act
   // The injected-context list once per session (and when it changes); the /explain HEAD hint once per session.
   const showActive = active.length > 0 && shown.active !== active.join(',')
   const explainHint = !!r.explain?.commit && !shown.explainHint
-  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, ponytail: r.ponytail ?? null, check: r.check ?? null, stopCheck: r.stopCheck ?? null, active, showActive, explainHint, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
+  const evidence = { activated, denied, failed, gate: r.gate ?? null, pressure: r.pressure ?? null, explain: r.explain ?? null, ponytail: r.ponytail ?? null, check: r.check ?? null, stopCheck: r.stopCheck ?? null, hookErrors: [...(r.hookErrors ?? [])], active, showActive, explainHint, reportPresent: section.present, claimed: section.applied, claimedEarlier, claimedNotObserved, observedNotClaimed }
   return { ...evidence, footer: renderFooter(evidence) }
 }
 
 const short = (id) => id.replace(/^andrej-karpathy-skills:/, 'karpathy:')
 
+/**
+ * The footer: the "Verified by engine" line when there is evidence to report, then a hook-error line when a
+ * workspace-core hook failed in this request (1.0 M1). null when both are empty.
+ */
 export function renderFooter(e) {
+  return [verifiedLine(e), hookErrorLine(e.hookErrors)].filter(Boolean).join('\n') || null
+}
+
+/** `workspace-core: 2 hook errors (prompt.submit, classic.Stop)`, or null when there were none. */
+export function hookErrorLine(hooks) {
+  if (!hooks?.length) return null
+  return `workspace-core: ${hooks.length} hook error${hooks.length === 1 ? '' : 's'} (${[...new Set(hooks)].join(', ')})`
+}
+
+/**
+ * The check commands that will run (1.0 M1.5), shown once per session under the footer: they come from the committed
+ * .claude/workspace.json and run through `sh -c`, so whoever opens the project sees what runs. null when none is set.
+ */
+export function checksLine({ stop, edit } = {}) {
+  const parts = [stop && `stop check: ${stop}`, edit && `edit check: ${edit}`].filter(Boolean)
+  return parts.length ? `workspace-core: ${parts.join(' · ')} (from .claude/workspace.json, run with sh -c)` : null
+}
+
+function verifiedLine(e) {
   const hint = e.explainHint ?? true // pure calls without session state keep the hint
   if (!e.reportPresent && !e.activated.length && !e.denied.length && !e.failed.length && !e.gate?.held && !e.pressure && !e.explain?.unit && !(e.explain?.commit && hint) && e.ponytail?.closing === undefined && !e.check && !e.stopCheck) return null
   const parts = []
@@ -177,6 +202,7 @@ export function replay(rows) {
         else if (e.action === 'validate') t.explain({ unit: e.unit, passed: e.passed.length, total: e.passed.length + e.failed.length, failedRules: e.failed })
         break
       case 'tool.call': if (e.tool === 'Skill' && e.skill) t.skillCall(e.skill, e); break
+      case 'hook.error': t.hookError(e.hook); break
       case 'turn.complete':
         if (e.agentId == null && open) {
           const s = t.finish(null, e.usageReport?.present ? e.usageReport.claimed : null)
